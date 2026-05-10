@@ -8,6 +8,10 @@ import type {
   ProviderCapabilities,
   PaymentMethodId,
   KnownPaymentMethodId,
+  KnownCountryCode,
+  CountryCode,
+  KnownCurrencyCode,
+  CurrencyCode,
 } from '../../src/index.js';
 
 test('InferProviderId extracts literal provider ID', () => {
@@ -74,4 +78,26 @@ test('KnownPaymentMethodId is a strict union', () => {
   expectTypeOf<'ideal'>().toMatchTypeOf<KnownPaymentMethodId>();
   // Arbitrary string should NOT match KnownPaymentMethodId
   expectTypeOf<'not_a_real_method'>().not.toMatchTypeOf<KnownPaymentMethodId>();
+});
+
+test('KnownCountryCode is a strict union', () => {
+  expectTypeOf<'US'>().toMatchTypeOf<KnownCountryCode>();
+  expectTypeOf<'CH'>().toMatchTypeOf<KnownCountryCode>();
+  expectTypeOf<'INVALID'>().not.toMatchTypeOf<KnownCountryCode>();
+});
+
+test('CountryCode accepts known codes and arbitrary strings', () => {
+  expectTypeOf<'US'>().toMatchTypeOf<CountryCode>();
+  expectTypeOf<'custom_region'>().toMatchTypeOf<CountryCode>();
+});
+
+test('KnownCurrencyCode is a strict union', () => {
+  expectTypeOf<'usd'>().toMatchTypeOf<KnownCurrencyCode>();
+  expectTypeOf<'chf'>().toMatchTypeOf<KnownCurrencyCode>();
+  expectTypeOf<'INVALID'>().not.toMatchTypeOf<KnownCurrencyCode>();
+});
+
+test('CurrencyCode accepts known codes and arbitrary strings', () => {
+  expectTypeOf<'usd'>().toMatchTypeOf<CurrencyCode>();
+  expectTypeOf<'custom_coin'>().toMatchTypeOf<CurrencyCode>();
 });

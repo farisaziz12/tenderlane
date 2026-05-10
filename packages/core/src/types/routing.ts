@@ -1,4 +1,4 @@
-import type { PaymentFlow, PaymentMethodId, KnownPaymentMethodId, ProviderId, KnownProviderId } from './capabilities.js';
+import type { PaymentFlow, PaymentMethodId, KnownPaymentMethodId, ProviderId, KnownProviderId, CountryCode, KnownCountryCode, CurrencyCode, KnownCurrencyCode, Locale, KnownLocale } from './capabilities.js';
 
 /**
  * Condition for matching string-valued context fields in a routing rule.
@@ -16,6 +16,15 @@ import type { PaymentFlow, PaymentMethodId, KnownPaymentMethodId, ProviderId, Kn
  * const nonSanctioned: StringCondition = { notIn: ["RU", "KP"] };
  */
 export type StringCondition = string | { in?: string[]; notIn?: string[] };
+
+/** Condition for matching country-valued context fields. Autocompletes with known ISO 3166-1 alpha-2 codes. */
+export type CountryCondition = KnownCountryCode | { in?: KnownCountryCode[]; notIn?: KnownCountryCode[] };
+
+/** Condition for matching currency-valued context fields. Autocompletes with known ISO 4217 codes (lowercase). */
+export type CurrencyCondition = KnownCurrencyCode | { in?: KnownCurrencyCode[]; notIn?: KnownCurrencyCode[] };
+
+/** Condition for matching locale-valued context fields. Autocompletes with known BCP 47 tags. */
+export type LocaleCondition = KnownLocale | { in?: KnownLocale[]; notIn?: KnownLocale[] };
 
 /**
  * Condition for matching numeric context fields in a routing rule.
@@ -59,10 +68,10 @@ export type BooleanCondition = boolean;
  * };
  */
 export interface RuleConditions {
-  country?: StringCondition;
-  currency?: StringCondition;
+  country?: CountryCondition;
+  currency?: CurrencyCondition;
   amount?: NumberCondition;
-  locale?: StringCondition;
+  locale?: LocaleCondition;
   experiment?: Record<string, string | boolean | number>;
   customer?: {
     isLoggedIn?: BooleanCondition;

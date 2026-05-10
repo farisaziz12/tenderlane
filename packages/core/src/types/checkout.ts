@@ -1,4 +1,4 @@
-import type { ProviderId } from './capabilities.js';
+import type { CurrencyCode, ProviderId } from './capabilities.js';
 
 /**
  * A single line item in a checkout session. Represents one product or service
@@ -20,7 +20,7 @@ export interface CheckoutLineItem {
   readonly description?: string;
   readonly quantity: number;
   readonly unitAmount: number;
-  readonly currency?: string;
+  readonly currency?: CurrencyCode;
   readonly metadata?: Record<string, string>;
 }
 

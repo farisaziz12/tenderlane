@@ -1,3 +1,5 @@
+import type { CountryCode, CurrencyCode, Locale } from './capabilities.js';
+
 /**
  * The reactive payment context that routing decisions depend on. Changes to
  * this context trigger re-evaluation of routing rules, allowing the selected
@@ -24,10 +26,10 @@
  * };
  */
 export interface TenderlaneContext {
-  country?: string;
-  currency?: string;
+  country?: CountryCode;
+  currency?: CurrencyCode;
   amount?: number;
-  locale?: string;
+  locale?: Locale;
   customer?: {
     id?: string;
     email?: string;

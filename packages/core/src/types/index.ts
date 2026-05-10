@@ -9,6 +9,12 @@ export type {
   PaymentMethodId,
   KnownProviderId,
   ProviderId,
+  KnownCountryCode,
+  CountryCode,
+  KnownCurrencyCode,
+  CurrencyCode,
+  KnownLocale,
+  Locale,
   ProviderCapabilities,
   PaymentMethodDescriptor,
 } from './capabilities.js';
@@ -26,6 +32,9 @@ export type {
 
 export type {
   StringCondition,
+  CountryCondition,
+  CurrencyCondition,
+  LocaleCondition,
   NumberCondition,
   BooleanCondition,
   RuleConditions,
