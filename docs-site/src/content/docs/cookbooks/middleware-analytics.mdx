@@ -1,0 +1,313 @@
+---
+title: "Middleware Analytics"
+description: "Track checkout events, route evaluations, and errors using Tenderlane middleware."
+sidebar:
+  order: 6
+---
+
+This cookbook shows how to build middleware for logging, analytics (PostHog/Segment style), and error tracking. You will create reusable middleware modules that fire events at every stage of the checkout lifecycle.
+
+## Logging middleware
+
+Start with a simple logging middleware that outputs structured logs for every lifecycle event. This is useful during development and in production for debugging.
+
+```ts
+import type { TenderlaneMiddleware } from '@tenderlane/core';
+
+const loggingMiddleware: TenderlaneMiddleware = {
+  name: 'logging',
+
+  onContextChange({ previousContext, nextContext }) {
+    const changedFields: string[] = [];
+    for (const key of Object.keys(nextContext)) {
+      const typedKey = key as keyof typeof nextContext;
+      if (previousContext[typedKey] !== nextContext[typedKey]) {
+        changedFields.push(key);
+      }
+    }
+    console.log('[tenderlane] Context changed:', changedFields.join(', '));
+  },
+
+  onRouteEvaluated({ context, route }) {
+    console.log('[tenderlane] Route evaluated:', {
+      provider: route.provider,
+      flow: route.flow,
+      ruleId: route.ruleId ?? 'fallback',
+      source: route.source,
+      country: context.country,
+      paymentMethods: route.paymentMethods,
+    });
+  },
+
+  onSessionCreated({ route, session }) {
+    console.log('[tenderlane] Session created:', {
+      provider: route.provider,
+      flow: session.flow,
+      sessionId: session.sessionId,
+    });
+  },
+
+  onCheckoutStart({ route, input }) {
+    console.log('[tenderlane] Checkout started:', {
+      provider: route.provider,
+      itemCount: input.lineItems.length,
+      totalAmount: input.lineItems.reduce(
+        (sum, item) => sum + item.unitAmount * item.quantity, 0
+      ),
+    });
+  },
+
+  onCheckoutSuccess({ route, result }) {
+    console.log('[tenderlane] Checkout succeeded:', {
+      provider: result.provider,
+      sessionId: result.id,
+      status: result.status,
+    });
+  },
+
+  onCheckoutError({ route, error }) {
+    console.error('[tenderlane] Checkout error:', {
+      code: error.code,
+      message: error.message,
+      provider: error.provider ?? route?.provider ?? 'unknown',
+    });
+  },
+};
+```
+
+## Analytics middleware (PostHog/Segment style)
+
+This middleware fires tracking events to your analytics platform. The example uses a generic `analytics.track()` interface that works with PostHog, Segment, Mixpanel, Amplitude, or any similar service.
+
+```ts
+import type { TenderlaneMiddleware } from '@tenderlane/core';
+
+// Generic analytics interface (PostHog, Segment, Mixpanel, etc.)
+interface AnalyticsClient {
+  track(event: string, properties: Record<string, unknown>): void;
+}
+
+export function createAnalyticsMiddleware(analytics: AnalyticsClient): TenderlaneMiddleware {
+  return {
+    name: 'analytics',
+
+    onRouteEvaluated({ context, route }) {
+      analytics.track('payment_route_selected', {
+        provider: route.provider,
+        flow: route.flow,
+        ruleId: route.ruleId,
+        source: route.source,
+        country: context.country,
+        currency: context.currency,
+        amount: context.amount,
+        paymentMethodCount: route.paymentMethods.length,
+        paymentMethods: route.paymentMethods,
+      });
+    },
+
+    onCheckoutStart({ context, route, input }) {
+      analytics.track('checkout_started', {
+        provider: route.provider,
+        flow: route.flow,
+        country: context.country,
+        currency: context.currency,
+        itemCount: input.lineItems.length,
+        totalAmount: input.lineItems.reduce(
+          (sum, item) => sum + item.unitAmount * item.quantity, 0
+        ),
+      });
+    },
+
+    onCheckoutSuccess({ context, route, result }) {
+      analytics.track('checkout_completed', {
+        provider: result.provider,
+        sessionId: result.id,
+        flow: route.flow,
+        ruleId: route.ruleId,
+        country: context.country,
+        currency: context.currency,
+        amount: context.amount,
+      });
+    },
+
+    onCheckoutError({ context, route, error }) {
+      analytics.track('checkout_error', {
+        errorCode: error.code,
+        errorMessage: error.message,
+        provider: error.provider ?? route?.provider ?? 'unknown',
+        flow: route?.flow,
+        country: context.country,
+      });
+    },
+  };
+}
+```
+
+### Usage with PostHog
+
+```ts
+import posthog from 'posthog-js';
+
+const analyticsMiddleware = createAnalyticsMiddleware({
+  track: (event, properties) => posthog.capture(event, properties),
+});
+```
+
+### Usage with Segment
+
+```ts
+import { AnalyticsBrowser } from '@segment/analytics-next';
+
+const segmentAnalytics = AnalyticsBrowser.load({ writeKey: 'YOUR_WRITE_KEY' });
+
+const analyticsMiddleware = createAnalyticsMiddleware({
+  track: (event, properties) => {
+    segmentAnalytics.then((instance) => instance.track(event, properties));
+  },
+});
+```
+
+## Error tracking middleware
+
+This middleware sends errors to your error tracking service (Sentry, Datadog, Bugsnag, etc.).
+
+```ts
+import type { TenderlaneMiddleware } from '@tenderlane/core';
+
+interface ErrorTracker {
+  captureException(error: Error, context?: Record<string, unknown>): void;
+}
+
+export function createErrorTrackingMiddleware(errorTracker: ErrorTracker): TenderlaneMiddleware {
+  return {
+    name: 'error-tracking',
+
+    onCheckoutError({ context, route, error }) {
+      errorTracker.captureException(error, {
+        tags: {
+          tenderlaneCode: error.code,
+          provider: error.provider ?? 'unknown',
+          flow: route?.flow ?? 'unknown',
+          ruleId: route?.ruleId ?? 'none',
+        },
+        extra: {
+          country: context.country,
+          currency: context.currency,
+          amount: context.amount,
+          routeSource: route?.source,
+        },
+      });
+    },
+  };
+}
+```
+
+### Usage with Sentry
+
+```ts
+import * as Sentry from '@sentry/react';
+
+const errorTrackingMiddleware = createErrorTrackingMiddleware({
+  captureException: (error, context) => {
+    Sentry.withScope((scope) => {
+      if (context?.tags) {
+        for (const [key, value] of Object.entries(context.tags)) {
+          scope.setTag(key, String(value));
+        }
+      }
+      if (context?.extra) {
+        scope.setExtras(context.extra as Record<string, unknown>);
+      }
+      Sentry.captureException(error);
+    });
+  },
+});
+```
+
+## Timing middleware
+
+Track how long each stage of the checkout takes:
+
+```ts
+import type { TenderlaneMiddleware } from '@tenderlane/core';
+
+export function createTimingMiddleware(
+  onTiming: (metric: string, durationMs: number) => void,
+): TenderlaneMiddleware {
+  let routeStartTime: number | null = null;
+  let checkoutStartTime: number | null = null;
+
+  return {
+    name: 'timing',
+
+    onContextChange() {
+      routeStartTime = performance.now();
+    },
+
+    onRouteEvaluated() {
+      if (routeStartTime !== null) {
+        const duration = performance.now() - routeStartTime;
+        onTiming('route_evaluation_ms', duration);
+        routeStartTime = null;
+      }
+    },
+
+    onCheckoutStart() {
+      checkoutStartTime = performance.now();
+    },
+
+    onCheckoutSuccess() {
+      if (checkoutStartTime !== null) {
+        const duration = performance.now() - checkoutStartTime;
+        onTiming('checkout_duration_ms', duration);
+        checkoutStartTime = null;
+      }
+    },
+
+    onCheckoutError() {
+      if (checkoutStartTime !== null) {
+        const duration = performance.now() - checkoutStartTime;
+        onTiming('checkout_error_duration_ms', duration);
+        checkoutStartTime = null;
+      }
+    },
+  };
+}
+```
+
+## Composing multiple middleware
+
+Register all your middleware in the order you want them to execute. Each middleware's hooks are called sequentially, so put logging first (for debugging) and error tracking last (to capture any issues from other middleware).
+
+```ts
+import { createTenderlaneClient } from '@tenderlane/client';
+
+const client = createTenderlaneClient({
+  context: { country: 'US', currency: 'usd', amount: 2500 },
+  providers: [stripe],
+  routing: router,
+  middleware: [
+    loggingMiddleware,                                  // 1. Log everything
+    createAnalyticsMiddleware(posthogAnalytics),         // 2. Track events
+    createTimingMiddleware((metric, duration) => {       // 3. Track timing
+      posthogAnalytics.track(metric, { duration });
+    }),
+    createErrorTrackingMiddleware(sentryErrorTracker),   // 4. Capture errors
+  ],
+});
+```
+
+:::tip
+Middleware errors are non-fatal. If your analytics service is down, the checkout still works. Errors from individual middleware are caught and logged to `console.error` without affecting the checkout flow or subsequent middleware.
+:::
+
+## Event lifecycle summary
+
+| Event | When it fires | Typical analytics use |
+|-------|--------------|----------------------|
+| `onContextChange` | User changes country, updates cart, etc. | Track funnel progression |
+| `onRouteEvaluated` | After routing selects a provider | Track which routes are used, experiment exposure |
+| `onSessionCreated` | After PaymentIntent/session is created | Track inline flow preparation |
+| `onCheckoutStart` | User clicks Pay | "Begin checkout" event |
+| `onCheckoutSuccess` | Payment completed | "Purchase" conversion event |
+| `onCheckoutError` | Any failure | Error rate monitoring |

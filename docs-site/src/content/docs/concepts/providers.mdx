@@ -1,0 +1,324 @@
+---
+title: "Providers"
+description: "How payment provider adapters work in Tenderlane, from capabilities to phantom types."
+sidebar:
+  order: 2
+---
+
+A **provider** in Tenderlane is an adapter that bridges the gap between Tenderlane's normalized API and a specific payment service provider (PSP) like Stripe, Adyen, or PayPal. Each provider has two sides: a **browser adapter** that runs in the frontend, and a **server adapter** that runs on your backend.
+
+## Browser payment provider
+
+The `BrowserPaymentProvider` interface defines what every frontend provider adapter must implement:
+
+```ts
+interface BrowserPaymentProvider<
+  TProviderId extends string = string,
+  TCapabilities extends ProviderCapabilities = ProviderCapabilities,
+  TProviderOptions = unknown,
+> {
+  readonly '~types': ProviderPhantomTypes<TProviderId, TCapabilities, TProviderOptions>;
+  readonly id: TProviderId;
+  readonly capabilities: TCapabilities;
+
+  getAvailablePaymentMethods(context: TenderlaneContext): PaymentMethodDescriptor[];
+  submit(input: CheckoutInput, route: SelectedPaymentRoute): Promise<CheckoutResult>;
+  createSession?(input: CheckoutInput, route: SelectedPaymentRoute): Promise<ProviderSession>;
+}
+```
+
+### Key methods
+
+| Method | Purpose | When called |
+|--------|---------|-------------|
+| `getAvailablePaymentMethods` | Returns payment methods available for the current context | When a route is evaluated |
+| `submit` | Initiates the checkout (redirect or inline confirmation) | When the user clicks Pay |
+| `createSession` | Creates a server-side session for inline flows (optional) | Before rendering inline payment forms |
+
+### Using the Stripe provider
+
+```ts
+import { stripeProvider } from '@tenderlane/stripe';
+
+const stripe = stripeProvider({
+  publishableKey: 'pk_test_...',
+  serverEndpoint: '/api/checkout',
+  stripeAccount: 'acct_...',  // Optional: for Stripe Connect
+  locale: 'de',                // Optional: Stripe.js locale
+});
+
+// stripe.id === 'stripe' (literal type, not just string)
+// stripe.capabilities.paymentMethods includes 'card', 'sepa_debit', 'twint', etc.
+```
+
+The Stripe browser provider never imports the `stripe` npm package. It communicates with your server endpoint via `fetch` and lazy-loads `@stripe/stripe-js` only when needed. This means zero Stripe.js bundle cost for pages that do not render a checkout.
+
+## Server provider adapter
+
+The `ServerProviderAdapter` interface handles operations that require secret API keys:
+
+```ts
+interface ServerProviderAdapter<TProviderId extends string = string> {
+  readonly id: TProviderId;
+  readonly actions: readonly string[];
+  handle(
+    action: string,
+    payload: CheckoutInput,
+    options?: Record<string, unknown>,
+  ): Promise<CheckoutResult>;
+}
+```
+
+The server adapter is registered with `createTenderlaneHandler`, which dispatches incoming requests to the right adapter based on the `provider` field.
+
+```ts
+import { createTenderlaneHandler } from '@tenderlane/core/server';
+import { stripeServerAdapter } from '@tenderlane/stripe/server';
+
+const handler = createTenderlaneHandler({
+  providers: [
+    stripeServerAdapter({ secretKey: process.env.STRIPE_SECRET_KEY! }),
+  ],
+});
+```
+
+### Stripe server adapter actions
+
+| Action | What it does | Used for |
+|--------|-------------|----------|
+| `'checkout'` | Creates a Stripe Checkout Session | Redirect flow (`checkout-session`) |
+| `'create-payment-intent'` | Creates a Stripe PaymentIntent | Inline flow (`payment-intent`) |
+
+## Capabilities
+
+Every provider declares its capabilities: which flows, payment methods, currencies, and countries it supports, and which features it offers.
+
+```ts
+interface ProviderCapabilities<TPaymentMethods extends PaymentMethodId = PaymentMethodId> {
+  readonly provider: string;
+  readonly flows: readonly PaymentFlow[];
+  readonly paymentMethods: readonly TPaymentMethods[];
+  readonly currencies?: readonly string[];
+  readonly countries?: readonly string[];
+  readonly supports: {
+    readonly redirect?: boolean;
+    readonly embedded?: boolean;
+    readonly subscriptions?: boolean;
+    readonly refunds?: boolean;
+    readonly webhooks?: boolean;
+  };
+}
+```
+
+The Stripe adapter declares these capabilities:
+
+```ts
+const STRIPE_CAPABILITIES = {
+  provider: 'stripe',
+  flows: ['checkout-session', 'payment-intent'],
+  paymentMethods: [
+    'card', 'paypal', 'link', 'sepa_debit', 'ideal', 'bancontact',
+    'giropay', 'sofort', 'eps', 'p24', 'twint', 'klarna',
+    'afterpay_clearpay', 'affirm', 'alipay', 'wechat_pay', 'cash_app',
+    'apple_pay', 'google_pay',
+  ],
+  currencies: ['usd', 'eur', 'gbp', 'chf', 'jpy', 'cad', 'aud'],
+  countries: ['US', 'GB', 'DE', 'FR', 'CH', 'JP', 'CA', 'AU'],
+  supports: {
+    redirect: true,
+    embedded: true,
+    subscriptions: false,  // Not yet implemented
+    refunds: false,         // Not yet implemented
+    webhooks: true,
+  },
+};
+```
+
+### Payment flows
+
+Tenderlane supports several payment flows:
+
+| Flow | Description | Example |
+|------|-------------|---------|
+| `'checkout-session'` | Redirect to a provider-hosted checkout page | Stripe Checkout |
+| `'payment-intent'` | Inline card form on your page | Stripe Elements |
+| `'embedded-checkout'` | Embedded checkout widget | Stripe Embedded Checkout |
+| `'redirect'` | Generic redirect to a provider URL | PayPal redirect |
+| `'custom'` | Custom flow defined by your provider adapter | Any bespoke flow |
+
+### Payment method descriptors
+
+When routing selects a provider, the client calls `getAvailablePaymentMethods(context)` to get human-readable descriptors for the UI:
+
+```ts
+interface PaymentMethodDescriptor {
+  readonly id: PaymentMethodId;    // e.g. 'card', 'sepa_debit'
+  readonly label: string;          // e.g. 'Credit or debit card', 'SEPA Direct Debit'
+  readonly type: 'card' | 'bank' | 'wallet' | 'redirect' | 'local' | 'other';
+  readonly provider: string;       // e.g. 'stripe'
+}
+```
+
+## Phantom types (`~types`)
+
+Provider adapters carry a `'~types'` property for compile-time type inference without runtime cost. This follows the TanStack pattern for preserving literal types through generic boundaries.
+
+```ts
+interface ProviderPhantomTypes<
+  TProviderId extends string = string,
+  TCapabilities extends ProviderCapabilities = ProviderCapabilities,
+  TProviderOptions = unknown,
+> {
+  readonly providerId: TProviderId;
+  readonly capabilities: TCapabilities;
+  readonly providerOptions: TProviderOptions;
+}
+```
+
+The `'~types'` property is never accessed at runtime. Its value is always `{} as StripePhantomTypes`. It exists purely so that TypeScript can infer the literal provider ID, capability types, and option types from the adapter instance.
+
+```ts
+const stripe = stripeProvider({ publishableKey: '...', serverEndpoint: '...' });
+
+// TypeScript infers:
+// typeof stripe.id === 'stripe' (literal, not string)
+// typeof stripe.capabilities.paymentMethods === readonly ['card', 'paypal', 'link', ...]
+```
+
+See [Type Safety](/concepts/type-safety/) for more on how to use the inference utilities.
+
+## Building a custom provider
+
+To integrate a PSP that Tenderlane does not yet support, implement both the browser and server interfaces.
+
+### Browser adapter
+
+```ts
+import type {
+  BrowserPaymentProvider,
+  ProviderCapabilities,
+  ProviderPhantomTypes,
+  TenderlaneContext,
+  PaymentMethodDescriptor,
+  CheckoutInput,
+  CheckoutResult,
+  SelectedPaymentRoute,
+} from '@tenderlane/core';
+
+interface AcmeProviderOptions {
+  readonly apiKey: string;
+  readonly serverEndpoint: string;
+}
+
+const ACME_CAPABILITIES = {
+  provider: 'acme',
+  flows: ['redirect'],
+  paymentMethods: ['card', 'bank_transfer'],
+  currencies: ['usd', 'eur'],
+  supports: {
+    redirect: true,
+    embedded: false,
+    subscriptions: false,
+    refunds: false,
+    webhooks: false,
+  },
+} as const satisfies ProviderCapabilities;
+
+type AcmeCapabilities = typeof ACME_CAPABILITIES;
+
+export function acmeProvider(
+  options: AcmeProviderOptions,
+): BrowserPaymentProvider<'acme', AcmeCapabilities, AcmeProviderOptions> {
+  return {
+    '~types': {} as ProviderPhantomTypes<'acme', AcmeCapabilities, AcmeProviderOptions>,
+    id: 'acme' as const,
+    capabilities: ACME_CAPABILITIES,
+
+    getAvailablePaymentMethods(_context: TenderlaneContext): PaymentMethodDescriptor[] {
+      return [
+        { id: 'card', label: 'Credit Card', type: 'card', provider: 'acme' },
+        { id: 'bank_transfer', label: 'Bank Transfer', type: 'bank', provider: 'acme' },
+      ];
+    },
+
+    async submit(input: CheckoutInput, route: SelectedPaymentRoute): Promise<CheckoutResult> {
+      const response = await fetch(options.serverEndpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          provider: 'acme',
+          action: 'create-checkout',
+          payload: input,
+          paymentMethods: route.paymentMethods,
+        }),
+      });
+
+      const result = await response.json() as CheckoutResult;
+
+      if (result.url && typeof window !== 'undefined') {
+        window.location.href = result.url;
+      }
+
+      return result;
+    },
+  };
+}
+```
+
+### Server adapter
+
+```ts
+import type { ServerProviderAdapter, CheckoutInput, CheckoutResult } from '@tenderlane/core';
+import { ProviderError } from '@tenderlane/core';
+
+export function acmeServerAdapter(config: {
+  secretKey: string;
+}): ServerProviderAdapter<'acme'> {
+  return {
+    id: 'acme' as const,
+    actions: ['create-checkout'] as const,
+
+    async handle(
+      action: string,
+      payload: CheckoutInput,
+      _options?: Record<string, unknown>,
+    ): Promise<CheckoutResult> {
+      if (action !== 'create-checkout') {
+        throw new ProviderError(
+          `Acme adapter does not support action "${action}"`,
+          'acme',
+        );
+      }
+
+      // Call the Acme PSP API with config.secretKey
+      const session = await createAcmeSession(config.secretKey, payload);
+
+      return {
+        provider: 'acme',
+        id: session.id,
+        status: 'created',
+        url: session.checkoutUrl,
+        raw: session,
+      };
+    },
+  };
+}
+```
+
+Register both adapters just like the Stripe provider:
+
+```ts
+// Browser
+const config = {
+  providers: [acmeProvider({ apiKey: '...', serverEndpoint: '/api/checkout' })],
+  routing: createRulesRouter({
+    rules: [{ id: 'default', when: {}, use: { provider: 'acme', flow: 'redirect' } }],
+    fallback: { provider: 'acme', flow: 'redirect' },
+  }),
+};
+
+// Server
+const handler = createTenderlaneHandler({
+  providers: [acmeServerAdapter({ secretKey: '...' })],
+});
+```

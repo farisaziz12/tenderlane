@@ -1,0 +1,96 @@
+---
+title: "Installation"
+description: "Install Tenderlane packages and configure your project."
+sidebar:
+  order: 2
+---
+
+## Install packages
+
+Tenderlane is distributed as separate npm packages. Install only what you need for your use case.
+
+### React + Stripe (most common)
+
+```bash
+# npm
+npm install @tenderlane/core @tenderlane/client @tenderlane/react @tenderlane/stripe
+
+# pnpm
+pnpm add @tenderlane/core @tenderlane/client @tenderlane/react @tenderlane/stripe
+
+# yarn
+yarn add @tenderlane/core @tenderlane/client @tenderlane/react @tenderlane/stripe
+```
+
+### Headless (no framework bindings)
+
+If you are using Vue, Solid, Svelte, or building your own integration layer:
+
+```bash
+pnpm add @tenderlane/core @tenderlane/client @tenderlane/stripe
+```
+
+### Core only (routing engine)
+
+If you only need the routing engine and types (for example, to use on the server):
+
+```bash
+pnpm add @tenderlane/core
+```
+
+## Peer dependencies
+
+Some packages require peer dependencies that you manage in your project:
+
+| Package | Peer dependency | Version | Notes |
+|---------|----------------|---------|-------|
+| `@tenderlane/react` | `react` | `>= 18.0` | Required for `useSyncExternalStore` |
+| `@tenderlane/stripe` | `@stripe/stripe-js` | `>= 2.0` | Lazy-loaded at runtime, zero bundle cost until used |
+| `@tenderlane/stripe/server` | `stripe` | `>= 14.0` | Server-side only; never import in browser code |
+
+For Stripe Elements (inline payment forms), you also need:
+
+```bash
+pnpm add @stripe/stripe-js @stripe/react-stripe-js
+```
+
+:::caution
+Never import `@tenderlane/stripe/server` in browser code. It imports the `stripe` npm package, which contains your secret key. Tenderlane enforces this boundary with separate subpath exports.
+:::
+
+## TypeScript requirements
+
+Tenderlane requires **TypeScript 5.0+** with strict mode enabled. The following `tsconfig.json` settings are recommended:
+
+```json
+{
+  "compilerOptions": {
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "target": "ES2022"
+  }
+}
+```
+
+:::tip
+The `noUncheckedIndexedAccess` flag is strongly recommended. Tenderlane's type system works best when TypeScript requires explicit checks for potentially undefined values from indexed access.
+:::
+
+## ESM only
+
+All Tenderlane packages are **ESM only** (`"type": "module"`). If your project uses CommonJS, you will need to configure your bundler to handle ESM imports. Most modern frameworks (Next.js 13+, Vite, Remix, Astro) handle this automatically.
+
+## Package descriptions
+
+| Package | Description |
+|---------|------------|
+| `@tenderlane/core` | The foundation package. Contains all TypeScript types, the routing engine (`createRulesRouter`, `createAutoRouter`), the middleware runner, the error hierarchy, and the server handler (`createTenderlaneHandler`). Has zero runtime dependencies and never imports any provider SDK. |
+| `@tenderlane/client` | The headless checkout client. Manages the checkout state machine (`idle` through `success`/`error`) and exposes `subscribe`/`getSnapshot` for integration with any UI framework via `useSyncExternalStore` or equivalent. |
+| `@tenderlane/react` | Thin React bindings. Provides `TenderlaneProvider` (creates the client once via `useRef`), `useTenderlaneCheckout` (primary hook for checkout UI), `usePaymentMethods`, `useProviderSession`, and `TenderlaneCheckoutForm` (auto-prepares inline flows). |
+| `@tenderlane/stripe` | Stripe provider adapter with separate browser and server entry points. The browser entry (`@tenderlane/stripe`) lazy-loads Stripe.js and communicates with your server via `fetch`. The server entry (`@tenderlane/stripe/server`) uses the `stripe` npm package to create Checkout Sessions and PaymentIntents. |
+
+## Next steps
+
+Once you have the packages installed, head to the [Quick Start](/getting-started/quick-start/) to build a working checkout in under 5 minutes.

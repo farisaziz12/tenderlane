@@ -1,0 +1,93 @@
+---
+title: "Introduction"
+description: "What Tenderlane is, why frontend payment orchestration matters, and how it works."
+sidebar:
+  order: 1
+---
+
+## What is Tenderlane?
+
+Tenderlane is a TypeScript SDK for **reactive payment orchestration**. It sits between your application and your payment service providers (PSPs), making your checkout flow responsive to changes in application state like country, currency, cart contents, and experiment flags.
+
+Instead of hard-coding a single provider integration, you define **routing rules** that select the right provider, payment flow, and payment methods based on your checkout context. When the context changes, Tenderlane automatically re-evaluates the rules and updates the checkout UI.
+
+## Why frontend payment orchestration?
+
+Most payment integrations follow a static pattern: pick Stripe, integrate Stripe, ship. This works until you need to:
+
+- **Support regional payment methods** — TWINT for Switzerland, SEPA for Germany, iDEAL for the Netherlands
+- **Run A/B tests** — Compare checkout redirect vs. inline payment forms
+- **Add a second provider** — Route high-value orders through a different PSP for better rates
+- **React to user behavior** — Show different payment options for logged-in vs. guest users
+
+With direct PSP integrations, each of these requires code changes scattered across your frontend and backend. With Tenderlane, they are all **configuration changes** to your routing rules.
+
+## Mental model
+
+Tenderlane follows a three-step mental model:
+
+```
+Context → Route → UI
+```
+
+1. **Context** — Your application provides checkout context: country, currency, amount, customer info, experiment flags
+2. **Route** — The routing engine evaluates rules against the context and selects a provider, flow, and payment methods
+3. **UI** — The headless client manages state transitions, and framework bindings keep your checkout UI in sync
+
+Every time the context changes (the user switches country, the cart updates, an experiment variant is assigned), the routing engine re-evaluates and the UI updates automatically.
+
+## Package architecture
+
+Tenderlane follows a layered architecture inspired by TanStack libraries:
+
+```
+@tenderlane/core          (zero external deps, provider-agnostic)
+    │
+    ├── @tenderlane/client   (headless checkout state machine)
+    │       │
+    │       └── @tenderlane/react  (thin React bindings via useSyncExternalStore)
+    │
+    └── @tenderlane/stripe   (browser provider + server adapter)
+```
+
+| Package | What it does | Runtime dependencies |
+|---------|-------------|---------------------|
+| **@tenderlane/core** | Types, routing engine, middleware runner, error hierarchy, server handler | None |
+| **@tenderlane/client** | Headless checkout state machine with `subscribe`/`getSnapshot` | `@tenderlane/core` |
+| **@tenderlane/react** | `TenderlaneProvider`, `useTenderlaneCheckout`, and other React hooks | `@tenderlane/client`, `react` |
+| **@tenderlane/stripe** | Stripe browser provider (lazy-loads Stripe.js) + server adapter | `@tenderlane/core`, `@stripe/stripe-js` (lazy), `stripe` (server only) |
+
+:::tip
+The `@tenderlane/core` package has **zero runtime dependencies** and never imports any provider SDK. All provider-specific code lives in provider packages like `@tenderlane/stripe`. This means your bundle only includes the providers you actually use.
+:::
+
+## How Tenderlane compares to direct PSP usage
+
+| | Direct Stripe integration | With Tenderlane |
+|---|---|---|
+| **Add a payment method** | Change Stripe config + update frontend | Add to routing rules |
+| **Add a second provider** | Build a new integration from scratch | Register a new provider adapter |
+| **Route by country** | Write custom if/else logic | Declarative routing rule |
+| **A/B test checkout flows** | Manual plumbing for each variant | Routing rule with `experiment` condition |
+| **Type safety** | Provider-specific types only | Unified types across all providers |
+| **React to context changes** | Manual state management | Automatic re-evaluation |
+
+## Current status
+
+Tenderlane is in **alpha**. The following is implemented and tested:
+
+- Rules router with declarative, serializable conditions
+- Auto router interface (remote routing endpoint)
+- Headless checkout client with full state machine
+- React hooks and provider component
+- Stripe Checkout redirect flow
+- Stripe Elements inline payment flow
+- Middleware lifecycle hooks
+- Typed error hierarchy
+- Full TypeScript type inference
+
+Not yet implemented: Vue/Solid/Svelte bindings, additional PSPs (Adyen, PayPal, etc.), webhooks, subscriptions, refunds, failover, ML-based routing, devtools.
+
+## Next steps
+
+Ready to get started? Head to [Installation](/getting-started/installation/) to set up your project, or jump straight to the [Quick Start](/getting-started/quick-start/) for a working example.

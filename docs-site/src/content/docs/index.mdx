@@ -1,0 +1,120 @@
+---
+title: Tenderlane
+description: Reactive payment orchestration for modern web apps
+template: splash
+hero:
+  tagline: Frontend-first, type-safe payment orchestration that reacts to your application state.
+  actions:
+    - text: Get Started
+      link: /getting-started/introduction/
+      icon: right-arrow
+      variant: primary
+    - text: View Cookbooks
+      link: /cookbooks/stripe-checkout-redirect/
+      variant: minimal
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+## Why Tenderlane?
+
+Most payment integrations are static: you pick a provider, hard-code the integration, and ship. But real checkout pages are dynamic. The country changes, the cart updates, an A/B test fires, and suddenly you need different payment methods, a different provider, or a different checkout flow.
+
+Tenderlane makes your payment layer **reactive**. When your application state changes, Tenderlane automatically re-evaluates routing rules and updates the selected provider, payment methods, and checkout UI — all with full TypeScript safety.
+
+<CardGrid>
+  <Card title="Reactive Routing" icon="rocket">
+    Routing rules evaluate against your checkout context (country, currency, amount, experiments). Change the context, and the payment flow updates automatically.
+  </Card>
+  <Card title="Type-Safe" icon="approve-check">
+    Provider IDs, payment method IDs, and flow types are preserved as string literals through the entire stack. Typos are caught at compile time, not in production.
+  </Card>
+  <Card title="Provider-Agnostic" icon="puzzle">
+    A single, normalized API for any payment provider. Switch from Stripe to Adyen without rewriting your checkout page. Add providers without touching existing code.
+  </Card>
+  <Card title="Framework-Agnostic Core" icon="setting">
+    The headless client works with any framework. React bindings are provided out of the box, with Vue, Solid, and Svelte planned.
+  </Card>
+</CardGrid>
+
+## How it works
+
+```
+Application State (country, currency, amount, experiment)
+        │
+        ▼
+   Routing Rules ──────► Selected Provider + Flow + Payment Methods
+        │
+        ▼
+   Headless Client ────► State Machine (idle → ready → submitting → success)
+        │
+        ▼
+   React / Vue / Solid ► Checkout UI (auto-updates on context change)
+```
+
+Your application provides a **context** (country, currency, amount, experiment flags). Tenderlane's **router** evaluates that context against your rules and selects the right provider, flow, and payment methods. The **headless client** manages the checkout state machine, and **framework bindings** keep your UI in sync.
+
+## Packages
+
+| Package | Purpose | Dependencies |
+|---------|---------|-------------|
+| `@tenderlane/core` | Types, routing engine, middleware, server handler | None |
+| `@tenderlane/client` | Headless checkout state machine | `@tenderlane/core` |
+| `@tenderlane/react` | React hooks and provider component | `@tenderlane/client` |
+| `@tenderlane/stripe` | Stripe browser provider + server adapter | `@tenderlane/core` |
+
+## Quick taste
+
+```tsx
+import { TenderlaneProvider, useTenderlaneCheckout } from '@tenderlane/react';
+import { createRulesRouter } from '@tenderlane/core';
+import { stripeProvider } from '@tenderlane/stripe';
+
+// When the country changes, routing re-evaluates automatically
+const config = {
+  context: { country: 'US', currency: 'usd', amount: 2500 },
+  providers: [
+    stripeProvider({
+      publishableKey: 'pk_test_...',
+      serverEndpoint: '/api/checkout',
+    }),
+  ],
+  routing: createRulesRouter({
+    rules: [
+      {
+        id: 'default',
+        when: {},
+        use: { provider: 'stripe', flow: 'checkout-session' },
+      },
+    ],
+    fallback: { provider: 'stripe', flow: 'checkout-session' },
+  }),
+};
+
+function App() {
+  return (
+    <TenderlaneProvider config={config}>
+      <CheckoutButton />
+    </TenderlaneProvider>
+  );
+}
+
+function CheckoutButton() {
+  const checkout = useTenderlaneCheckout();
+
+  return (
+    <button
+      disabled={!checkout.canSubmit}
+      onClick={() =>
+        checkout.submit({
+          lineItems: [{ name: 'Widget', quantity: 1, unitAmount: 2500 }],
+          successUrl: window.location.origin + '/success',
+          cancelUrl: window.location.origin + '/cancel',
+        })
+      }
+    >
+      Pay ${(2500 / 100).toFixed(2)}
+    </button>
+  );
+}
+```

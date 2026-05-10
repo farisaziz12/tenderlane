@@ -1,0 +1,287 @@
+---
+title: "Routing"
+description: "How Tenderlane selects the right provider, flow, and payment methods for each checkout."
+sidebar:
+  order: 1
+---
+
+Routing is the core of Tenderlane. The routing engine evaluates your checkout context against a set of rules and selects the provider, payment flow, and payment methods to use. When the context changes, routing re-evaluates automatically.
+
+Tenderlane provides two router implementations:
+
+| Router | Best for | How it works |
+|--------|----------|-------------|
+| **Rules Router** | Most use cases | Evaluates declarative JSON rules locally, first match wins |
+| **Auto Router** | ML-based routing, remote config | Sends context to a remote endpoint, falls back on timeout |
+
+## Rules Router
+
+The rules router (`createRulesRouter`) is the primary routing strategy. Rules are plain JSON objects, fully serializable, and evaluated in order. The first rule whose `when` clause matches the context wins.
+
+```ts
+import { createRulesRouter } from '@tenderlane/core';
+
+const router = createRulesRouter({
+  rules: [
+    {
+      id: 'swiss-twint',
+      description: 'Route Swiss customers to TWINT + card',
+      when: { country: 'CH', currency: 'chf' },
+      use: { provider: 'stripe', flow: 'checkout-session', paymentMethods: ['twint', 'card'] },
+    },
+    {
+      id: 'eu-sepa',
+      description: 'Route EU customers to SEPA + card',
+      when: { country: { in: ['DE', 'AT', 'FR', 'IT', 'ES', 'NL', 'BE'] }, currency: 'eur' },
+      use: { provider: 'stripe', flow: 'checkout-session', paymentMethods: ['sepa_debit', 'card'] },
+    },
+    {
+      id: 'default',
+      description: 'Card-only fallback for all other regions',
+      when: {},
+      use: { provider: 'stripe', flow: 'checkout-session', paymentMethods: ['card'] },
+    },
+  ],
+  fallback: { provider: 'stripe', flow: 'checkout-session', paymentMethods: ['card'] },
+});
+```
+
+### First-match-wins
+
+Rules are evaluated **in order**. The first rule whose `when` clause matches the context is selected. This means you should put your most specific rules first and your most general rules last.
+
+```ts
+const router = createRulesRouter({
+  rules: [
+    // Most specific: Swiss high-value orders
+    { id: 'ch-high', when: { country: 'CH', amount: { gte: 50000 } }, use: { ... } },
+    // Less specific: All Swiss orders
+    { id: 'ch-all', when: { country: 'CH' }, use: { ... } },
+    // Least specific: Everything else
+    { id: 'default', when: {}, use: { ... } },
+  ],
+  fallback: { provider: 'stripe', flow: 'checkout-session' },
+});
+```
+
+### Fallback route
+
+The `fallback` route is used when no rule matches the context. It is required to ensure every context produces a valid route.
+
+```ts
+const router = createRulesRouter({
+  rules: [...],
+  fallback: {
+    provider: 'stripe',
+    flow: 'checkout-session',
+    paymentMethods: ['card'],
+  },
+});
+```
+
+## Condition operators
+
+Each field in a rule's `when` clause supports different comparison operators depending on the value type.
+
+### Exact match
+
+The simplest condition. The context value must be strictly equal to the specified value.
+
+```ts
+when: { country: 'CH' }           // country === 'CH'
+when: { currency: 'eur' }         // currency === 'eur'
+when: { amount: 5000 }            // amount === 5000
+```
+
+### Set operators: `in` and `notIn`
+
+Match against a set of allowed or disallowed values.
+
+```ts
+// Match any of these countries
+when: { country: { in: ['DE', 'FR', 'IT', 'ES'] } }
+
+// Match any country EXCEPT these
+when: { country: { notIn: ['RU', 'KP', 'IR'] } }
+```
+
+### Numeric range operators: `gt`, `gte`, `lt`, `lte`
+
+Match numeric values within a range. When multiple operators are specified, all must be satisfied (AND semantics).
+
+```ts
+// Amount >= 10000 (high-value orders, amounts in minor units)
+when: { amount: { gte: 10000 } }
+
+// Amount between 1000 and 50000 (inclusive lower, exclusive upper)
+when: { amount: { gte: 1000, lt: 50000 } }
+
+// Amount strictly greater than 0
+when: { amount: { gt: 0 } }
+```
+
+### Nested object matching
+
+For fields like `customer` and `experiment`, you can match against nested properties. All specified nested conditions must match (AND semantics).
+
+```ts
+// Match logged-in business customers
+when: {
+  customer: {
+    isLoggedIn: true,
+    type: 'business',
+  },
+}
+
+// Match experiment variant
+when: {
+  experiment: {
+    checkoutVariant: 'b',
+  },
+}
+```
+
+### Combining conditions
+
+All conditions in a `when` clause are ANDed together. Every condition must match for the rule to fire.
+
+```ts
+// Swiss, logged-in, high-value, EUR currency
+when: {
+  country: 'CH',
+  currency: 'eur',
+  amount: { gte: 10000 },
+  customer: { isLoggedIn: true },
+}
+```
+
+## Predicates escape hatch
+
+Rules are designed to be serializable JSON, but sometimes you need logic that cannot be expressed with declarative conditions. The `predicates` option lets you attach JavaScript functions to specific rules by their ID.
+
+When a rule has a matching predicate, the predicate function is used **instead of** the declarative `when` clause.
+
+```ts
+const router = createRulesRouter({
+  rules: [
+    {
+      id: 'complex-rule',
+      when: {}, // Ignored when a predicate exists for this rule ID
+      use: { provider: 'stripe', flow: 'checkout-session' },
+    },
+  ],
+  fallback: { provider: 'stripe', flow: 'checkout-session' },
+  predicates: {
+    'complex-rule': (context) => {
+      const amount = context.amount as number | undefined;
+      const country = context.country as string | undefined;
+      // Custom logic that cannot be expressed declaratively
+      return country === 'CH' && amount !== undefined && amount > 0 && amount % 100 === 0;
+    },
+  },
+});
+```
+
+:::caution
+Predicates make your routing rules non-serializable. If you plan to store rules in a database or send them over the network, avoid predicates and express your conditions using the built-in operators. Predicates are an escape hatch for truly complex logic.
+:::
+
+## Auto Router
+
+The auto router (`createAutoRouter`) delegates routing decisions to a remote endpoint. This is useful for ML-based routing, feature flag services, or centralized routing configuration.
+
+```ts
+import { createAutoRouter } from '@tenderlane/core';
+
+const router = createAutoRouter({
+  endpoint: 'https://routing.example.com/evaluate',
+  fallback: { provider: 'stripe', flow: 'checkout-session' },
+  timeoutMs: 3000,
+  headers: { 'x-api-key': 'your-api-key' },
+});
+```
+
+### How it works
+
+1. The auto router sends a `POST` request to the endpoint with the checkout context
+2. The endpoint returns a JSON response specifying the provider, flow, and payment methods
+3. If the request fails or times out, the router falls back to the configured `fallback` route
+
+### Request format
+
+```json
+{
+  "version": "1",
+  "context": {
+    "country": "CH",
+    "currency": "chf",
+    "amount": 5000
+  },
+  "timestamp": "2025-01-15T10:30:00.000Z"
+}
+```
+
+### Expected response format
+
+```json
+{
+  "provider": "stripe",
+  "flow": "checkout-session",
+  "paymentMethods": ["card", "twint"],
+  "reason": "Swiss customer, TWINT available",
+  "confidence": 0.95
+}
+```
+
+### Timeout and fallback
+
+The auto router uses `AbortController` to enforce a timeout (default: 3000ms). On any error or timeout, it falls back to the configured fallback route. This ensures your checkout always works, even when the remote routing service is unavailable.
+
+```ts
+const router = createAutoRouter({
+  endpoint: 'https://routing.example.com/evaluate',
+  fallback: { provider: 'stripe', flow: 'checkout-session', paymentMethods: ['card'] },
+  timeoutMs: 2000, // Fail fast
+});
+```
+
+## Route evaluation result
+
+Both routers return a `SelectedPaymentRoute` object with full metadata about the decision:
+
+```ts
+interface SelectedPaymentRoute {
+  readonly provider: string;        // e.g. 'stripe'
+  readonly flow: PaymentFlow;       // e.g. 'checkout-session'
+  readonly paymentMethods: string[];  // e.g. ['card', 'twint']
+  readonly providerOptions?: Record<string, unknown>;
+  readonly reason?: string;          // Human-readable explanation
+  readonly ruleId?: string;          // Which rule matched (rules router only)
+  readonly source: 'rule' | 'fallback' | 'auto' | 'auto-fallback';
+}
+```
+
+The `source` field tells you how the route was selected:
+
+| Source | Meaning |
+|--------|---------|
+| `'rule'` | A specific routing rule matched |
+| `'fallback'` | No rule matched; the fallback route was used |
+| `'auto'` | The auto router's remote endpoint made the decision |
+| `'auto-fallback'` | The auto router failed or timed out; the fallback was used |
+
+## Remote configuration
+
+Since routing rules are plain JSON, you can load them from a database, API, or feature flag service at startup:
+
+```ts
+const rulesResponse = await fetch('https://config.example.com/routing-rules');
+const rulesData = await rulesResponse.json();
+
+const router = createRulesRouter({
+  rules: rulesData.rules,
+  fallback: rulesData.fallback,
+});
+```
+
+This lets you change routing rules in production without deploying new code.

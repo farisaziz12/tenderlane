@@ -1,0 +1,180 @@
+---
+title: "State Machine"
+description: "How the Tenderlane checkout client manages state transitions from idle to success."
+sidebar:
+  order: 3
+---
+
+The Tenderlane client manages checkout state through a deterministic state machine. Every state transition produces a new immutable snapshot, making the client compatible with React's `useSyncExternalStore` and similar external store patterns in other frameworks.
+
+## State diagram
+
+```
+                    ┌──────────────────────────────────────────────┐
+                    │                                              │
+                    ▼                                              │
+  ┌──────┐    ┌────────────┐    ┌───────┐    ┌───────────┐    ┌───────────┐
+  │ idle │───▶│ evaluating │───▶│ ready │───▶│ preparing │───▶│ prepared  │
+  └──────┘    └────────────┘    └───────┘    └───────────┘    └───────────┘
+                    │                │                              │
+                    │                │                              │
+                    │                ▼                              ▼
+                    │         ┌────────────┐                ┌────────────┐
+                    │         │ submitting │                │ submitting │
+                    │         └────────────┘                └────────────┘
+                    │                │                              │
+                    │           ┌────┴────┐                   ┌────┴────┐
+                    │           ▼         ▼                   ▼         ▼
+                    │     ┌─────────┐ ┌───────┐         ┌─────────┐ ┌───────┐
+                    └────▶│  error  │ │success│         │  error  │ │success│
+                          └─────────┘ └───────┘         └─────────┘ └───────┘
+```
+
+## States
+
+| State | Description | `canSubmit` | Key properties |
+|-------|-------------|:-----------:|----------------|
+| `idle` | Initial state before first evaluation, or after `reset()` | `false` | No route, no provider |
+| `evaluating` | Router is evaluating the context (may be async for auto router) | `false` | Previous route cleared |
+| `ready` | Route selected, provider resolved, payment methods available | `true` | `route`, `selectedProvider`, `paymentMethods` populated |
+| `preparing` | Creating a provider session for inline flows (e.g., PaymentIntent) | `false` | In-progress session creation |
+| `prepared` | Provider session ready, inline payment form can render | `true` | `providerSession` populated with `clientSecret` |
+| `submitting` | Provider's `submit()` call is in progress | `false` | Waiting for provider response |
+| `success` | Checkout completed successfully | `false` | `checkoutResult` populated |
+| `error` | Any failure during evaluation, preparation, or submission | varies | `error` populated with `TenderlaneError` |
+
+## Transitions
+
+### `idle` to `evaluating`
+
+Triggered automatically when you create a client with `createTenderlaneClient()`, or when you call `client.updateContext()`.
+
+```ts
+const client = createTenderlaneClient({
+  context: { country: 'US', currency: 'usd', amount: 2500 },
+  providers: [stripe],
+  routing: router,
+});
+// For a rules router (synchronous), the state immediately reaches 'ready'
+// For an auto router (async), the state passes through 'evaluating' first
+```
+
+:::tip
+The rules router is **synchronous**, so `createTenderlaneClient` skips the `evaluating` state entirely. The initial state is `ready` with the route already resolved. This avoids SSR/hydration mismatches in React, since the server and client renders see the same initial state.
+:::
+
+### `evaluating` to `ready`
+
+When the router returns a result, the client resolves the provider from the registered adapters, computes available payment methods, and enters `ready`.
+
+If the router is asynchronous (auto router), this transition happens after the promise resolves.
+
+### `evaluating` to `error`
+
+If the router throws or the auto router times out and the fallback also fails, the state transitions to `error`.
+
+### `ready` to `submitting`
+
+Triggered by calling `client.submit(input)`. The client calls the selected provider's `submit()` method.
+
+```ts
+await client.submit({
+  lineItems: [{ name: 'Widget', quantity: 1, unitAmount: 2500 }],
+  successUrl: 'https://example.com/success',
+  cancelUrl: 'https://example.com/cancel',
+});
+```
+
+### `ready` to `preparing`
+
+Triggered by calling `client.prepare(input)` for inline payment flows that need a server-side session (e.g., Stripe PaymentIntent). Not needed for redirect flows.
+
+```ts
+await client.prepare({
+  lineItems: [{ name: 'Widget', quantity: 1, unitAmount: 2500 }],
+  successUrl: 'https://example.com/success',
+  cancelUrl: 'https://example.com/cancel',
+});
+```
+
+### `preparing` to `prepared`
+
+After the provider's `createSession()` method returns, the `providerSession` is stored in state and the client enters `prepared`. The `providerSession` contains the `clientSecret` needed to render inline payment forms.
+
+### `prepared` to `submitting`
+
+Triggered by calling `client.submit(input)` after preparation. For Stripe Elements, this confirms the PaymentIntent using the mounted Elements instance.
+
+### `submitting` to `success`
+
+The provider's `submit()` method resolved successfully. For redirect flows, the browser may have already redirected. For inline flows, `checkoutResult` is populated.
+
+### `submitting` to `error`
+
+The provider's `submit()` method threw. The error is wrapped in a `ProviderError` and stored in state. After a submission error, `canSubmit` remains `true` to allow retries.
+
+### Any state to `idle` (via `reset()`)
+
+Calling `client.reset()` returns the client to `idle`, clearing the route, provider, payment methods, errors, and checkout result.
+
+## State snapshot
+
+Every state transition produces a new immutable object. The `getSnapshot()` method returns a stable reference until the next transition:
+
+```ts
+interface TenderlaneClientState {
+  readonly status: ClientStatus;
+  readonly context: TenderlaneContext;
+  readonly route: SelectedPaymentRoute | null;
+  readonly selectedProvider: string | null;
+  readonly paymentMethods: PaymentMethodDescriptor[];
+  readonly selectedPaymentMethod: string | null;
+  readonly canSubmit: boolean;
+  readonly error: TenderlaneError | null;
+  readonly checkoutResult: CheckoutResult | null;
+  readonly providerSession: ProviderSession | null;
+}
+```
+
+## `useSyncExternalStore` integration
+
+The client implements the `subscribe`/`getSnapshot` contract that React's `useSyncExternalStore` expects:
+
+```ts
+const client = createTenderlaneClient({ ... });
+
+// In React:
+const state = useSyncExternalStore(
+  client.subscribe,
+  client.getSnapshot,
+  client.getSnapshot,  // Server snapshot (same as client for SSR)
+);
+```
+
+You do not need to call `useSyncExternalStore` directly. The `useTenderlaneCheckout()` hook does this for you and returns a memoized derived state object.
+
+## Stale evaluation handling
+
+When `updateContext()` is called rapidly (e.g., user types quickly in a search field), each call increments an internal version counter. When an async evaluation completes, it checks whether its version is still current. If a newer evaluation has been started, the stale result is discarded.
+
+```ts
+// These happen in rapid succession:
+client.updateContext({ country: 'US', amount: 1000 });  // version 1
+client.updateContext({ country: 'DE', amount: 1000 });  // version 2
+client.updateContext({ country: 'CH', amount: 1000 });  // version 3
+
+// Only version 3's result is applied. Versions 1 and 2 are discarded.
+```
+
+## Middleware integration
+
+Middleware hooks fire at each state transition point. See [Middleware](/concepts/middleware/) for details.
+
+| Transition | Middleware hook |
+|-----------|---------------|
+| Context changed | `onContextChange` |
+| Route evaluated | `onRouteEvaluated` |
+| Session created | `onSessionCreated` |
+| Submit started | `onCheckoutStart` |
+| Submit succeeded | `onCheckoutSuccess` |
+| Any error | `onCheckoutError` |

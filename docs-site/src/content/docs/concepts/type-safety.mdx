@@ -1,0 +1,231 @@
+---
+title: "Type Safety"
+description: "How Tenderlane uses TypeScript to catch payment integration errors at compile time."
+sidebar:
+  order: 5
+---
+
+Tenderlane's type system is designed to catch common payment integration mistakes at compile time rather than in production. Provider IDs, payment method IDs, and flow types are preserved as **string literals** through the entire stack, giving you autocomplete in your editor and type errors when something is wrong.
+
+## `KnownPaymentMethodId` pattern
+
+Payment method IDs use a union of well-known string literals combined with a `(string & {})` escape hatch. This gives you autocomplete for known methods while allowing custom or provider-specific methods.
+
+```ts
+type KnownPaymentMethodId =
+  | 'card'
+  | 'sepa_debit'
+  | 'ideal'
+  | 'twint'
+  | 'apple_pay'
+  | 'google_pay'
+  | 'klarna'
+  // ... more known methods
+  ;
+
+type PaymentMethodId = KnownPaymentMethodId | (string & {});
+```
+
+The same pattern is used for provider IDs:
+
+```ts
+type KnownProviderId =
+  | 'stripe'
+  | 'adyen'
+  | 'polar'
+  | 'revolut'
+  | 'braintree'
+  | 'paypal'
+  | 'mollie'
+  | 'square';
+
+type ProviderId = KnownProviderId | (string & {});
+```
+
+When you write routing rules, your editor autocompletes known values while still accepting custom ones:
+
+```ts
+const rule: RoutingRule = {
+  id: 'default',
+  when: { country: 'US' },
+  use: {
+    provider: 'str', // Editor suggests: 'stripe', 'square'
+    flow: 'check',   // Editor suggests: 'checkout-session'
+    paymentMethods: ['ca'], // Editor suggests: 'card', 'cash_app'
+  },
+};
+```
+
+## Provider ID inference
+
+When you create a provider with `stripeProvider()`, the returned object carries the literal type `'stripe'` as its `id`, not just `string`. This is preserved through the `~types` phantom property.
+
+```ts
+import { stripeProvider } from '@tenderlane/stripe';
+
+const stripe = stripeProvider({
+  publishableKey: 'pk_test_...',
+  serverEndpoint: '/api/checkout',
+});
+
+// Type of stripe.id is 'stripe' (literal), not string
+// Type of stripe.capabilities.flows is readonly ['checkout-session', 'payment-intent']
+// Type of stripe.capabilities.paymentMethods is readonly ['card', 'paypal', 'link', ...]
+```
+
+## `const` type parameter on `createRulesRouter`
+
+The `createRulesRouter` function uses TypeScript's `const` type parameter (`<const T>`) to preserve the literal types of your entire routing configuration:
+
+```ts
+const router = createRulesRouter({
+  rules: [
+    {
+      id: 'swiss',
+      when: { country: 'CH' },
+      use: { provider: 'stripe', flow: 'checkout-session', paymentMethods: ['card', 'twint'] },
+    },
+  ],
+  fallback: { provider: 'stripe', flow: 'checkout-session' },
+});
+
+// TypeScript infers the full literal types:
+// rules[0].id is 'swiss' (not string)
+// rules[0].use.provider is 'stripe' (not string)
+// rules[0].use.paymentMethods is readonly ['card', 'twint'] (not string[])
+```
+
+Without the `const` type parameter, TypeScript would widen these to `string` and `string[]`, losing the compile-time safety.
+
+## Type inference utilities
+
+Tenderlane provides utility types to extract type information from provider adapters:
+
+### `InferProviderId<T>`
+
+Extracts the literal provider ID from an adapter's phantom types.
+
+```ts
+import type { InferProviderId } from '@tenderlane/core';
+import { stripeProvider } from '@tenderlane/stripe';
+
+const stripe = stripeProvider({ publishableKey: '...', serverEndpoint: '...' });
+
+type StripeId = InferProviderId<typeof stripe>;
+// Result: 'stripe'
+```
+
+### `InferProviderIds<T[]>`
+
+Extracts a union of provider IDs from an array of adapters. Useful when you want to constrain which provider IDs are valid in your routing rules.
+
+```ts
+import type { InferProviderIds } from '@tenderlane/core';
+
+const providers = [stripeProvider({ ... }), acmeProvider({ ... })];
+
+type ValidProviders = InferProviderIds<typeof providers>;
+// Result: 'stripe' | 'acme'
+```
+
+### `InferCapabilities<T>`
+
+Extracts the full capabilities type from an adapter.
+
+```ts
+import type { InferCapabilities } from '@tenderlane/core';
+
+type StripeCaps = InferCapabilities<typeof stripe>;
+// Result: {
+//   provider: 'stripe',
+//   flows: readonly ['checkout-session', 'payment-intent'],
+//   paymentMethods: readonly ['card', 'paypal', ...],
+//   ...
+// }
+```
+
+### `InferPaymentMethods<T>`
+
+Extracts the literal payment method IDs supported by a provider.
+
+```ts
+import type { InferPaymentMethods } from '@tenderlane/core';
+
+type StripeMethods = InferPaymentMethods<typeof stripe>;
+// Result: 'card' | 'paypal' | 'link' | 'sepa_debit' | 'ideal' | ...
+```
+
+### `InferProviderOptions<T>`
+
+Extracts the options type used to configure a provider.
+
+```ts
+import type { InferProviderOptions } from '@tenderlane/core';
+
+type StripeOpts = InferProviderOptions<typeof stripe>;
+// Result: StripeProviderOptions (publishableKey, serverEndpoint, etc.)
+```
+
+## How typos are caught
+
+Because provider IDs and payment methods flow through as literal types, typos produce compile-time errors instead of runtime failures.
+
+### Provider ID typo in routing rules
+
+```ts
+const router = createRulesRouter({
+  rules: [
+    {
+      id: 'default',
+      when: {},
+      // 'stripee' would still compile because ProviderId accepts (string & {}),
+      // but your editor's autocomplete will suggest the correct 'stripe'.
+      use: { provider: 'stripe', flow: 'checkout-session' },
+    },
+  ],
+  fallback: { provider: 'stripe', flow: 'checkout-session' },
+});
+```
+
+:::tip
+While Tenderlane's `ProviderId` type accepts arbitrary strings for extensibility, using the autocomplete suggestions from `KnownProviderId` catches most typos. For stricter enforcement, you can narrow the type in your application code using `InferProviderIds<typeof providers>`.
+:::
+
+### Invalid payment method for a provider
+
+When you use `InferPaymentMethods`, you can create type-safe constraints:
+
+```ts
+import type { InferPaymentMethods } from '@tenderlane/core';
+
+type StripeMethod = InferPaymentMethods<typeof stripe>;
+
+// You can create a helper that only accepts valid Stripe methods
+function createStripeRule(paymentMethods: StripeMethod[]) {
+  return {
+    id: 'stripe-rule',
+    when: {},
+    use: { provider: 'stripe' as const, flow: 'checkout-session' as const, paymentMethods },
+  };
+}
+
+createStripeRule(['card', 'twint']);     // OK
+createStripeRule(['card', 'venmo']);     // Type error: 'venmo' is not assignable to StripeMethod
+```
+
+## `Expand<T>` utility
+
+The `Expand` utility type flattens intersection types into a single object type for better IDE display:
+
+```ts
+import type { Expand } from '@tenderlane/core';
+
+// Without Expand, the tooltip shows:
+// { provider: string } & { flow: string }
+
+// With Expand, the tooltip shows:
+// { provider: string; flow: string }
+type Clean = Expand<{ provider: string } & { flow: string }>;
+```
+
+This is a display-only utility that does not change runtime behavior.

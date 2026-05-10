@@ -14,8 +14,9 @@
     "lint": "turbo run lint",
     "clean": "turbo run clean",
     "dev": "turbo run dev",
-    "docs": "typedoc",
-    "docs:serve": "typedoc && npx serve docs"
+    "docs": "cd docs-site && pnpm build",
+    "docs:dev": "cd docs-site && pnpm dev",
+    "docs:serve": "cd docs-site && pnpm preview"
   },
   "devDependencies": {
     "turbo": "^2.3.0",

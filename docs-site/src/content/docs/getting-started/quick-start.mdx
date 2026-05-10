@@ -1,0 +1,183 @@
+---
+title: "Quick Start"
+description: "Build a working checkout page with Tenderlane in under 5 minutes."
+sidebar:
+  order: 3
+---
+
+This guide walks you through building a complete checkout flow: a React page that routes payments through Stripe, backed by a server endpoint that creates Stripe Checkout Sessions. By the end, you will have a working checkout that you can test with Stripe's test card.
+
+## Prerequisites
+
+- Node.js 18+
+- A [Stripe test account](https://dashboard.stripe.com/register) with API keys
+- A React project (Next.js, Vite, or similar)
+
+## 1. Set up environment variables
+
+Create a `.env` file (or `.env.local` for Next.js) with your Stripe keys:
+
+```bash
+STRIPE_SECRET_KEY=sk_test_...
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
+```
+
+:::tip
+You can find your test API keys in the [Stripe Dashboard](https://dashboard.stripe.com/test/apikeys) under Developers > API keys. Make sure you are in test mode.
+:::
+
+## 2. Create the server endpoint
+
+The server endpoint receives checkout requests from Tenderlane and creates Stripe Checkout Sessions. This example uses Next.js App Router, but the handler works with any framework that supports the Web `Request`/`Response` API.
+
+```ts
+// app/api/checkout/route.ts
+import { createTenderlaneHandler } from '@tenderlane/core/server';
+import { stripeServerAdapter } from '@tenderlane/stripe/server';
+
+const handler = createTenderlaneHandler({
+  providers: [
+    stripeServerAdapter({
+      secretKey: process.env.STRIPE_SECRET_KEY!,
+    }),
+  ],
+});
+
+export const POST = handler.POST;
+```
+
+That is the entire server-side setup. The handler dispatches requests to the correct provider adapter based on the `provider` field in the request body and returns a normalized `CheckoutResult`.
+
+## 3. Build the checkout page
+
+```tsx
+// app/checkout/page.tsx
+'use client';
+
+import { useState } from 'react';
+import { TenderlaneProvider, useTenderlaneCheckout } from '@tenderlane/react';
+import { createRulesRouter } from '@tenderlane/core';
+import { stripeProvider } from '@tenderlane/stripe';
+
+const stripe = stripeProvider({
+  publishableKey: process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!,
+  serverEndpoint: '/api/checkout',
+});
+
+const router = createRulesRouter({
+  rules: [
+    {
+      id: 'eu-checkout',
+      when: { country: { in: ['DE', 'FR', 'IT', 'ES', 'AT', 'NL'] } },
+      use: { provider: 'stripe', flow: 'checkout-session', paymentMethods: ['card', 'sepa_debit'] },
+    },
+    {
+      id: 'ch-checkout',
+      when: { country: 'CH' },
+      use: { provider: 'stripe', flow: 'checkout-session', paymentMethods: ['card', 'twint'] },
+    },
+    {
+      id: 'default-checkout',
+      when: {},
+      use: { provider: 'stripe', flow: 'checkout-session', paymentMethods: ['card'] },
+    },
+  ],
+  fallback: { provider: 'stripe', flow: 'checkout-session', paymentMethods: ['card'] },
+});
+
+export default function CheckoutPage() {
+  const [country, setCountry] = useState('US');
+
+  const config = {
+    context: { country, currency: 'usd', amount: 2500 },
+    providers: [stripe],
+    routing: router,
+  };
+
+  return (
+    <TenderlaneProvider config={config}>
+      <h1>Checkout</h1>
+      <label>
+        Country:{' '}
+        <select value={country} onChange={(event) => setCountry(event.target.value)}>
+          <option value="US">United States</option>
+          <option value="DE">Germany</option>
+          <option value="CH">Switzerland</option>
+          <option value="FR">France</option>
+        </select>
+      </label>
+      <CheckoutForm />
+    </TenderlaneProvider>
+  );
+}
+
+function CheckoutForm() {
+  const checkout = useTenderlaneCheckout();
+
+  if (checkout.status === 'evaluating') return <p>Loading...</p>;
+  if (checkout.error) return <p>Error: {checkout.error.message}</p>;
+
+  return (
+    <div>
+      <p>Provider: {checkout.selectedProvider}</p>
+      <p>Payment methods: {checkout.paymentMethods.map((method) => method.label).join(', ')}</p>
+
+      <button
+        disabled={!checkout.canSubmit || checkout.status === 'submitting'}
+        onClick={() =>
+          checkout.submit({
+            lineItems: [
+              { name: 'Premium Widget', quantity: 1, unitAmount: 2500 },
+            ],
+            successUrl: window.location.origin + '/success',
+            cancelUrl: window.location.origin + '/cancel',
+          })
+        }
+      >
+        {checkout.status === 'submitting' ? 'Processing...' : 'Pay $25.00'}
+      </button>
+    </div>
+  );
+}
+```
+
+## 4. Test it
+
+Start your development server and navigate to your checkout page.
+
+1. Select **United States** — you will see "Credit or debit card" as the only payment method
+2. Switch to **Germany** — SEPA Direct Debit appears alongside card
+3. Switch to **Switzerland** — TWINT appears alongside card
+4. Click **Pay $25.00** — you will be redirected to Stripe's hosted checkout page
+5. Use card number `4242 4242 4242 4242` with any future expiry date and any CVC
+
+:::note
+The payment methods shown in the UI update instantly when you change the country. This is Tenderlane's reactive routing in action: the routing rules re-evaluate against the new context, the selected route changes, and the checkout UI updates automatically via `useSyncExternalStore`.
+:::
+
+## What just happened?
+
+Here is the sequence of events when you change the country dropdown:
+
+1. React state update: `setCountry('CH')`
+2. `TenderlaneProvider` detects the context change and calls `client.updateContext({ country: 'CH', ... })`
+3. The rules router evaluates the new context against the rules in order
+4. Rule `ch-checkout` matches (`country: 'CH'`), selecting `['card', 'twint']` as payment methods
+5. The client enters the `ready` state with the new route
+6. `useTenderlaneCheckout` triggers a re-render with the updated payment methods
+7. The UI shows "Credit or debit card, TWINT"
+
+When you click Pay:
+
+1. `checkout.submit()` calls the Stripe browser provider's `submit` method
+2. The provider sends a `POST` to `/api/checkout` with `{ provider: 'stripe', action: 'checkout', payload: { lineItems, successUrl, cancelUrl } }`
+3. The server handler dispatches to the Stripe server adapter
+4. The adapter creates a Stripe Checkout Session and returns the redirect URL
+5. The browser redirects to Stripe's hosted checkout page
+
+## Next steps
+
+- Learn about [Routing](/concepts/routing/) to write more sophisticated rules
+- Explore [Middleware](/concepts/middleware/) for analytics and logging
+- See the [Stripe Checkout Redirect](/cookbooks/stripe-checkout-redirect/) cookbook for a complete end-to-end guide
+- Try [Stripe Elements Inline](/cookbooks/stripe-elements-inline/) for an embedded card form instead of redirect
