@@ -1,12 +1,7 @@
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
-  transpilePackages: [
-    '@tenderlane/core',
-    '@tenderlane/client',
-    '@tenderlane/react',
-    '@tenderlane/stripe',
-  ],
+  transpilePackages: ['tenderlane'],
 };
 
 export default nextConfig;

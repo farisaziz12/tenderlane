@@ -1,7 +1,0 @@
-{
-  "/api/payments/stripe/route": "app/api/payments/stripe/route.js",
-  "/_not-found/page": "app/_not-found/page.js",
-  "/cancel/page": "app/cancel/page.js",
-  "/success/page": "app/success/page.js",
-  "/page": "app/page.js"
-}

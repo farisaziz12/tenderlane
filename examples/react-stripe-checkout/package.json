@@ -9,10 +9,7 @@
     "start": "next start"
   },
   "dependencies": {
-    "@tenderlane/core": "workspace:*",
-    "@tenderlane/client": "workspace:*",
-    "@tenderlane/react": "workspace:*",
-    "@tenderlane/stripe": "workspace:*",
+    "tenderlane": "workspace:*",
     "next": "^15.3.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",

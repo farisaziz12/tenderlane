@@ -1,5 +1,5 @@
-import { createTenderlaneHandler } from '@tenderlane/core/server';
-import { stripeServerAdapter } from '@tenderlane/stripe/server';
+import { createTenderlaneHandler } from 'tenderlane/server';
+import { stripeServerAdapter } from 'tenderlane/stripe/server';
 
 function getHandler() {
   return createTenderlaneHandler({

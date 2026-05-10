@@ -5,12 +5,12 @@ import {
   TenderlaneProvider,
   TenderlaneCheckoutForm,
   useTenderlaneCheckout,
-} from '@tenderlane/react';
-import { stripeProvider } from '@tenderlane/stripe';
-import { StripePaymentElement } from '@tenderlane/stripe/react';
-import { createRulesRouter } from '@tenderlane/core';
-import type { TenderlaneClientConfig } from '@tenderlane/client';
-import type { CheckoutInput } from '@tenderlane/core';
+} from 'tenderlane/react';
+import { stripeProvider } from 'tenderlane/stripe';
+import { StripePaymentElement } from 'tenderlane/stripe/react';
+import { createRulesRouter } from 'tenderlane';
+import type { TenderlaneClientConfig } from 'tenderlane/client';
+import type { CheckoutInput } from 'tenderlane';
 import styles from './checkout.module.css';
 
 const stripe = stripeProvider({

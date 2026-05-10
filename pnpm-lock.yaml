@@ -29,18 +29,6 @@ importers:
 
   examples/react-stripe-checkout:
     dependencies:
-      '@tenderlane/client':
-        specifier: workspace:*
-        version: link:../../packages/client
-      '@tenderlane/core':
-        specifier: workspace:*
-        version: link:../../packages/core
-      '@tenderlane/react':
-        specifier: workspace:*
-        version: link:../../packages/react
-      '@tenderlane/stripe':
-        specifier: workspace:*
-        version: link:../../packages/stripe
       next:
         specifier: ^15.3.0
         version: 15.5.18(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
@@ -53,6 +41,9 @@ importers:
       stripe:
         specifier: ^17.0.0
         version: 17.7.0
+      tenderlane:
+        specifier: workspace:*
+        version: link:../../packages/tenderlane
     devDependencies:
       '@types/react':
         specifier: ^19.1.0
@@ -156,6 +147,40 @@ importers:
       vitest:
         specifier: ^2.1.0
         version: 2.1.9(@types/node@25.6.2)(jsdom@25.0.1)
+
+  packages/tenderlane:
+    dependencies:
+      '@stripe/react-stripe-js':
+        specifier: '>=2.0.0'
+        version: 2.9.0(@stripe/stripe-js@4.10.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      '@stripe/stripe-js':
+        specifier: '>=2.0.0'
+        version: 4.10.0
+      '@tenderlane/client':
+        specifier: workspace:*
+        version: link:../client
+      '@tenderlane/core':
+        specifier: workspace:*
+        version: link:../core
+      '@tenderlane/react':
+        specifier: workspace:*
+        version: link:../react
+      '@tenderlane/stripe':
+        specifier: workspace:*
+        version: link:../stripe
+      react:
+        specifier: '>=18.0.0'
+        version: 19.2.6
+      stripe:
+        specifier: '>=14.0.0'
+        version: 17.7.0
+    devDependencies:
+      tsup:
+        specifier: ^8.3.0
+        version: 8.5.1(postcss@8.5.14)(typescript@5.9.3)(yaml@2.8.4)
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
 
 packages:
 
@@ -3856,6 +3881,13 @@ snapshots:
       prop-types: 15.8.1
       react: 18.3.1
       react-dom: 19.2.6(react@18.3.1)
+
+  '@stripe/react-stripe-js@2.9.0(@stripe/stripe-js@4.10.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)':
+    dependencies:
+      '@stripe/stripe-js': 4.10.0
+      prop-types: 15.8.1
+      react: 19.2.6
+      react-dom: 19.2.6(react@19.2.6)
 
   '@stripe/stripe-js@4.10.0': {}
 
