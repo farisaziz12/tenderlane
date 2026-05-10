@@ -2,6 +2,8 @@ import { defineConfig } from 'astro/config';
 import starlight from '@astrojs/starlight';
 
 export default defineConfig({
+  site: 'https://farisaziz12.github.io',
+  base: '/tenderlane',
   integrations: [
     starlight({
       title: 'Tenderlane',
