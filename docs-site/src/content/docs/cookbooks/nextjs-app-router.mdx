@@ -1,0 +1,358 @@
+---
+title: "Next.js App Router"
+description: "Complete guide to integrating Tenderlane with Next.js App Router."
+sidebar:
+  order: 5
+---
+
+This cookbook provides a complete guide for integrating Tenderlane with Next.js App Router, covering the layout, API route, checkout page, environment setup, and deployment considerations.
+
+## Project structure
+
+```
+app/
+  layout.tsx              # Root layout (no Tenderlane here)
+  api/
+    checkout/
+      route.ts            # Tenderlane server handler
+  checkout/
+    page.tsx              # Checkout page (client component)
+  success/
+    page.tsx              # Success page after payment
+  cancel/
+    page.tsx              # Cancel page (back to shopping)
+.env.local                # Stripe API keys
+```
+
+## 1. Environment setup
+
+```bash
+# .env.local
+STRIPE_SECRET_KEY=sk_test_51ABC...
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_51ABC...
+```
+
+Install the packages:
+
+```bash
+pnpm add @tenderlane/core @tenderlane/client @tenderlane/react @tenderlane/stripe stripe
+```
+
+## 2. API route (server handler)
+
+Create a single API route that handles all Tenderlane checkout requests. The handler is created lazily on the first request to avoid cold-start overhead during builds.
+
+```ts
+// app/api/checkout/route.ts
+import { createTenderlaneHandler } from '@tenderlane/core/server';
+import { stripeServerAdapter } from '@tenderlane/stripe/server';
+
+let handler: ReturnType<typeof createTenderlaneHandler> | null = null;
+
+function getHandler() {
+  if (!handler) {
+    handler = createTenderlaneHandler({
+      providers: [
+        stripeServerAdapter({
+          secretKey: process.env.STRIPE_SECRET_KEY!,
+        }),
+      ],
+    });
+  }
+  return handler;
+}
+
+export async function POST(request: Request): Promise<Response> {
+  return getHandler().POST(request);
+}
+```
+
+:::tip
+Lazy initialization avoids creating a Stripe SDK instance during the build step, which would fail because environment variables are not available at build time. The handler is created on the first incoming request, when `STRIPE_SECRET_KEY` is available.
+:::
+
+## 3. Checkout page
+
+This is a client component (`'use client'`) because it uses React state and browser APIs. The `TenderlaneProvider` and hooks are browser-only.
+
+```tsx
+// app/checkout/page.tsx
+'use client';
+
+import { useState, useMemo } from 'react';
+import { TenderlaneProvider, useTenderlaneCheckout } from '@tenderlane/react';
+import { createRulesRouter } from '@tenderlane/core';
+import type { TenderlaneMiddleware } from '@tenderlane/core';
+import { stripeProvider } from '@tenderlane/stripe';
+
+// Create provider once at module scope (lazy-loads Stripe.js)
+const stripe = stripeProvider({
+  publishableKey: process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!,
+  serverEndpoint: '/api/checkout',
+});
+
+// Create router once at module scope (pure function, no side effects)
+const router = createRulesRouter({
+  rules: [
+    {
+      id: 'eu-checkout',
+      when: { country: { in: ['DE', 'FR', 'IT', 'ES', 'AT', 'NL'] } },
+      use: {
+        provider: 'stripe',
+        flow: 'checkout-session',
+        paymentMethods: ['card', 'sepa_debit'],
+      },
+    },
+    {
+      id: 'ch-checkout',
+      when: { country: 'CH' },
+      use: {
+        provider: 'stripe',
+        flow: 'checkout-session',
+        paymentMethods: ['card', 'twint'],
+      },
+    },
+    {
+      id: 'default-checkout',
+      when: {},
+      use: {
+        provider: 'stripe',
+        flow: 'checkout-session',
+        paymentMethods: ['card'],
+      },
+    },
+  ],
+  fallback: {
+    provider: 'stripe',
+    flow: 'checkout-session',
+    paymentMethods: ['card'],
+  },
+});
+
+// Optional: analytics middleware
+const analyticsMiddleware: TenderlaneMiddleware = {
+  name: 'analytics',
+  onRouteEvaluated({ context, route }) {
+    console.log('[analytics] Route selected:', route.provider, route.flow, route.ruleId);
+  },
+  onCheckoutSuccess({ result }) {
+    console.log('[analytics] Checkout succeeded:', result.id);
+  },
+  onCheckoutError({ error }) {
+    console.error('[analytics] Checkout error:', error.code, error.message);
+  },
+};
+
+export default function CheckoutPage() {
+  const [country, setCountry] = useState('US');
+
+  const config = useMemo(
+    () => ({
+      context: { country, currency: 'usd', amount: 2500 },
+      providers: [stripe] as const,
+      routing: router,
+      middleware: [analyticsMiddleware],
+    }),
+    [country],
+  );
+
+  return (
+    <TenderlaneProvider config={config}>
+      <main style={{ maxWidth: 480, margin: '2rem auto', fontFamily: 'system-ui' }}>
+        <h1>Checkout</h1>
+
+        <label>
+          Country:{' '}
+          <select value={country} onChange={(event) => setCountry(event.target.value)}>
+            <option value="US">United States</option>
+            <option value="DE">Germany</option>
+            <option value="CH">Switzerland</option>
+            <option value="FR">France</option>
+          </select>
+        </label>
+
+        <CheckoutForm />
+      </main>
+    </TenderlaneProvider>
+  );
+}
+
+function CheckoutForm() {
+  const checkout = useTenderlaneCheckout();
+
+  if (checkout.status === 'evaluating') {
+    return <p>Loading payment options...</p>;
+  }
+
+  return (
+    <div style={{ marginTop: '1.5rem' }}>
+      {checkout.error && (
+        <div style={{ color: 'red', padding: '1rem', border: '1px solid red', borderRadius: 4 }}>
+          {checkout.error.message}
+        </div>
+      )}
+
+      <h3>Payment Methods</h3>
+      <ul>
+        {checkout.paymentMethods.map((method) => (
+          <li key={method.id}>{method.label}</li>
+        ))}
+      </ul>
+
+      <button
+        disabled={!checkout.canSubmit || checkout.status === 'submitting'}
+        onClick={() =>
+          checkout.submit({
+            lineItems: [
+              { name: 'Widget', description: 'A fine widget', quantity: 1, unitAmount: 2500 },
+            ],
+            successUrl: `${window.location.origin}/success?session_id={CHECKOUT_SESSION_ID}`,
+            cancelUrl: `${window.location.origin}/checkout`,
+          })
+        }
+        style={{
+          width: '100%',
+          padding: '0.75rem 1.5rem',
+          fontSize: '1rem',
+          backgroundColor: '#6c5ce7',
+          color: 'white',
+          border: 'none',
+          borderRadius: 4,
+          cursor: checkout.canSubmit ? 'pointer' : 'not-allowed',
+          marginTop: '1rem',
+        }}
+      >
+        {checkout.status === 'submitting' ? 'Redirecting...' : 'Pay $25.00'}
+      </button>
+    </div>
+  );
+}
+```
+
+## 4. Success and cancel pages
+
+```tsx
+// app/success/page.tsx
+import { Suspense } from 'react';
+
+function SuccessContent() {
+  return (
+    <main style={{ maxWidth: 480, margin: '2rem auto', textAlign: 'center' }}>
+      <h1>Payment Successful</h1>
+      <p>Thank you for your purchase!</p>
+      <a href="/">Back to Home</a>
+    </main>
+  );
+}
+
+export default function SuccessPage() {
+  return (
+    <Suspense>
+      <SuccessContent />
+    </Suspense>
+  );
+}
+```
+
+```tsx
+// app/cancel/page.tsx
+export default function CancelPage() {
+  return (
+    <main style={{ maxWidth: 480, margin: '2rem auto', textAlign: 'center' }}>
+      <h1>Payment Cancelled</h1>
+      <p>Your payment was not processed.</p>
+      <a href="/checkout">Try again</a>
+    </main>
+  );
+}
+```
+
+## 5. Context sync with application state
+
+In a real application, the checkout context comes from various sources: the user's profile, the cart, feature flags, and geolocation. Here is how to sync all of these into the Tenderlane context.
+
+```tsx
+'use client';
+
+import { useMemo } from 'react';
+import { TenderlaneProvider } from '@tenderlane/react';
+
+function CheckoutLayout({ children }: { children: React.ReactNode }) {
+  // These come from your application state
+  const userCountry = useUserCountry();     // From geolocation or profile
+  const cart = useCart();                     // From cart state
+  const experiments = useExperiments();       // From feature flag service
+  const user = useUser();                     // From auth
+
+  const config = useMemo(
+    () => ({
+      context: {
+        country: userCountry,
+        currency: cart.currency,
+        amount: cart.totalAmount,
+        customer: {
+          id: user?.id,
+          email: user?.email,
+          isLoggedIn: !!user,
+          type: user?.accountType as 'individual' | 'business' | undefined,
+        },
+        experiment: experiments,
+      },
+      providers: [stripe] as const,
+      routing: router,
+      middleware: [analyticsMiddleware],
+    }),
+    [userCountry, cart.currency, cart.totalAmount, experiments, user],
+  );
+
+  return (
+    <TenderlaneProvider config={config}>
+      {children}
+    </TenderlaneProvider>
+  );
+}
+```
+
+:::tip
+When any of these values change (the user switches country, the cart updates, an experiment variant is assigned), `useMemo` produces a new config object, `TenderlaneProvider` detects the context change, and routing re-evaluates automatically. Your checkout UI updates without any manual state management.
+:::
+
+## 6. SSR considerations
+
+Tenderlane's rules router is **synchronous**, so the initial state is `ready` (not `evaluating`). This means the server-rendered HTML and the client hydration see the same initial state, avoiding hydration mismatches.
+
+For the auto router (async), the initial state is `evaluating`, which also matches between server and client since both start from the same initial state.
+
+Key SSR rules:
+
+1. **Never** call `window.location` at the module level. Use it only inside event handlers or effects.
+2. The `stripeProvider` module is safe to import in SSR because it lazy-loads Stripe.js only when `getStripeInstance()` is called.
+3. Keep `createRulesRouter` at module scope. It is a pure function with no side effects.
+
+## 7. Deployment
+
+### Vercel
+
+No special configuration needed. Ensure your environment variables are set in the Vercel dashboard under Settings > Environment Variables.
+
+### Self-hosted / Docker
+
+Set environment variables in your Docker compose or runtime config:
+
+```yaml
+# docker-compose.yml
+services:
+  app:
+    environment:
+      - STRIPE_SECRET_KEY=sk_live_...
+      - NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_live_...
+```
+
+### Edge runtime
+
+The Tenderlane server handler uses the Web `Request`/`Response` standard and works with Edge runtimes (Vercel Edge Functions, Cloudflare Workers). However, the `stripe` npm package may not be fully compatible with all Edge runtimes. Check Stripe's Edge support for your platform.
+
+```ts
+// app/api/checkout/route.ts
+export const runtime = 'edge'; // Optional: use Edge runtime
+```

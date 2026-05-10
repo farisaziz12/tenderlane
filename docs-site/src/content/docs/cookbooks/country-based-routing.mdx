@@ -1,0 +1,265 @@
+---
+title: "Country-Based Routing"
+description: "Route customers to different payment methods based on their country."
+sidebar:
+  order: 3
+---
+
+This cookbook shows how to configure Tenderlane to offer different payment methods based on the customer's country. You will set up routing rules for Switzerland (TWINT + card), Germany/Austria (SEPA + card), and the US (card only), then watch the checkout UI update reactively as the country changes.
+
+## Why country-based routing matters
+
+Payment method preferences vary dramatically by region:
+
+| Country | Preferred methods | Notes |
+|---------|------------------|-------|
+| Switzerland | TWINT, card | TWINT is the dominant mobile payment in Switzerland; CHF only |
+| Germany | SEPA Direct Debit, card, giropay | Bank transfers are preferred for many purchases |
+| Netherlands | iDEAL, card | iDEAL has ~60% online payment market share |
+| United States | Card, Apple Pay, Google Pay | Credit/debit cards dominate |
+
+Showing the right payment methods increases conversion rates. Showing irrelevant methods (e.g., TWINT to a US customer) creates confusion.
+
+## Routing rules
+
+```ts
+import { createRulesRouter } from '@tenderlane/core';
+
+const router = createRulesRouter({
+  rules: [
+    {
+      id: 'ch-payments',
+      description: 'Swiss customers: TWINT + card (CHF only for TWINT)',
+      when: { country: 'CH' },
+      use: {
+        provider: 'stripe',
+        flow: 'checkout-session',
+        paymentMethods: ['twint', 'card'],
+      },
+    },
+    {
+      id: 'dach-payments',
+      description: 'DACH region (DE/AT): SEPA + card',
+      when: { country: { in: ['DE', 'AT'] } },
+      use: {
+        provider: 'stripe',
+        flow: 'checkout-session',
+        paymentMethods: ['sepa_debit', 'card'],
+      },
+    },
+    {
+      id: 'nl-payments',
+      description: 'Netherlands: iDEAL + card',
+      when: { country: 'NL' },
+      use: {
+        provider: 'stripe',
+        flow: 'checkout-session',
+        paymentMethods: ['ideal', 'card'],
+      },
+    },
+    {
+      id: 'us-payments',
+      description: 'US: card + wallets',
+      when: { country: 'US' },
+      use: {
+        provider: 'stripe',
+        flow: 'checkout-session',
+        paymentMethods: ['card', 'apple_pay', 'google_pay'],
+      },
+    },
+    {
+      id: 'default-card',
+      description: 'Everywhere else: card only',
+      when: {},
+      use: {
+        provider: 'stripe',
+        flow: 'checkout-session',
+        paymentMethods: ['card'],
+      },
+    },
+  ],
+  fallback: {
+    provider: 'stripe',
+    flow: 'checkout-session',
+    paymentMethods: ['card'],
+  },
+});
+```
+
+## Complete checkout page
+
+```tsx
+'use client';
+
+import { useState, useMemo } from 'react';
+import { TenderlaneProvider, useTenderlaneCheckout, usePaymentMethods } from '@tenderlane/react';
+import { createRulesRouter } from '@tenderlane/core';
+import { stripeProvider } from '@tenderlane/stripe';
+
+const stripe = stripeProvider({
+  publishableKey: process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!,
+  serverEndpoint: '/api/checkout',
+});
+
+// (router defined above)
+
+export default function CheckoutPage() {
+  const [country, setCountry] = useState('US');
+
+  // Currency follows the country for this example
+  const currencyByCountry: Record<string, string> = {
+    CH: 'chf',
+    DE: 'eur',
+    AT: 'eur',
+    NL: 'eur',
+    US: 'usd',
+    GB: 'gbp',
+  };
+
+  const currency = currencyByCountry[country] ?? 'usd';
+
+  const config = useMemo(
+    () => ({
+      context: { country, currency, amount: 4999 },
+      providers: [stripe] as const,
+      routing: router,
+    }),
+    [country, currency],
+  );
+
+  return (
+    <TenderlaneProvider config={config}>
+      <div style={{ maxWidth: 480, margin: '2rem auto' }}>
+        <h1>Checkout</h1>
+
+        <label>
+          Country:{' '}
+          <select value={country} onChange={(event) => setCountry(event.target.value)}>
+            <option value="US">United States</option>
+            <option value="CH">Switzerland</option>
+            <option value="DE">Germany</option>
+            <option value="AT">Austria</option>
+            <option value="NL">Netherlands</option>
+            <option value="GB">United Kingdom</option>
+          </select>
+        </label>
+
+        <PaymentMethodDisplay />
+        <CheckoutButton currency={currency} />
+      </div>
+    </TenderlaneProvider>
+  );
+}
+
+function PaymentMethodDisplay() {
+  const paymentMethods = usePaymentMethods();
+
+  return (
+    <div style={{ margin: '1rem 0' }}>
+      <h3>Available Payment Methods</h3>
+      <ul>
+        {paymentMethods.map((method) => (
+          <li key={method.id}>
+            <strong>{method.label}</strong>
+            <span style={{ color: '#666', marginLeft: 8 }}>({method.type})</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function CheckoutButton({ currency }: { currency: string }) {
+  const checkout = useTenderlaneCheckout();
+
+  const currencySymbol: Record<string, string> = {
+    usd: '$', eur: '\u20AC', chf: 'CHF ', gbp: '\u00A3',
+  };
+
+  return (
+    <button
+      disabled={!checkout.canSubmit || checkout.status === 'submitting'}
+      onClick={() =>
+        checkout.submit({
+          lineItems: [{ name: 'Premium Widget', quantity: 1, unitAmount: 4999 }],
+          successUrl: window.location.origin + '/success',
+          cancelUrl: window.location.origin + '/checkout',
+        })
+      }
+    >
+      {checkout.status === 'submitting'
+        ? 'Redirecting...'
+        : `Pay ${currencySymbol[currency] ?? ''}49.99`}
+    </button>
+  );
+}
+```
+
+## How reactive switching works
+
+When the user changes the country dropdown from "United States" to "Switzerland":
+
+1. React re-renders with `country: 'CH'` and `currency: 'chf'`
+2. The `config` object is recreated with the new context via `useMemo`
+3. `TenderlaneProvider` detects the context change and calls `client.updateContext()`
+4. The rules router re-evaluates:
+   - Rule `ch-payments` matches (`country: 'CH'`)
+   - Route selects `paymentMethods: ['twint', 'card']`
+5. The client enters `ready` state with the new payment methods
+6. `usePaymentMethods()` triggers a re-render
+7. The UI shows "TWINT" and "Credit or debit card"
+
+This entire sequence happens synchronously for the rules router, so there is no loading state between country changes.
+
+## Currency constraints
+
+TWINT only supports CHF. When you offer TWINT to Swiss customers, make sure you are also setting the currency to `chf`. If you send a non-CHF currency to Stripe with TWINT as a payment method, Stripe will reject the request.
+
+One approach is to couple currency to country in your application logic (as shown above). Another is to add currency conditions to your routing rules:
+
+```ts
+{
+  id: 'ch-twint',
+  when: { country: 'CH', currency: 'chf' },
+  use: {
+    provider: 'stripe',
+    flow: 'checkout-session',
+    paymentMethods: ['twint', 'card'],
+  },
+},
+{
+  id: 'ch-non-chf',
+  when: { country: 'CH' },  // Matches when currency is NOT chf
+  use: {
+    provider: 'stripe',
+    flow: 'checkout-session',
+    paymentMethods: ['card'],  // No TWINT for non-CHF
+  },
+},
+```
+
+Because rules evaluate in order (first match wins), the `ch-twint` rule fires only when both country is CH **and** currency is chf. The `ch-non-chf` rule catches Swiss customers with other currencies.
+
+## Combining country with other conditions
+
+You can combine country with amount thresholds, customer type, or experiment flags:
+
+```ts
+{
+  id: 'de-business-sepa',
+  description: 'German businesses: SEPA for orders over 100 EUR',
+  when: {
+    country: 'DE',
+    currency: 'eur',
+    amount: { gte: 10000 },
+    customer: { type: 'business' },
+  },
+  use: {
+    provider: 'stripe',
+    flow: 'checkout-session',
+    paymentMethods: ['sepa_debit'],
+  },
+},
+```
+
+See the [Routing](/concepts/routing/) concepts page for the full list of condition operators.

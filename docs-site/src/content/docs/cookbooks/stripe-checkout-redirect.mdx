@@ -1,0 +1,332 @@
+---
+title: "Stripe Checkout Redirect"
+description: "End-to-end guide for building a Stripe Checkout redirect flow with Tenderlane."
+sidebar:
+  order: 1
+---
+
+This cookbook walks you through building a complete Stripe Checkout redirect flow from scratch. You will set up a Stripe test account, configure the server adapter, build a React checkout page with routing rules, and test it with Stripe's test cards.
+
+## What you will build
+
+A checkout page that:
+- Routes payments to Stripe Checkout (hosted payment page)
+- Selects payment methods based on the customer's country
+- Redirects to Stripe's hosted checkout page on submit
+- Redirects back to your success or cancel page after payment
+
+## Prerequisites
+
+- Node.js 18+
+- A React project with a server-side API capability (Next.js App Router, Remix, etc.)
+- [Stripe account](https://dashboard.stripe.com/register) (free to create)
+
+## 1. Create a Stripe test account
+
+1. Go to [dashboard.stripe.com/register](https://dashboard.stripe.com/register) and create an account
+2. In the dashboard, toggle to **Test mode** (top-right)
+3. Go to **Developers > API keys**
+4. Copy your **Publishable key** (`pk_test_...`) and **Secret key** (`sk_test_...`)
+
+## 2. Install packages
+
+```bash
+pnpm add @tenderlane/core @tenderlane/client @tenderlane/react @tenderlane/stripe
+```
+
+On the server, you also need the Stripe SDK:
+
+```bash
+pnpm add stripe
+```
+
+## 3. Set up environment variables
+
+Create a `.env.local` file (Next.js) or `.env` file in your project root:
+
+```bash
+STRIPE_SECRET_KEY=sk_test_51ABC...
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_51ABC...
+```
+
+:::caution
+Never commit your secret key to version control. Add `.env.local` to your `.gitignore`.
+:::
+
+## 4. Create the server endpoint
+
+The server endpoint receives checkout requests from the Tenderlane browser provider and creates Stripe Checkout Sessions.
+
+```ts
+// app/api/checkout/route.ts (Next.js App Router)
+import { createTenderlaneHandler } from '@tenderlane/core/server';
+import { stripeServerAdapter } from '@tenderlane/stripe/server';
+
+const stripeAdapter = stripeServerAdapter({
+  secretKey: process.env.STRIPE_SECRET_KEY!,
+});
+
+const handler = createTenderlaneHandler({
+  providers: [stripeAdapter],
+});
+
+export const POST = handler.POST;
+```
+
+This is the entire server-side setup. Here is what happens when a request arrives:
+
+1. `createTenderlaneHandler` parses the request body: `{ provider, action, payload }`
+2. It dispatches to the Stripe adapter based on `provider: 'stripe'`
+3. The adapter maps `CheckoutInput` to Stripe's `checkout.sessions.create()` parameters
+4. It returns a normalized `CheckoutResult` with the redirect URL
+
+## 5. Build the checkout page
+
+```tsx
+// app/checkout/page.tsx
+'use client';
+
+import { useState, useMemo } from 'react';
+import { TenderlaneProvider, useTenderlaneCheckout } from '@tenderlane/react';
+import { createRulesRouter } from '@tenderlane/core';
+import { stripeProvider } from '@tenderlane/stripe';
+
+// Create the Stripe browser provider (lazy-loads Stripe.js)
+const stripe = stripeProvider({
+  publishableKey: process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!,
+  serverEndpoint: '/api/checkout',
+});
+
+// Define routing rules
+const router = createRulesRouter({
+  rules: [
+    {
+      id: 'ch-checkout',
+      description: 'Swiss customers get TWINT + card',
+      when: { country: 'CH' },
+      use: {
+        provider: 'stripe',
+        flow: 'checkout-session',
+        paymentMethods: ['card', 'twint'],
+      },
+    },
+    {
+      id: 'eu-checkout',
+      description: 'EU customers get SEPA + card',
+      when: { country: { in: ['DE', 'AT', 'FR', 'IT', 'ES', 'NL', 'BE'] } },
+      use: {
+        provider: 'stripe',
+        flow: 'checkout-session',
+        paymentMethods: ['card', 'sepa_debit'],
+      },
+    },
+    {
+      id: 'us-checkout',
+      description: 'US customers get card only',
+      when: { country: 'US' },
+      use: {
+        provider: 'stripe',
+        flow: 'checkout-session',
+        paymentMethods: ['card'],
+      },
+    },
+  ],
+  fallback: {
+    provider: 'stripe',
+    flow: 'checkout-session',
+    paymentMethods: ['card'],
+  },
+});
+
+export default function CheckoutPage() {
+  const [country, setCountry] = useState('US');
+  const [currency, setCurrency] = useState('usd');
+
+  const config = useMemo(
+    () => ({
+      context: { country, currency, amount: 4999 },
+      providers: [stripe] as const,
+      routing: router,
+    }),
+    [country, currency],
+  );
+
+  return (
+    <TenderlaneProvider config={config}>
+      <div style={{ maxWidth: 480, margin: '2rem auto', fontFamily: 'system-ui' }}>
+        <h1>Checkout</h1>
+
+        <fieldset>
+          <legend>Shipping details</legend>
+
+          <label style={{ display: 'block', marginBottom: '0.5rem' }}>
+            Country:{' '}
+            <select value={country} onChange={(event) => setCountry(event.target.value)}>
+              <option value="US">United States</option>
+              <option value="DE">Germany</option>
+              <option value="CH">Switzerland</option>
+              <option value="FR">France</option>
+              <option value="GB">United Kingdom</option>
+            </select>
+          </label>
+
+          <label style={{ display: 'block', marginBottom: '0.5rem' }}>
+            Currency:{' '}
+            <select value={currency} onChange={(event) => setCurrency(event.target.value)}>
+              <option value="usd">USD</option>
+              <option value="eur">EUR</option>
+              <option value="chf">CHF</option>
+              <option value="gbp">GBP</option>
+            </select>
+          </label>
+        </fieldset>
+
+        <CheckoutForm />
+      </div>
+    </TenderlaneProvider>
+  );
+}
+
+function CheckoutForm() {
+  const checkout = useTenderlaneCheckout();
+
+  if (checkout.status === 'evaluating') {
+    return <p>Loading payment options...</p>;
+  }
+
+  if (checkout.error) {
+    return (
+      <div style={{ color: 'red', padding: '1rem', border: '1px solid red', borderRadius: 4 }}>
+        <strong>Error:</strong> {checkout.error.message}
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <h2>Order Summary</h2>
+      <table style={{ width: '100%', marginBottom: '1rem' }}>
+        <tbody>
+          <tr>
+            <td>Premium Widget</td>
+            <td style={{ textAlign: 'right' }}>$49.99</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>Available Payment Methods</h3>
+      <ul>
+        {checkout.paymentMethods.map((method) => (
+          <li key={method.id}>
+            {method.label} ({method.type})
+          </li>
+        ))}
+      </ul>
+
+      <p style={{ fontSize: '0.875rem', color: '#666' }}>
+        Routing: {checkout.selectedRoute?.reason}
+      </p>
+
+      <button
+        disabled={!checkout.canSubmit || checkout.status === 'submitting'}
+        onClick={() =>
+          checkout.submit({
+            lineItems: [
+              {
+                name: 'Premium Widget',
+                description: 'A high-quality widget',
+                quantity: 1,
+                unitAmount: 4999,
+              },
+            ],
+            successUrl: window.location.origin + '/success?session_id={CHECKOUT_SESSION_ID}',
+            cancelUrl: window.location.origin + '/checkout',
+            customerEmail: 'test@example.com',
+          })
+        }
+        style={{
+          width: '100%',
+          padding: '0.75rem',
+          fontSize: '1rem',
+          backgroundColor: '#6c5ce7',
+          color: 'white',
+          border: 'none',
+          borderRadius: 4,
+          cursor: checkout.canSubmit ? 'pointer' : 'not-allowed',
+        }}
+      >
+        {checkout.status === 'submitting' ? 'Redirecting to Stripe...' : 'Pay $49.99'}
+      </button>
+    </div>
+  );
+}
+```
+
+## 6. Create success and cancel pages
+
+```tsx
+// app/success/page.tsx
+export default function SuccessPage() {
+  return (
+    <div style={{ maxWidth: 480, margin: '2rem auto', textAlign: 'center' }}>
+      <h1>Payment Successful</h1>
+      <p>Thank you for your purchase!</p>
+    </div>
+  );
+}
+```
+
+## 7. Test with Stripe test cards
+
+Start your development server and navigate to your checkout page:
+
+1. Select a country and click **Pay $49.99**
+2. You will be redirected to Stripe's hosted checkout page
+3. Use these test card numbers:
+
+| Card Number | Result |
+|-------------|--------|
+| `4242 4242 4242 4242` | Successful payment |
+| `4000 0000 0000 3220` | 3D Secure authentication required |
+| `4000 0000 0000 0002` | Card declined |
+
+Use any future expiry date (e.g., `12/34`) and any 3-digit CVC.
+
+4. After payment, you will be redirected to your success page
+
+## 8. Verify in Stripe Dashboard
+
+Go to the [Stripe Dashboard > Payments](https://dashboard.stripe.com/test/payments) to see your test payment. You will see the checkout session with the line items, customer email, and metadata you specified.
+
+## How it works under the hood
+
+```
+Browser                          Server                         Stripe
+  │                                │                              │
+  │  checkout.submit(input)        │                              │
+  │  ──▶ POST /api/checkout        │                              │
+  │      {provider: "stripe",     │                              │
+  │       action: "checkout",      │                              │
+  │       payload: {lineItems...}} │                              │
+  │                                │                              │
+  │                                │  stripe.checkout.sessions    │
+  │                                │  .create({...})              │
+  │                                │  ──────────────────────────▶ │
+  │                                │                              │
+  │                                │  ◀─── {id, url, status}     │
+  │                                │                              │
+  │  ◀── {provider:"stripe",      │                              │
+  │       id:"cs_test_...",        │                              │
+  │       url:"https://checkout.."}│                              │
+  │                                │                              │
+  │  window.location.href = url    │                              │
+  │  ──────────────────────────────────────────────────────────▶ │
+  │                                │                              │
+  │  ◀── redirect to successUrl   │                              │
+```
+
+## Next steps
+
+- Add [middleware for analytics](/cookbooks/middleware-analytics/) to track checkout events
+- Try the [Stripe Elements inline flow](/cookbooks/stripe-elements-inline/) for an embedded card form
+- Implement [country-based routing](/cookbooks/country-based-routing/) with region-specific payment methods

@@ -1,0 +1,289 @@
+---
+title: "A/B Testing Payment Flows"
+description: "Run experiments on checkout flows using Tenderlane's routing rules and middleware."
+sidebar:
+  order: 4
+---
+
+This cookbook shows how to A/B test different payment flows using Tenderlane's routing rules and middleware. You will assign users to experiment variants, route them to different checkout experiences, and fire exposure events for your analytics platform.
+
+## What you will build
+
+An experiment that compares two checkout experiences:
+
+| Variant | Flow | Description |
+|---------|------|-------------|
+| **control** | `checkout-session` | Redirect to Stripe's hosted checkout page |
+| **treatment** | `payment-intent` | Inline card form on your page |
+
+## 1. Routing rules with experiment conditions
+
+Tenderlane routing rules support an `experiment` condition that matches against key-value pairs in the checkout context. This lets you route different experiment variants to different payment flows without any if/else logic in your components.
+
+```ts
+import { createRulesRouter } from '@tenderlane/core';
+
+const router = createRulesRouter({
+  rules: [
+    {
+      id: 'inline-experiment',
+      description: 'Treatment: inline card form (Stripe Elements)',
+      when: {
+        experiment: { checkoutFlow: 'treatment' },
+      },
+      use: {
+        provider: 'stripe',
+        flow: 'payment-intent',
+        paymentMethods: ['card'],
+      },
+    },
+    {
+      id: 'redirect-control',
+      description: 'Control: redirect to Stripe Checkout',
+      when: {
+        experiment: { checkoutFlow: 'control' },
+      },
+      use: {
+        provider: 'stripe',
+        flow: 'checkout-session',
+        paymentMethods: ['card'],
+      },
+    },
+  ],
+  fallback: {
+    provider: 'stripe',
+    flow: 'checkout-session',
+    paymentMethods: ['card'],
+  },
+});
+```
+
+## 2. Variant assignment
+
+Assign experiment variants before creating the Tenderlane config. This example uses a simple random assignment, but in production you would use your experimentation platform (LaunchDarkly, Statsig, PostHog, etc.).
+
+```ts
+function assignVariant(experimentName: string, userId: string): string {
+  // Simple deterministic assignment based on user ID hash
+  // In production, use your experimentation platform's SDK
+  const hash = Array.from(userId).reduce(
+    (accumulator, char) => accumulator + char.charCodeAt(0), 0
+  );
+  return hash % 2 === 0 ? 'control' : 'treatment';
+}
+```
+
+## 3. Middleware for exposure tracking
+
+The exposure event must fire when the user **sees** the experiment variant, not when they are assigned to it. Tenderlane's `onRouteEvaluated` middleware hook is the right place for this, because it fires only when a route is actually selected and the UI is about to render.
+
+```ts
+import type { TenderlaneMiddleware } from '@tenderlane/core';
+
+const experimentExposureMiddleware: TenderlaneMiddleware = {
+  name: 'experiment-exposure',
+
+  onRouteEvaluated({ context, route }) {
+    // Only fire exposure if the route matched an experiment rule
+    if (!context.experiment || !route.ruleId) return;
+
+    for (const [experimentName, variant] of Object.entries(context.experiment)) {
+      analytics.track('experiment_exposure', {
+        experiment: experimentName,
+        variant: String(variant),
+        ruleId: route.ruleId,
+        provider: route.provider,
+        flow: route.flow,
+      });
+    }
+  },
+};
+```
+
+## 4. Complete checkout page
+
+```tsx
+'use client';
+
+import { useMemo } from 'react';
+import { TenderlaneProvider, TenderlaneCheckoutForm, useTenderlaneCheckout } from '@tenderlane/react';
+import { stripeProvider } from '@tenderlane/stripe';
+import { StripePaymentElement } from '@tenderlane/stripe/react';
+import type { TenderlaneMiddleware } from '@tenderlane/core';
+
+const stripe = stripeProvider({
+  publishableKey: process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!,
+  serverEndpoint: '/api/checkout',
+});
+
+// (router and middleware defined above)
+
+export default function CheckoutPage({ userId }: { userId: string }) {
+  const variant = assignVariant('checkoutFlow', userId);
+
+  const config = useMemo(
+    () => ({
+      context: {
+        country: 'US',
+        currency: 'usd',
+        amount: 2500,
+        experiment: { checkoutFlow: variant },
+      },
+      providers: [stripe] as const,
+      routing: router,
+      middleware: [experimentExposureMiddleware],
+    }),
+    [variant],
+  );
+
+  const checkoutInput = {
+    lineItems: [{ name: 'Widget', quantity: 1, unitAmount: 2500 }],
+    successUrl: window.location.origin + '/success',
+    cancelUrl: window.location.origin + '/checkout',
+  };
+
+  return (
+    <TenderlaneProvider config={config}>
+      <div style={{ maxWidth: 480, margin: '2rem auto' }}>
+        <h1>Checkout</h1>
+        <p style={{ color: '#666', fontSize: '0.875rem' }}>
+          Experiment variant: {variant}
+        </p>
+
+        <TenderlaneCheckoutForm
+          input={checkoutInput}
+          elements={{ stripe: StripePaymentElement }}
+        >
+          {({ status, canSubmit, error, checkoutResult, submit }) => (
+            <div>
+              {error && <p style={{ color: 'red' }}>{error.message}</p>}
+
+              {checkoutResult && (
+                <p style={{ color: 'green' }}>Payment succeeded!</p>
+              )}
+
+              <button
+                disabled={!canSubmit || status === 'submitting'}
+                onClick={submit}
+                style={{ width: '100%', padding: '0.75rem', marginTop: '1rem' }}
+              >
+                {status === 'submitting' ? 'Processing...' : 'Pay $25.00'}
+              </button>
+            </div>
+          )}
+        </TenderlaneCheckoutForm>
+      </div>
+    </TenderlaneProvider>
+  );
+}
+```
+
+:::note
+The `TenderlaneCheckoutForm` component handles both redirect and inline flows automatically. When the experiment variant is `control` (redirect flow), it renders only the pay button. When the variant is `treatment` (inline flow), it auto-prepares the PaymentIntent and renders the `StripePaymentElement`.
+:::
+
+## How it works
+
+1. The user arrives at the checkout page
+2. `assignVariant()` determines their experiment variant (e.g., `treatment`)
+3. The context is created with `experiment: { checkoutFlow: 'treatment' }`
+4. The router evaluates the rules:
+   - Rule `inline-experiment` matches (`experiment.checkoutFlow === 'treatment'`)
+   - Route selects `flow: 'payment-intent'`
+5. `experimentExposureMiddleware.onRouteEvaluated()` fires the exposure event
+6. `TenderlaneCheckoutForm` auto-prepares the PaymentIntent and renders the inline card form
+7. User completes payment inline without a redirect
+
+If the variant were `control`, rule `redirect-control` would match, selecting `flow: 'checkout-session'`, and clicking Pay would redirect to Stripe's hosted page.
+
+## Multi-factor experiments
+
+You can run experiments that vary more than just the flow. For example, test different payment method combinations:
+
+```ts
+const router = createRulesRouter({
+  rules: [
+    {
+      id: 'wallets-enabled',
+      when: { experiment: { showWallets: true } },
+      use: {
+        provider: 'stripe',
+        flow: 'checkout-session',
+        paymentMethods: ['card', 'apple_pay', 'google_pay'],
+      },
+    },
+    {
+      id: 'wallets-disabled',
+      when: { experiment: { showWallets: false } },
+      use: {
+        provider: 'stripe',
+        flow: 'checkout-session',
+        paymentMethods: ['card'],
+      },
+    },
+  ],
+  fallback: { provider: 'stripe', flow: 'checkout-session', paymentMethods: ['card'] },
+});
+```
+
+## Combining experiments with country routing
+
+Experiments can be combined with other conditions. Put the more specific experiment rules first:
+
+```ts
+const router = createRulesRouter({
+  rules: [
+    // Experiment variant for Swiss customers
+    {
+      id: 'ch-inline-experiment',
+      when: { country: 'CH', experiment: { checkoutFlow: 'treatment' } },
+      use: {
+        provider: 'stripe',
+        flow: 'payment-intent',
+        paymentMethods: ['card', 'twint'],
+      },
+    },
+    // Default Swiss routing (control)
+    {
+      id: 'ch-default',
+      when: { country: 'CH' },
+      use: {
+        provider: 'stripe',
+        flow: 'checkout-session',
+        paymentMethods: ['card', 'twint'],
+      },
+    },
+    // Default for everyone else
+    {
+      id: 'default',
+      when: {},
+      use: { provider: 'stripe', flow: 'checkout-session', paymentMethods: ['card'] },
+    },
+  ],
+  fallback: { provider: 'stripe', flow: 'checkout-session', paymentMethods: ['card'] },
+});
+```
+
+## Tracking conversions
+
+Use the `onCheckoutSuccess` middleware hook to track conversions per experiment variant:
+
+```ts
+const conversionTrackingMiddleware: TenderlaneMiddleware = {
+  name: 'conversion-tracking',
+
+  onCheckoutSuccess({ context, route, result }) {
+    if (context.experiment) {
+      for (const [experimentName, variant] of Object.entries(context.experiment)) {
+        analytics.track('experiment_conversion', {
+          experiment: experimentName,
+          variant: String(variant),
+          provider: result.provider,
+          ruleId: route.ruleId,
+          sessionId: result.id,
+        });
+      }
+    }
+  },
+};
+```

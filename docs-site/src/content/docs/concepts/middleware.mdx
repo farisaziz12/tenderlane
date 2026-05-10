@@ -1,0 +1,284 @@
+---
+title: "Middleware"
+description: "Observe and react to every lifecycle event in the Tenderlane checkout flow."
+sidebar:
+  order: 4
+---
+
+Middleware lets you hook into every stage of the checkout lifecycle: context changes, route evaluations, session creation, checkout start, success, and errors. Use middleware for analytics, logging, error tracking, experiment exposure, or any side effect that should happen alongside the payment flow.
+
+## Defining middleware
+
+A middleware is a plain object with a `name` and one or more lifecycle hook methods:
+
+```ts
+import type { TenderlaneMiddleware } from '@tenderlane/core';
+
+const loggingMiddleware: TenderlaneMiddleware = {
+  name: 'logging',
+
+  onContextChange({ previousContext, nextContext }) {
+    console.log('Context changed', { previousContext, nextContext });
+  },
+
+  onRouteEvaluated({ context, route }) {
+    console.log('Route selected', { provider: route.provider, flow: route.flow, rule: route.ruleId });
+  },
+
+  onCheckoutStart({ context, route, input }) {
+    console.log('Checkout starting', { provider: route.provider, items: input.lineItems.length });
+  },
+
+  onCheckoutSuccess({ context, route, result }) {
+    console.log('Checkout succeeded', { provider: result.provider, sessionId: result.id });
+  },
+
+  onCheckoutError({ context, route, error }) {
+    console.error('Checkout error', { code: error.code, message: error.message });
+  },
+};
+```
+
+## Registering middleware
+
+Pass middleware as an array in the client configuration. Middleware hooks execute in the order they appear in the array.
+
+```ts
+import { createTenderlaneClient } from '@tenderlane/client';
+
+const client = createTenderlaneClient({
+  context: { country: 'US', currency: 'usd', amount: 2500 },
+  providers: [stripe],
+  routing: router,
+  middleware: [loggingMiddleware, analyticsMiddleware, errorTrackingMiddleware],
+});
+```
+
+Or with React:
+
+```tsx
+<TenderlaneProvider
+  config={{
+    context: { country: 'US', currency: 'usd', amount: 2500 },
+    providers: [stripe],
+    routing: router,
+    middleware: [loggingMiddleware, analyticsMiddleware],
+  }}
+>
+  {children}
+</TenderlaneProvider>
+```
+
+## Lifecycle hooks
+
+### `onContextChange`
+
+Fired when `client.updateContext()` is called with a new context. Receives both the previous and next context, which is useful for tracking what changed.
+
+```ts
+onContextChange({ previousContext, nextContext }) {
+  if (previousContext.country !== nextContext.country) {
+    analytics.track('country_changed', {
+      from: previousContext.country,
+      to: nextContext.country,
+    });
+  }
+}
+```
+
+**When it fires:** After `updateContext()` updates the internal state, before the router re-evaluates.
+
+### `onRouteEvaluated`
+
+Fired after the router selects a route. Receives the context and the selected route, including which rule matched.
+
+```ts
+onRouteEvaluated({ context, route }) {
+  analytics.track('route_evaluated', {
+    provider: route.provider,
+    flow: route.flow,
+    ruleId: route.ruleId,
+    source: route.source,
+    paymentMethods: route.paymentMethods,
+  });
+}
+```
+
+**When it fires:** After the route is applied and the client enters `ready` state.
+
+### `onSessionCreated`
+
+Fired after `client.prepare()` creates a provider session for inline payment flows. Receives the session data including the `clientSecret`.
+
+```ts
+onSessionCreated({ context, route, session }) {
+  analytics.track('session_created', {
+    provider: route.provider,
+    flow: session.flow,
+    sessionId: session.sessionId,
+  });
+}
+```
+
+**When it fires:** After the provider's `createSession()` returns and the client enters `prepared` state.
+
+### `onCheckoutStart`
+
+Fired when `client.submit()` is called, before the provider processes the payment. This is the right place to fire an "add to cart" or "begin checkout" analytics event.
+
+```ts
+onCheckoutStart({ context, route, input }) {
+  analytics.track('checkout_started', {
+    provider: route.provider,
+    flow: route.flow,
+    itemCount: input.lineItems.length,
+    totalAmount: input.lineItems.reduce(
+      (sum, item) => sum + item.unitAmount * item.quantity, 0
+    ),
+  });
+}
+```
+
+**When it fires:** After the client enters `submitting` state, before the provider's `submit()` is called.
+
+### `onCheckoutSuccess`
+
+Fired after the provider's `submit()` returns successfully. For redirect flows, this may fire just before the browser redirects to the provider's hosted page.
+
+```ts
+onCheckoutSuccess({ context, route, result }) {
+  analytics.track('checkout_completed', {
+    provider: result.provider,
+    sessionId: result.id,
+    status: result.status,
+  });
+}
+```
+
+**When it fires:** After the client enters `success` state.
+
+### `onCheckoutError`
+
+Fired on any error during evaluation, preparation, or submission. The error is always a `TenderlaneError` instance with a typed `code` field.
+
+```ts
+onCheckoutError({ context, route, error }) {
+  errorTracker.captureException(error, {
+    tags: {
+      tenderlaneCode: error.code,
+      provider: error.provider ?? 'unknown',
+    },
+    extra: {
+      country: context.country,
+      ruleId: route?.ruleId,
+    },
+  });
+}
+```
+
+**When it fires:** After the client enters `error` state.
+
+## Execution order
+
+Middleware hooks execute **sequentially** in the order they appear in the middleware array. Each middleware's hook must complete (or its promise must resolve) before the next middleware's hook is called.
+
+```ts
+middleware: [first, second, third]
+// For each hook event:
+// 1. first.onRouteEvaluated()  — awaited
+// 2. second.onRouteEvaluated() — awaited
+// 3. third.onRouteEvaluated()  — awaited
+```
+
+## Error handling
+
+If a middleware hook throws an error, it is caught and logged to `console.error`. The error **does not** stop subsequent middleware from executing and **does not** affect the client state machine.
+
+```ts
+// This middleware throws, but the checkout flow continues normally
+const brokenMiddleware: TenderlaneMiddleware = {
+  name: 'broken',
+  onCheckoutStart() {
+    throw new Error('Analytics service is down');
+  },
+};
+
+// Console output:
+// [tenderlane] Middleware "broken" error in onCheckoutStart: Error: Analytics service is down
+```
+
+:::tip
+Middleware errors are intentionally non-fatal. A broken analytics integration should never prevent a customer from completing their purchase. If you need to block checkout on middleware failure, handle that logic in your application code instead.
+:::
+
+## Async middleware
+
+All lifecycle hooks can return a `Promise`. The middleware runner will `await` each hook before moving to the next middleware.
+
+```ts
+const asyncMiddleware: TenderlaneMiddleware = {
+  name: 'async-analytics',
+
+  async onCheckoutSuccess({ result }) {
+    // This is awaited before the next middleware runs
+    await fetch('https://analytics.example.com/events', {
+      method: 'POST',
+      body: JSON.stringify({ event: 'purchase', sessionId: result.id }),
+    });
+  },
+};
+```
+
+## Common patterns
+
+### Combined logging and analytics
+
+```ts
+const observabilityMiddleware: TenderlaneMiddleware = {
+  name: 'observability',
+
+  onRouteEvaluated({ context, route }) {
+    console.debug(`[tenderlane] Route: ${route.provider}/${route.flow} (rule: ${route.ruleId ?? 'fallback'})`);
+    analytics.track('payment_route_selected', {
+      provider: route.provider,
+      country: context.country,
+    });
+  },
+
+  onCheckoutStart({ input }) {
+    console.debug(`[tenderlane] Checkout starting with ${input.lineItems.length} items`);
+  },
+
+  onCheckoutSuccess({ result }) {
+    console.debug(`[tenderlane] Checkout success: ${result.id}`);
+    analytics.track('payment_completed', { sessionId: result.id });
+  },
+
+  onCheckoutError({ error }) {
+    console.error(`[tenderlane] Checkout error: [${error.code}] ${error.message}`);
+    errorTracker.captureException(error);
+  },
+};
+```
+
+### Experiment exposure tracking
+
+```ts
+const experimentMiddleware: TenderlaneMiddleware = {
+  name: 'experiment-exposure',
+
+  onRouteEvaluated({ context, route }) {
+    if (context.experiment && route.ruleId) {
+      for (const [experimentName, variant] of Object.entries(context.experiment)) {
+        analytics.track('experiment_exposure', {
+          experiment: experimentName,
+          variant: String(variant),
+          ruleId: route.ruleId,
+        });
+      }
+    }
+  },
+};
+```
+
+See the [Middleware Analytics](/cookbooks/middleware-analytics/) cookbook for more detailed examples.

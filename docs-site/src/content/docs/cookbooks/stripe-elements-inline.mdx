@@ -1,0 +1,270 @@
+---
+title: "Stripe Elements Inline"
+description: "Build an inline card payment form using Stripe Elements and Tenderlane."
+sidebar:
+  order: 2
+---
+
+This cookbook shows how to build an inline payment form using Stripe Elements (PaymentElement) instead of redirecting to Stripe's hosted checkout page. The payment form renders directly on your page, and payment confirmation happens without a full-page redirect.
+
+## When to use inline vs. redirect
+
+| Aspect | Redirect (Checkout Session) | Inline (Payment Intent + Elements) |
+|--------|---------------------------|--------------------------------------|
+| **UX** | Leaves your site, Stripe-hosted page | Stays on your page, embedded form |
+| **Customization** | Limited to Stripe's checkout UI | Full control over form layout and styling |
+| **Setup complexity** | Simpler (no Elements to mount) | More moving parts (session creation, element mounting) |
+| **Conversion** | Stripe-optimized checkout page | Your own flow, your own design |
+
+## What you will build
+
+A checkout page that:
+- Creates a Stripe PaymentIntent via `client.prepare()`
+- Renders a Stripe PaymentElement inline on your page
+- Confirms the payment without leaving your site
+- Shows success/error states inline
+
+## Prerequisites
+
+Same as the [Stripe Checkout Redirect](/cookbooks/stripe-checkout-redirect/) cookbook, plus the Stripe React bindings:
+
+```bash
+pnpm add @tenderlane/core @tenderlane/client @tenderlane/react @tenderlane/stripe
+pnpm add @stripe/stripe-js @stripe/react-stripe-js
+pnpm add stripe  # server-side
+```
+
+## 1. Server endpoint
+
+The same server endpoint handles both checkout sessions and payment intents. The Stripe server adapter supports both actions.
+
+```ts
+// app/api/checkout/route.ts
+import { createTenderlaneHandler } from '@tenderlane/core/server';
+import { stripeServerAdapter } from '@tenderlane/stripe/server';
+
+const handler = createTenderlaneHandler({
+  providers: [
+    stripeServerAdapter({
+      secretKey: process.env.STRIPE_SECRET_KEY!,
+    }),
+  ],
+});
+
+export const POST = handler.POST;
+```
+
+:::note
+No changes are needed from the redirect flow. The same endpoint handles `action: 'checkout'` (redirect) and `action: 'create-payment-intent'` (inline). Tenderlane selects the action based on the route's `flow` setting.
+:::
+
+## 2. Build the checkout page
+
+The key differences from the redirect flow:
+
+1. The routing rule uses `flow: 'payment-intent'` instead of `flow: 'checkout-session'`
+2. We use `TenderlaneCheckoutForm` with an `elements` map to auto-prepare and render the inline form
+3. We import `StripePaymentElement` from `@tenderlane/stripe/react`
+
+```tsx
+// app/checkout/page.tsx
+'use client';
+
+import { useState, useMemo } from 'react';
+import { TenderlaneProvider, TenderlaneCheckoutForm } from '@tenderlane/react';
+import { createRulesRouter } from '@tenderlane/core';
+import { stripeProvider } from '@tenderlane/stripe';
+import { StripePaymentElement } from '@tenderlane/stripe/react';
+
+const stripe = stripeProvider({
+  publishableKey: process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!,
+  serverEndpoint: '/api/checkout',
+});
+
+const router = createRulesRouter({
+  rules: [
+    {
+      id: 'inline-card',
+      description: 'Inline card payment via Stripe Elements',
+      when: {},
+      use: {
+        provider: 'stripe',
+        flow: 'payment-intent',
+        paymentMethods: ['card'],
+      },
+    },
+  ],
+  fallback: {
+    provider: 'stripe',
+    flow: 'payment-intent',
+    paymentMethods: ['card'],
+  },
+});
+
+const checkoutInput = {
+  lineItems: [
+    {
+      name: 'Premium Widget',
+      description: 'A high-quality widget',
+      quantity: 1,
+      unitAmount: 2500,
+    },
+  ],
+  successUrl: typeof window !== 'undefined'
+    ? window.location.origin + '/success'
+    : 'http://localhost:3000/success',
+  cancelUrl: typeof window !== 'undefined'
+    ? window.location.origin + '/checkout'
+    : 'http://localhost:3000/checkout',
+};
+
+export default function CheckoutPage() {
+  const config = useMemo(
+    () => ({
+      context: { country: 'US', currency: 'usd', amount: 2500 },
+      providers: [stripe] as const,
+      routing: router,
+    }),
+    [],
+  );
+
+  return (
+    <TenderlaneProvider config={config}>
+      <div style={{ maxWidth: 480, margin: '2rem auto', fontFamily: 'system-ui' }}>
+        <h1>Checkout</h1>
+
+        <h2>Order Summary</h2>
+        <p>Premium Widget - $25.00</p>
+
+        <TenderlaneCheckoutForm
+          input={checkoutInput}
+          elements={{ stripe: StripePaymentElement }}
+        >
+          {({ status, canSubmit, error, checkoutResult, submit }) => (
+            <div>
+              {error && (
+                <div style={{ color: 'red', marginBottom: '1rem' }}>
+                  {error.message}
+                </div>
+              )}
+
+              {checkoutResult && (
+                <div style={{ color: 'green', marginBottom: '1rem' }}>
+                  Payment succeeded! ID: {checkoutResult.id}
+                </div>
+              )}
+
+              {status === 'preparing' && (
+                <p>Loading payment form...</p>
+              )}
+
+              <button
+                disabled={!canSubmit || status === 'submitting'}
+                onClick={submit}
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  fontSize: '1rem',
+                  backgroundColor: canSubmit ? '#6c5ce7' : '#ccc',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: 4,
+                  marginTop: '1rem',
+                  cursor: canSubmit ? 'pointer' : 'not-allowed',
+                }}
+              >
+                {status === 'submitting' ? 'Processing...' : 'Pay $25.00'}
+              </button>
+            </div>
+          )}
+        </TenderlaneCheckoutForm>
+      </div>
+    </TenderlaneProvider>
+  );
+}
+```
+
+## How `TenderlaneCheckoutForm` works
+
+The `TenderlaneCheckoutForm` component handles the inline flow lifecycle automatically:
+
+1. **Auto-prepare**: When the route selects an inline flow (`payment-intent`), the form automatically calls `client.prepare(input)` to create a PaymentIntent on the server. This transitions the state to `preparing` then `prepared`.
+
+2. **Element rendering**: When `prepared`, the form looks up the matching element component from the `elements` map (keyed by provider ID) and renders it with the `clientSecret` from the provider session.
+
+3. **Re-prepare on changes**: If the `input` prop changes (e.g., the user updates their cart), the form automatically creates a new PaymentIntent.
+
+4. **Children render prop**: Your custom UI receives the current state and a `submit` function. The inline payment element renders above the children automatically.
+
+```tsx
+<TenderlaneCheckoutForm
+  input={checkoutInput}
+  elements={{ stripe: StripePaymentElement }}
+>
+  {({ status, canSubmit, error, submit }) => (
+    // Your custom pay button and error display
+  )}
+</TenderlaneCheckoutForm>
+```
+
+## Lazy loading benefit
+
+Both `@stripe/stripe-js` and `@stripe/react-stripe-js` are **lazy-loaded** when using Tenderlane's Stripe integration:
+
+- `Stripe.js` loads via dynamic `import()` when the provider's `getStripeInstance()` is first called
+- `@stripe/react-stripe-js` loads via `React.lazy` when `StripePaymentElement` first mounts
+
+This means pages that use redirect flows (or non-Stripe providers) pay zero bundle cost for the Elements integration. The heavy Stripe React library is code-split and only downloaded when the inline payment form actually renders.
+
+## State flow for inline payments
+
+```
+ready ──▶ preparing ──▶ prepared ──▶ submitting ──▶ success
+                                                      │
+             (auto)         (render          (user      ▼
+           prepare()     PaymentElement)   clicks Pay)  error
+```
+
+1. **ready** — Route evaluated, `flow: 'payment-intent'` selected
+2. **preparing** — `TenderlaneCheckoutForm` auto-calls `client.prepare(input)`, which sends `POST /api/checkout` with `action: 'create-payment-intent'`
+3. **prepared** — Server returns the `clientSecret`, `StripePaymentElement` renders the card form
+4. **submitting** — User fills the form and clicks Pay, `stripe.confirmPayment()` is called
+5. **success** or **error** — Payment confirmed inline (no redirect needed for simple card payments)
+
+## Test with Stripe test cards
+
+| Card Number | Result |
+|-------------|--------|
+| `4242 4242 4242 4242` | Successful payment (no redirect) |
+| `4000 0025 0000 3155` | Requires authentication (shows 3D Secure modal) |
+| `4000 0000 0000 0002` | Card declined |
+
+:::tip
+With inline Elements, successful test card payments complete without any page navigation. The `checkoutResult` is populated directly in the component state, and you can show a success message inline.
+:::
+
+## Mixing redirect and inline flows
+
+You can use routing rules to choose between redirect and inline flows based on context:
+
+```ts
+const router = createRulesRouter({
+  rules: [
+    {
+      id: 'high-value-redirect',
+      description: 'High-value orders use Stripe Checkout for trust',
+      when: { amount: { gte: 50000 } },
+      use: { provider: 'stripe', flow: 'checkout-session', paymentMethods: ['card'] },
+    },
+    {
+      id: 'default-inline',
+      description: 'Standard orders use inline Elements',
+      when: {},
+      use: { provider: 'stripe', flow: 'payment-intent', paymentMethods: ['card'] },
+    },
+  ],
+  fallback: { provider: 'stripe', flow: 'checkout-session', paymentMethods: ['card'] },
+});
+```
+
+When the route switches between `checkout-session` and `payment-intent`, `TenderlaneCheckoutForm` automatically shows or hides the inline payment element and adjusts the submit behavior.
