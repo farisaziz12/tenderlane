@@ -1,0 +1,25 @@
+{
+  "name": "tenderlane",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Reactive payment orchestration SDK for modern web apps",
+  "packageManager": "pnpm@9.15.4",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "build": "turbo run build",
+    "test": "turbo run test",
+    "typecheck": "turbo run typecheck",
+    "lint": "turbo run lint",
+    "clean": "turbo run clean",
+    "dev": "turbo run dev",
+    "docs": "typedoc",
+    "docs:serve": "typedoc && npx serve docs"
+  },
+  "devDependencies": {
+    "turbo": "^2.3.0",
+    "typedoc": "^0.28.0",
+    "typescript": "^5.7.0"
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "entryPoints": [
+    "packages/core/src/index.ts",
+    "packages/core/src/server/index.ts",
+    "packages/client/src/index.ts",
+    "packages/react/src/index.ts",
+    "packages/stripe/src/index.ts",
+    "packages/stripe/src/server/index.ts",
+    "packages/stripe/src/react/index.ts"
+  ],
+  "entryPointStrategy": "resolve",
+  "out": "docs",
+  "tsconfig": "tsconfig.docs.json",
+  "name": "Tenderlane",
+  "includeVersion": false,
+  "excludePrivate": true,
+  "excludeInternal": true,
+  "githubPages": true,
+  "categorizeByGroup": true,
+  "sort": ["alphabetical"],
+  "exclude": ["**/__tests__/**", "**/node_modules/**", "examples/**"]
+}

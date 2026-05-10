@@ -1,0 +1,56 @@
+{
+  "name": "@tenderlane/stripe",
+  "version": "0.1.0-alpha.0",
+  "description": "Stripe provider adapter for Tenderlane payment orchestration",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./server": {
+      "types": "./dist/server/index.d.ts",
+      "import": "./dist/server/index.js"
+    },
+    "./react": {
+      "types": "./dist/react/index.d.ts",
+      "import": "./dist/react/index.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": ["dist"],
+  "scripts": {
+    "build": "rm -rf dist && tsup",
+    "dev": "tsup --watch",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@tenderlane/core": "workspace:*"
+  },
+  "peerDependencies": {
+    "stripe": ">=14.0.0",
+    "@stripe/stripe-js": ">=2.0.0",
+    "@stripe/react-stripe-js": ">=2.0.0",
+    "react": ">=18.0.0"
+  },
+  "peerDependenciesMeta": {
+    "stripe": { "optional": true },
+    "@stripe/stripe-js": { "optional": true },
+    "@stripe/react-stripe-js": { "optional": true },
+    "react": { "optional": true }
+  },
+  "devDependencies": {
+    "@stripe/stripe-js": "^4.0.0",
+    "@stripe/react-stripe-js": "^2.0.0",
+    "@types/react": "^18.3.0",
+    "react": "^18.3.0",
+    "stripe": "^17.0.0",
+    "tsup": "^8.3.0",
+    "typescript": "^5.7.0",
+    "vitest": "^2.1.0"
+  },
+  "license": "MIT"
+}

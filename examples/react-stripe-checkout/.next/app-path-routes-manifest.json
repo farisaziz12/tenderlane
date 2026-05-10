@@ -1,0 +1,7 @@
+{
+  "/api/payments/stripe/route": "/api/payments/stripe",
+  "/_not-found/page": "/_not-found",
+  "/cancel/page": "/cancel",
+  "/success/page": "/success",
+  "/page": "/"
+}

@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(rm -rf .turbo examples/react-stripe-checkout/.next)",
+      "Bash(pnpm build:*)",
+      "Bash(pnpm --filter \"@tenderlane/*\" test)",
+      "WebSearch",
+      "WebFetch(domain:docs.stripe.com)"
+    ]
+  }
+}

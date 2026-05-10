@@ -1,0 +1,26 @@
+{
+  "name": "nextjs-stripe-checkout-example",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "next dev --turbopack",
+    "build": "next build",
+    "start": "next start"
+  },
+  "dependencies": {
+    "@tenderlane/core": "workspace:*",
+    "@tenderlane/client": "workspace:*",
+    "@tenderlane/react": "workspace:*",
+    "@tenderlane/stripe": "workspace:*",
+    "next": "^15.3.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "stripe": "^17.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.0",
+    "typescript": "^5.7.0"
+  }
+}
