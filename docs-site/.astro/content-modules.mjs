@@ -1,0 +1,18 @@
+
+export default new Map([
+["src/content/docs/concepts/middleware.mdx", () => import("astro:content-layer-deferred-module?astro%3Acontent-layer-deferred-module=&fileName=src%2Fcontent%2Fdocs%2Fconcepts%2Fmiddleware.mdx&astroContentModuleFlag=true")],
+["src/content/docs/concepts/providers.mdx", () => import("astro:content-layer-deferred-module?astro%3Acontent-layer-deferred-module=&fileName=src%2Fcontent%2Fdocs%2Fconcepts%2Fproviders.mdx&astroContentModuleFlag=true")],
+["src/content/docs/index.mdx", () => import("astro:content-layer-deferred-module?astro%3Acontent-layer-deferred-module=&fileName=src%2Fcontent%2Fdocs%2Findex.mdx&astroContentModuleFlag=true")],
+["src/content/docs/concepts/routing.mdx", () => import("astro:content-layer-deferred-module?astro%3Acontent-layer-deferred-module=&fileName=src%2Fcontent%2Fdocs%2Fconcepts%2Frouting.mdx&astroContentModuleFlag=true")],
+["src/content/docs/concepts/type-safety.mdx", () => import("astro:content-layer-deferred-module?astro%3Acontent-layer-deferred-module=&fileName=src%2Fcontent%2Fdocs%2Fconcepts%2Ftype-safety.mdx&astroContentModuleFlag=true")],
+["src/content/docs/cookbooks/ab-testing-payment-flows.mdx", () => import("astro:content-layer-deferred-module?astro%3Acontent-layer-deferred-module=&fileName=src%2Fcontent%2Fdocs%2Fcookbooks%2Fab-testing-payment-flows.mdx&astroContentModuleFlag=true")],
+["src/content/docs/concepts/state-machine.mdx", () => import("astro:content-layer-deferred-module?astro%3Acontent-layer-deferred-module=&fileName=src%2Fcontent%2Fdocs%2Fconcepts%2Fstate-machine.mdx&astroContentModuleFlag=true")],
+["src/content/docs/cookbooks/middleware-analytics.mdx", () => import("astro:content-layer-deferred-module?astro%3Acontent-layer-deferred-module=&fileName=src%2Fcontent%2Fdocs%2Fcookbooks%2Fmiddleware-analytics.mdx&astroContentModuleFlag=true")],
+["src/content/docs/cookbooks/nextjs-app-router.mdx", () => import("astro:content-layer-deferred-module?astro%3Acontent-layer-deferred-module=&fileName=src%2Fcontent%2Fdocs%2Fcookbooks%2Fnextjs-app-router.mdx&astroContentModuleFlag=true")],
+["src/content/docs/cookbooks/country-based-routing.mdx", () => import("astro:content-layer-deferred-module?astro%3Acontent-layer-deferred-module=&fileName=src%2Fcontent%2Fdocs%2Fcookbooks%2Fcountry-based-routing.mdx&astroContentModuleFlag=true")],
+["src/content/docs/getting-started/installation.mdx", () => import("astro:content-layer-deferred-module?astro%3Acontent-layer-deferred-module=&fileName=src%2Fcontent%2Fdocs%2Fgetting-started%2Finstallation.mdx&astroContentModuleFlag=true")],
+["src/content/docs/cookbooks/stripe-elements-inline.mdx", () => import("astro:content-layer-deferred-module?astro%3Acontent-layer-deferred-module=&fileName=src%2Fcontent%2Fdocs%2Fcookbooks%2Fstripe-elements-inline.mdx&astroContentModuleFlag=true")],
+["src/content/docs/cookbooks/stripe-checkout-redirect.mdx", () => import("astro:content-layer-deferred-module?astro%3Acontent-layer-deferred-module=&fileName=src%2Fcontent%2Fdocs%2Fcookbooks%2Fstripe-checkout-redirect.mdx&astroContentModuleFlag=true")],
+["src/content/docs/getting-started/introduction.mdx", () => import("astro:content-layer-deferred-module?astro%3Acontent-layer-deferred-module=&fileName=src%2Fcontent%2Fdocs%2Fgetting-started%2Fintroduction.mdx&astroContentModuleFlag=true")],
+["src/content/docs/getting-started/quick-start.mdx", () => import("astro:content-layer-deferred-module?astro%3Acontent-layer-deferred-module=&fileName=src%2Fcontent%2Fdocs%2Fgetting-started%2Fquick-start.mdx&astroContentModuleFlag=true")]]);
+		
