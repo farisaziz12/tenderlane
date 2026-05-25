@@ -1,5 +1,5 @@
 {
-  "name": "nextjs-stripe-checkout-example",
+  "name": "nextjs-multi-psp-checkout-example",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -13,7 +13,8 @@
     "next": "^15.3.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
-    "stripe": "^17.0.0"
+    "stripe": "^17.0.0",
+    "@polar-sh/sdk": "^0.34.0"
   },
   "devDependencies": {
     "@types/react": "^19.1.0",

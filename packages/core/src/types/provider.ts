@@ -1,5 +1,5 @@
 import type { ProviderCapabilities, PaymentMethodDescriptor, PaymentFlow } from './capabilities.js';
-import type { CheckoutInput, CheckoutResult } from './checkout.js';
+import type { CheckoutInput, CheckoutResult, ResolvedCheckoutInput } from './checkout.js';
 import type { TenderlaneContext } from './context.js';
 import type { ProviderPhantomTypes } from './phantom.js';
 import type { SelectedPaymentRoute } from './routing.js';
@@ -44,15 +44,20 @@ export interface BrowserPaymentProvider<
 }
 
 /**
- * Server-side payment provider adapter.
- * Handles PSP operations that require secret keys.
+ * Server-side payment provider adapter. Handles PSP operations that require
+ * secret keys.
+ *
+ * The `payload` is a {@link ResolvedCheckoutInput} — the server handler has
+ * already resolved the catalog, so `payload.items[]` carries canonical
+ * server-authoritative pricing. Adapters MUST read pricing exclusively from
+ * `payload.items[].unitAmount` / `payload.items[].providerRefs`.
  */
 export interface ServerProviderAdapter<TProviderId extends string = string> {
   readonly id: TProviderId;
   readonly actions: readonly string[];
   handle(
     action: string,
-    payload: CheckoutInput,
+    payload: ResolvedCheckoutInput,
     options?: Record<string, unknown>,
   ): Promise<CheckoutResult>;
 }

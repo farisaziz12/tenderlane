@@ -34,6 +34,13 @@ idle → evaluating → ready → submitting → success
 - `evaluate()` is fire-and-forget from `updateContext()` - the state machine handles async lifecycle
 - Initial evaluation happens automatically in `createTenderlaneClient()`
 - Middleware hooks are fired at each lifecycle point via `runMiddlewareHook` from core
+- **Price integrity**: the client must NEVER post `unitAmount` to the server. The wire shape is `{ items: [{ sku, quantity }], context, ... }`. Server's catalog is canonical and re-resolves at submit time. Client-side `catalog.resolve()` results are display-only.
+
+## CheckoutInput Migration (planned)
+
+- New canonical shape: `submit({ items: [{ sku, quantity }], successUrl, ... })`.
+- Legacy `submit({ lineItems: [{ name, unitAmount, currency, quantity }] })` continues to work — the client wraps it in an ephemeral inline catalog on the way out and posts the resulting `items[]`. No behavior change for existing Stripe consumers.
+- When a `catalog` is configured at the client level (planned `ClientConfig.catalog`), `client.previewItems()` returns the client-side resolved `ResolvedCatalogItem[]` for currency-switcher / running-total UX. The submit path still hits the server, which re-resolves canonically.
 
 ## API
 

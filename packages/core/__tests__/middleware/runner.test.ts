@@ -114,6 +114,34 @@ describe('runMiddlewareHook', () => {
     consoleSpy.mockRestore();
   });
 
+  it('dispatches onCatalogResolved with the resolved items', async () => {
+    const onCatalogResolved = vi.fn();
+
+    const middlewares: TenderlaneMiddleware[] = [
+      { name: 'audit', onCatalogResolved },
+    ];
+
+    const resolved = [
+      {
+        sku: 'pro-plan',
+        quantity: 1,
+        name: 'Pro Plan',
+        unitAmount: 2900,
+        currency: 'usd',
+      },
+    ];
+
+    await runMiddlewareHook(middlewares, 'onCatalogResolved', {
+      context: { currency: 'usd' },
+      resolved,
+    });
+
+    expect(onCatalogResolved).toHaveBeenCalledWith({
+      context: { currency: 'usd' },
+      resolved,
+    });
+  });
+
   it('handles async middleware', async () => {
     const order: string[] = [];
 

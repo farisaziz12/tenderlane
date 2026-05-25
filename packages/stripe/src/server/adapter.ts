@@ -1,5 +1,9 @@
 import Stripe from 'stripe';
-import type { ServerProviderAdapter, CheckoutInput, CheckoutResult } from '@tenderlane/core';
+import type {
+  ServerProviderAdapter,
+  ResolvedCheckoutInput,
+  CheckoutResult,
+} from '@tenderlane/core';
 import { ProviderError } from '@tenderlane/core';
 import type { StripeServerConfig } from './types.js';
 import {
@@ -50,7 +54,7 @@ export function stripeServerAdapter(
 
     async handle(
       action: string,
-      payload: CheckoutInput,
+      payload: ResolvedCheckoutInput,
       options?: Record<string, unknown>,
     ): Promise<CheckoutResult> {
       const paymentMethods = options?.paymentMethods as string[] | undefined;

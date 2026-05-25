@@ -26,9 +26,18 @@ export type {
 export type {
   CheckoutLineItem,
   CheckoutInput,
+  ResolvedCheckoutInput,
   CheckoutStatus,
   CheckoutResult,
 } from './checkout.js';
+
+export type {
+  Catalog,
+  CatalogPhantomTypes,
+  CatalogRequest,
+  ResolvedCatalogItem,
+  ResolvedProviderRefs,
+} from './catalog.js';
 
 export type {
   StringCondition,
@@ -63,5 +72,6 @@ export type {
   InferProviderOptions,
   InferProviderIds,
   InferPaymentMethods,
+  InferCatalogSkus,
   Expand,
 } from './utils.js';

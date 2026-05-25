@@ -1,4 +1,8 @@
-import type { CheckoutInput, CheckoutResult } from '@tenderlane/core';
+import type {
+  CheckoutResult,
+  ResolvedCatalogItem,
+  ResolvedCheckoutInput,
+} from '@tenderlane/core';
 import type Stripe from 'stripe';
 
 /**
@@ -28,32 +32,51 @@ const STRIPE_METHOD_TYPE_MAP: Record<string, string> = {
 };
 
 /**
- * Map a Tenderlane CheckoutInput into Stripe Checkout Session create params.
- * When paymentMethods are provided from the routing rule, they are mapped
- * to Stripe's payment_method_types to restrict the Checkout page.
+ * Translate a resolved catalog item into a Stripe Checkout Session line item.
+ *
+ * Preference order, per the price-integrity contract:
+ * 1. If `providerRefs.stripe.priceId` is present, emit `{ price: priceId, quantity }`
+ *    (uses a pre-created Stripe Price object — the canonical source of truth).
+ * 2. Otherwise, fall back to inline `price_data` from the server-resolved
+ *    `unitAmount` / `currency` / `name` (the values the server's catalog
+ *    produced, never anything the client supplied).
+ */
+function resolvedItemToStripeLineItem(
+  item: ResolvedCatalogItem,
+): Stripe.Checkout.SessionCreateParams.LineItem {
+  const stripeRef = item.providerRefs?.stripe;
+  if (stripeRef?.priceId) {
+    return { price: stripeRef.priceId, quantity: item.quantity };
+  }
+  return {
+    quantity: item.quantity,
+    price_data: {
+      currency: item.currency,
+      unit_amount: item.unitAmount,
+      product_data: {
+        name: item.name,
+        ...(item.description ? { description: item.description } : {}),
+      },
+    },
+  };
+}
+
+/**
+ * Map a Tenderlane resolved checkout input into Stripe Checkout Session create
+ * params. When `paymentMethods` are provided from the routing rule, they are
+ * mapped to Stripe's `payment_method_types` to restrict the Checkout page.
  */
 export function mapToStripeSessionParams(
-  input: CheckoutInput,
+  input: ResolvedCheckoutInput,
   paymentMethods?: string[],
 ): Stripe.Checkout.SessionCreateParams {
   const params: Stripe.Checkout.SessionCreateParams = {
     mode: 'payment',
     success_url: input.successUrl,
     cancel_url: input.cancelUrl,
-    line_items: input.lineItems.map((item) => ({
-      quantity: item.quantity,
-      price_data: {
-        currency: item.currency ?? 'usd',
-        unit_amount: item.unitAmount,
-        product_data: {
-          name: item.name,
-          ...(item.description ? { description: item.description } : {}),
-        },
-      },
-    })),
+    line_items: input.items.map(resolvedItemToStripeLineItem),
   };
 
-  // Map routing rule payment methods to Stripe's payment_method_types
   if (paymentMethods && paymentMethods.length > 0) {
     const stripeTypes = [
       ...new Set(
@@ -117,19 +140,19 @@ function mapStripeStatus(
 }
 
 /**
- * Map a Tenderlane CheckoutInput into Stripe PaymentIntent create params.
- * Calculates the total amount from line items.
+ * Map a Tenderlane resolved checkout input into Stripe PaymentIntent create
+ * params. Calculates the total amount from server-resolved items only.
  */
 export function mapToStripePaymentIntentParams(
-  input: CheckoutInput,
+  input: ResolvedCheckoutInput,
   paymentMethods?: string[],
 ): Stripe.PaymentIntentCreateParams {
-  const amount = input.lineItems.reduce(
+  const amount = input.items.reduce(
     (total, item) => total + item.unitAmount * item.quantity,
     0,
   );
 
-  const currency = input.lineItems[0]?.currency ?? 'usd';
+  const currency = input.items[0]?.currency ?? 'usd';
 
   const params: Stripe.PaymentIntentCreateParams = {
     amount,

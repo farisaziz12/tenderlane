@@ -1,0 +1,280 @@
+---
+title: "Catalog"
+description: "Provider-agnostic product and pricing layer. The server is canonical; the client never declares amounts."
+sidebar:
+  order: 4
+---
+
+A **catalog** is the provider-agnostic primitive that resolves what a customer is buying (`sku`, `quantity`) into canonical pricing the PSP can charge against. It's the same architectural slot as a router: the user supplies one catalog, every provider knows how to consume its output.
+
+The catalog is what makes Tenderlane work across PSPs with fundamentally different product models — Stripe's inline `price_data`, Polar's pre-created product IDs, your own database — without leaking those differences into the rest of the stack.
+
+## The price-integrity contract
+
+There is one rule that everything else follows from:
+
+> **`unitAmount` MUST never cross the wire from client to server.**
+
+The wire payload is `{ items: [{ sku, quantity }], context, ... }`. The client says *what* (SKU + quantity + context); the server runs its own `catalog.resolve()` and decides *for how much*. The server handler defensively strips any client-supplied `unitAmount` before resolution, even if a malicious client tries to forge one.
+
+Client-side catalog resolution exists for **preview UX only** — running totals, currency-switcher demos, hover cards. If client and server disagree (stale code, coupon applied between view and submit, A/B variant flipped), the server wins, silently and always.
+
+```
+Browser                                          Server
+─────────                                        ─────────
+catalog.resolve(items, context)  ← display only  catalog.resolve(items, context)  ← canonical
+        ↓                                                ↓
+ResolvedItem[] (preview total)                   ResolvedItem[] (real amounts)
+        ↓                                                ↓
+POST { provider, action,        ───────────►     adapter.handle(action, resolved)
+       payload: { items, ctx } }                         ↓
+   (NO unitAmount in payload)                    PSP session created w/ server prices
+```
+
+## The Catalog interface
+
+```ts
+interface Catalog<TSku extends string = string> {
+  readonly '~types': CatalogPhantomTypes<TSku>;
+  resolve(
+    items: readonly CatalogRequest[],
+    context: TenderlaneContext,
+  ): MaybePromise<readonly ResolvedCatalogItem[]>;
+}
+
+interface CatalogRequest {
+  readonly sku: string;
+  readonly quantity: number;
+}
+
+interface ResolvedCatalogItem {
+  readonly sku: string;
+  readonly quantity: number;
+  readonly name: string;
+  readonly description?: string;
+  readonly unitAmount: number;
+  readonly currency: CurrencyCode;
+  readonly providerRefs?: {
+    stripe?: { priceId?: string; productId?: string };
+    polar?:  { productId: string; priceId?: string };
+    [providerId: string]: unknown;
+  };
+}
+```
+
+The phantom-type metadata in `~types` lets you infer the literal SKU union from any inline catalog: `InferCatalogSkus<typeof catalog>` produces `"pro-plan" | "team-plan"` for autocomplete in `items: [{ sku: ... }]`.
+
+## Three legitimate catalog sources
+
+Tenderlane ships three implementations and one escape hatch. Pick based on where your product data lives.
+
+### 1. `createInlineCatalog` — pure, isomorphic, shareable code
+
+Suitable when pricing logic is data you can deploy to both client and server bundles. Both sides call `resolve()`; the server's result is canonical.
+
+```ts
+import { createInlineCatalog } from 'tenderlane';
+
+const catalog = createInlineCatalog({
+  'pro-plan': {
+    name: 'Pro Plan',
+    pricing: (context) => ({
+      amount: context.currency === 'eur' ? 2700 : 2900,
+      currency: context.currency ?? 'usd',
+    }),
+    providerRefs: {
+      stripe: { priceId: 'price_xxx' },
+      polar:  { productId: 'polar_prod_yyy' },
+    },
+  },
+});
+```
+
+The `pricing` field can be a static `{ amount, currency }` or a function of context — that's how the catalog stays reactive across currency switches, regional pricing, customer tiers.
+
+### 2. `createRemoteCatalog` — production default
+
+A client-side stub that POSTs `{ items, context }` to a server endpoint and returns the resolved items. Client carries zero pricing logic; the server (the canonical source of truth) owns resolution.
+
+```ts
+import { createRemoteCatalog } from 'tenderlane';
+
+const catalog = createRemoteCatalog({
+  endpoint: '/api/tenderlane/resolve',
+});
+```
+
+The server handler exposes a built-in `/resolve` route that satisfies this contract — pair it with any server-side catalog.
+
+### 3. `defineCatalog` — server-only custom resolver
+
+The escape hatch for backend-sourced catalogs: pull pricing from a database, CMS, or headless commerce platform.
+
+```ts
+import { defineCatalog } from 'tenderlane';
+
+const catalog = defineCatalog({
+  async resolve(items, context) {
+    const rows = await db.products.findMany({
+      where: { sku: { in: items.map((item) => item.sku) } },
+    });
+    return items.map((item) => {
+      const row = rows.find((r) => r.sku === item.sku)!;
+      return {
+        sku: item.sku,
+        quantity: item.quantity,
+        name: row.name,
+        unitAmount: row.prices[context.currency ?? 'usd'],
+        currency: context.currency ?? 'usd',
+        providerRefs: { stripe: { priceId: row.stripePriceId } },
+      };
+    });
+  },
+});
+```
+
+Pair with `createRemoteCatalog` on the client.
+
+### 4. `createStripeCatalog` / `createPolarCatalog` — PSP-sourced
+
+The strongest price-integrity boundary: the PSP itself is the source of truth. The catalog calls Stripe's / Polar's API at resolve time and reads the canonical price from there. Your code never declares an amount.
+
+```ts
+// tenderlane/stripe/server
+import { createStripeCatalog } from 'tenderlane/stripe/server';
+
+const stripeCatalog = createStripeCatalog({
+  secretKey: process.env.STRIPE_SECRET_KEY!,
+  skus: {
+    'premium-plan': { priceId: 'price_1ABC' },  // pre-created in Stripe dashboard
+  },
+});
+// At resolve time: stripe.prices.retrieve('price_1ABC', { expand: ['product'] })
+// Populates providerRefs.stripe.priceId — adapter emits { price } and Stripe
+// looks up the canonical amount internally.
+```
+
+```ts
+// tenderlane/polar/server
+import { createPolarCatalog } from 'tenderlane/polar/server';
+
+const polarCatalog = createPolarCatalog({
+  accessToken: process.env.POLAR_ACCESS_TOKEN!,
+  organizationId: process.env.POLAR_ORG_ID!,
+  server: 'sandbox',
+  skus: {
+    'premium-plan': { productId: 'polar_prod_abc' },
+  },
+});
+// At resolve time: polar.products.get({ id: 'polar_prod_abc' })
+// Reads the first fixed-amount price (or a specific priceId if declared).
+```
+
+Server-only by construction (require secret keys). Pair with `createRemoteCatalog` on the client.
+
+## Per-provider catalogs
+
+Because each PSP has its own source of truth, `createTenderlaneHandler` accepts a `catalogs` map keyed by provider ID. When the wire payload's `provider` field matches a key, that catalog is used for resolution; otherwise the top-level `catalog` is used.
+
+```ts
+import { createTenderlaneHandler } from 'tenderlane/server';
+import {
+  stripeServerAdapter,
+  createStripeCatalog,
+} from 'tenderlane/stripe/server';
+import {
+  polarServerAdapter,
+  createPolarCatalog,
+} from 'tenderlane/polar/server';
+
+const handler = createTenderlaneHandler({
+  providers: [
+    stripeServerAdapter({ secretKey: process.env.STRIPE_SECRET_KEY! }),
+    polarServerAdapter({
+      accessToken: process.env.POLAR_ACCESS_TOKEN!,
+      organizationId: process.env.POLAR_ORG_ID!,
+      server: 'sandbox',
+    }),
+  ],
+  catalogs: {
+    stripe: createStripeCatalog({
+      secretKey: process.env.STRIPE_SECRET_KEY!,
+      skus: { 'premium-plan': { priceId: 'price_xxx' } },
+    }),
+    polar: createPolarCatalog({
+      accessToken: process.env.POLAR_ACCESS_TOKEN!,
+      organizationId: process.env.POLAR_ORG_ID!,
+      server: 'sandbox',
+      skus: { 'premium-plan': { productId: 'polar_prod_abc' } },
+    }),
+  },
+});
+
+export const POST = handler.POST;
+```
+
+Now routing decides everything: when a rule picks `stripe`, the Stripe-sourced catalog runs and the Stripe Price is the source of truth. When a rule picks `polar`, the Polar-sourced catalog runs and the Polar product is the source of truth. The example's `app/api/payments/route.ts` shows the full pattern.
+
+The `/resolve` route always uses the top-level `catalog` (it has no provider context). Set the top-level `catalog` to a fast in-memory option (typically `createInlineCatalog` or a small `defineCatalog`) for client previews — pricing on the preview is best-effort; the server catalog is canonical at submit time regardless.
+
+## Per-provider native references
+
+The `providerRefs` field on each resolved item carries native PSP IDs the adapter prefers over inline pricing:
+
+- **Stripe** uses `providerRefs.stripe.priceId` when present (emits `{ price, quantity }` against a pre-created Stripe Price). Falls back to inline `price_data` if absent.
+- **Polar** requires `providerRefs.polar.productId` — Polar is product-first and has no inline pricing fallback. Missing `productId` throws a typed `CatalogError`.
+
+A single SKU can declare refs for multiple PSPs at once. If your routing rule sends EU customers to Polar and US customers to Stripe, the same catalog entry works for both — each adapter reads what it needs.
+
+## Wiring it into the handler
+
+`createTenderlaneHandler` accepts a `catalog` config field plus an optional `middleware` array:
+
+```ts
+import { createTenderlaneHandler } from 'tenderlane/server';
+import { stripeServerAdapter } from 'tenderlane/stripe/server';
+
+const handler = createTenderlaneHandler({
+  providers: [stripeServerAdapter({ secretKey: process.env.STRIPE_SECRET_KEY! })],
+  catalog,
+  middleware: [
+    {
+      name: 'audit',
+      onCatalogResolved({ context, resolved }) {
+        console.log('Resolved', resolved.length, 'items for', context.currency);
+      },
+    },
+  ],
+});
+
+// Next.js App Router
+export const POST = handler.POST;
+// app/api/tenderlane/resolve/route.ts — for createRemoteCatalog clients
+export const POST_RESOLVE = handler.resolve;
+```
+
+The `onCatalogResolved` middleware hook fires after resolution and before the provider adapter runs — useful for analytics, audit logging, or running-total tracking.
+
+## Legacy `lineItems` shim
+
+For backwards compatibility, `CheckoutInput.lineItems` continues to work when **no catalog is configured**. The server handler wraps the legacy shape into resolved items automatically.
+
+If a catalog is configured and a caller posts `lineItems`, the handler returns 400 with a `CATALOG_ERROR` asking them to migrate to `items[]`. This is intentional: mixing legacy line items with a real catalog would silently bypass the price-integrity contract.
+
+## Error handling
+
+`CatalogError` (code `CATALOG_ERROR`) carries the offending `sku` and, when relevant, the `provider`:
+
+```ts
+import { CatalogError } from 'tenderlane';
+
+try {
+  await client.submit({ items: [{ sku: 'unknown-plan', quantity: 1 }], ... });
+} catch (error) {
+  if (error instanceof CatalogError) {
+    console.error(`Catalog rejected SKU "${error.sku}":`, error.message);
+  }
+}
+```
+
+The server handler maps `CatalogError` to HTTP 400; other errors map to 500. The `/resolve` route uses the same mapping.

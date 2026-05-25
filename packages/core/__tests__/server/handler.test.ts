@@ -116,7 +116,7 @@ describe('createTenderlaneHandler', () => {
         provider: 'error-provider',
         action: 'checkout',
         payload: {
-          lineItems: [],
+          lineItems: [{ name: 'Widget', quantity: 1, unitAmount: 1000 }],
           successUrl: '/success',
           cancelUrl: '/cancel',
         },

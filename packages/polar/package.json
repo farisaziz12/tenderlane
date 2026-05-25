@@ -1,0 +1,42 @@
+{
+  "name": "@tenderlane/polar",
+  "version": "0.1.0-alpha.0",
+  "description": "Polar.sh provider adapter for Tenderlane payment orchestration",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./server": {
+      "types": "./dist/server/index.d.ts",
+      "import": "./dist/server/index.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": ["dist"],
+  "scripts": {
+    "build": "rm -rf dist && tsup",
+    "dev": "tsup --watch",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@tenderlane/core": "workspace:*"
+  },
+  "peerDependencies": {
+    "@polar-sh/sdk": ">=0.30.0"
+  },
+  "peerDependenciesMeta": {
+    "@polar-sh/sdk": { "optional": true }
+  },
+  "devDependencies": {
+    "@polar-sh/sdk": "^0.34.0",
+    "tsup": "^8.3.0",
+    "typescript": "^5.7.0",
+    "vitest": "^2.1.0"
+  },
+  "license": "MIT"
+}

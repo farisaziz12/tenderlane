@@ -18,8 +18,14 @@ export type {
   ProviderPhantomTypes,
   CheckoutLineItem,
   CheckoutInput,
+  ResolvedCheckoutInput,
   CheckoutStatus,
   CheckoutResult,
+  Catalog,
+  CatalogPhantomTypes,
+  CatalogRequest,
+  ResolvedCatalogItem,
+  ResolvedProviderRefs,
   StringCondition,
   CountryCondition,
   CurrencyCondition,
@@ -43,6 +49,7 @@ export type {
   InferProviderOptions,
   InferProviderIds,
   InferPaymentMethods,
+  InferCatalogSkus,
   Expand,
 } from './types/index.js';
 
@@ -51,6 +58,22 @@ export { createRulesRouter } from './routing/rules-router.js';
 export { createAutoRouter } from './routing/auto-router.js';
 export type { AutoRouterRequest, AutoRouterResponse } from './routing/auto-router.js';
 export { resolvePath, matchConditionValue, matchRuleConditions } from './routing/evaluate.js';
+
+// Catalog
+export {
+  createInlineCatalog,
+  createRemoteCatalog,
+  defineCatalog,
+  resolveCatalogItems,
+  wrapLegacyLineItems,
+} from './catalog/index.js';
+export type {
+  InlineCatalogPricing,
+  InlineCatalogProduct,
+  InlineCatalogProducts,
+  RemoteCatalogConfig,
+  DefineCatalogConfig,
+} from './catalog/index.js';
 
 // Middleware
 export { runMiddlewareHook } from './middleware/runner.js';
@@ -64,4 +87,5 @@ export {
   ProviderError,
   ValidationError,
   UnsupportedCapabilityError,
+  CatalogError,
 } from './errors/errors.js';

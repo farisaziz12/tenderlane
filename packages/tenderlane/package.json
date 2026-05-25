@@ -31,6 +31,14 @@
     "./stripe/react": {
       "types": "./dist/stripe-react.d.ts",
       "import": "./dist/stripe-react.js"
+    },
+    "./polar": {
+      "types": "./dist/polar.d.ts",
+      "import": "./dist/polar.js"
+    },
+    "./polar/server": {
+      "types": "./dist/polar-server.d.ts",
+      "import": "./dist/polar-server.js"
     }
   },
   "main": "./dist/index.js",
@@ -46,19 +54,22 @@
     "@tenderlane/core": "workspace:*",
     "@tenderlane/client": "workspace:*",
     "@tenderlane/react": "workspace:*",
-    "@tenderlane/stripe": "workspace:*"
+    "@tenderlane/stripe": "workspace:*",
+    "@tenderlane/polar": "workspace:*"
   },
   "peerDependencies": {
     "react": ">=18.0.0",
     "stripe": ">=14.0.0",
     "@stripe/stripe-js": ">=2.0.0",
-    "@stripe/react-stripe-js": ">=2.0.0"
+    "@stripe/react-stripe-js": ">=2.0.0",
+    "@polar-sh/sdk": ">=0.30.0"
   },
   "peerDependenciesMeta": {
     "react": { "optional": true },
     "stripe": { "optional": true },
     "@stripe/stripe-js": { "optional": true },
-    "@stripe/react-stripe-js": { "optional": true }
+    "@stripe/react-stripe-js": { "optional": true },
+    "@polar-sh/sdk": { "optional": true }
   },
   "devDependencies": {
     "tsup": "^8.3.0",

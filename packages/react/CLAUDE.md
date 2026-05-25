@@ -28,7 +28,7 @@ src/
 ```ts
 const checkout = useTenderlaneCheckout();
 checkout.status              // "idle" | "evaluating" | "ready" | "submitting" | "success" | "error"
-checkout.selectedProvider    // "stripe" | null
+checkout.selectedProvider    // "stripe" | "polar" | null   (polar planned)
 checkout.selectedRoute       // SelectedPaymentRoute | null
 checkout.paymentMethods      // PaymentMethodDescriptor[]
 checkout.selectedPaymentMethod // string | null
@@ -37,7 +37,14 @@ checkout.error               // TenderlaneError | null
 checkout.checkoutResult      // CheckoutResult | null
 checkout.selectPaymentMethod(id)  // select a payment method
 checkout.submit(input)            // start checkout
+// Planned (catalog primitive):
+checkout.previewItems        // ResolvedCatalogItem[] | null — client-side resolve for display only; server re-resolves at submit
+checkout.previewTotal        // { amount, currency } | null — derived from previewItems
 ```
+
+## Catalog (planned)
+
+The React layer is a passthrough: catalog is configured on the `TenderlaneProvider` (`config.catalog`), and `useTenderlaneCheckout()` exposes `previewItems` / `previewTotal` for currency-switcher and running-total UX. The wire payload from React → server still carries no `unitAmount`. See root `CLAUDE.md` for the price-integrity contract.
 
 ## Testing
 

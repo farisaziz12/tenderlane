@@ -27,8 +27,11 @@ importers:
         specifier: ^5.8.0
         version: 5.18.1(@types/node@25.6.2)(rollup@4.60.3)(typescript@5.9.3)(yaml@2.8.4)
 
-  examples/react-stripe-checkout:
+  examples/react-checkout-multi-psp:
     dependencies:
+      '@polar-sh/sdk':
+        specifier: ^0.34.0
+        version: 0.34.17
       next:
         specifier: ^15.3.0
         version: 15.5.18(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
@@ -73,6 +76,25 @@ importers:
 
   packages/core:
     devDependencies:
+      tsup:
+        specifier: ^8.3.0
+        version: 8.5.1(postcss@8.5.14)(typescript@5.9.3)(yaml@2.8.4)
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.0
+        version: 2.1.9(@types/node@25.6.2)(jsdom@25.0.1)
+
+  packages/polar:
+    dependencies:
+      '@tenderlane/core':
+        specifier: workspace:*
+        version: link:../core
+    devDependencies:
+      '@polar-sh/sdk':
+        specifier: ^0.34.0
+        version: 0.34.17
       tsup:
         specifier: ^8.3.0
         version: 8.5.1(postcss@8.5.14)(typescript@5.9.3)(yaml@2.8.4)
@@ -150,6 +172,9 @@ importers:
 
   packages/tenderlane:
     dependencies:
+      '@polar-sh/sdk':
+        specifier: '>=0.30.0'
+        version: 0.34.17
       '@stripe/react-stripe-js':
         specifier: '>=2.0.0'
         version: 2.9.0(@stripe/stripe-js@4.10.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
@@ -162,6 +187,9 @@ importers:
       '@tenderlane/core':
         specifier: workspace:*
         version: link:../core
+      '@tenderlane/polar':
+        specifier: workspace:*
+        version: link:../polar
       '@tenderlane/react':
         specifier: workspace:*
         version: link:../react
@@ -992,6 +1020,15 @@ packages:
     cpu: [x64]
     os: [win32]
 
+  '@polar-sh/sdk@0.34.17':
+    resolution: {integrity: sha512-+eJAAyyP4CAtMy9Hd6gaNXErjaH3KuTXJFv72kqlCCvv7SweBlM4U2+zpeYAZvd/YMRZq/c447f0a0DD2e7UEA==}
+    hasBin: true
+    peerDependencies:
+      '@modelcontextprotocol/sdk': '>=1.5.0 <1.10.0'
+    peerDependenciesMeta:
+      '@modelcontextprotocol/sdk':
+        optional: true
+
   '@rollup/pluginutils@5.3.0':
     resolution: {integrity: sha512-5EdhGZtnu3V88ces7s53hhfK5KSASnJZv8Lulpc04cWO3REESroJXg73DFsOmgbU2BhwV0E20bu2IDZb3VKW4Q==}
     engines: {node: '>=14.0.0'}
@@ -1146,6 +1183,9 @@ packages:
 
   '@shikijs/vscode-textmate@10.0.2':
     resolution: {integrity: sha512-83yeghZ2xxin3Nj8z1NMd/NCuca+gsYXswywDy5bHvwlWL8tpTQmzGeUuHd9FC3E/SBEMvzJRwWEOz5gGes9Qg==}
+
+  '@stablelib/base64@1.0.1':
+    resolution: {integrity: sha512-1bnPQqSxSuc3Ii6MhBysoWCg58j97aUjuCSZrGSmDxNqtytIi0k8utUenAwTZN4V5mXXYGsVUI9zeBqy+jBOSQ==}
 
   '@stripe/react-stripe-js@2.9.0':
     resolution: {integrity: sha512-+/j2g6qKAKuWSurhgRMfdlIdKM+nVVJCy/wl0US2Ccodlqx0WqfIIBhUkeONkCG+V/b+bZzcj4QVa3E/rXtT4Q==}
@@ -1739,6 +1779,9 @@ packages:
 
   extend@3.0.2:
     resolution: {integrity: sha512-fjquC59cD7CyW6urNXK0FBufkZcoiGG80wTuPujX590cB5Ttln20E2UB4S/WARVqhXffZl2LNgS+gQdPIIim/g==}
+
+  fast-sha256@1.3.0:
+    resolution: {integrity: sha512-n11RGP/lrWEFI/bWdygLxhI+pVeo1ZYIVwvvPkW7azl/rOy+F3HYRZ2K5zeE9mmkhQppyv9sQFx0JM9UabnpPQ==}
 
   fdir@6.5.0:
     resolution: {integrity: sha512-tIbYtZbucOs0BRGqPJkshJUYdL+SDH7dVM8gjy+ERp3WAUjLEFJE+02kanyHtwjWOnwrKYBiwAmM0p4kLJAnXg==}
@@ -2624,6 +2667,9 @@ packages:
 
   stackback@0.0.2:
     resolution: {integrity: sha512-1XMJE5fQo1jGH6Y/7ebnwPOBEkIEnT4QF32d5R1+VXdXveM0IBMJt8zfaxX1P3QhVwrYe+576+jkANtSS2mBbw==}
+
+  standardwebhooks@1.0.0:
+    resolution: {integrity: sha512-BbHGOQK9olHPMvQNHWul6MYlrRTAOKn03rOe4A8O3CLWhNf4YHBqq2HJKKC+sfqpxiBY52pNeesD6jIiLDz8jg==}
 
   std-env@3.10.0:
     resolution: {integrity: sha512-5GS12FdOZNliM5mAOxFRg7Ir0pWz8MdpYm6AY6VPkGpbA7ZzmbzNcBJQ0GPvvyWgcY7QAhCgf9Uy89I03faLkg==}
@@ -3759,6 +3805,11 @@ snapshots:
   '@pagefind/windows-x64@1.5.2':
     optional: true
 
+  '@polar-sh/sdk@0.34.17':
+    dependencies:
+      standardwebhooks: 1.0.0
+      zod: 3.25.76
+
   '@rollup/pluginutils@5.3.0(rollup@4.60.3)':
     dependencies:
       '@types/estree': 1.0.9
@@ -3874,6 +3925,8 @@ snapshots:
       '@types/hast': 3.0.4
 
   '@shikijs/vscode-textmate@10.0.2': {}
+
+  '@stablelib/base64@1.0.1': {}
 
   '@stripe/react-stripe-js@2.9.0(@stripe/stripe-js@4.10.0)(react-dom@19.2.6(react@18.3.1))(react@18.3.1)':
     dependencies:
@@ -4593,6 +4646,8 @@ snapshots:
       '@expressive-code/plugin-text-markers': 0.41.7
 
   extend@3.0.2: {}
+
+  fast-sha256@1.3.0: {}
 
   fdir@6.5.0(picomatch@4.0.4):
     optionalDependencies:
@@ -6038,6 +6093,11 @@ snapshots:
   space-separated-tokens@2.0.2: {}
 
   stackback@0.0.2: {}
+
+  standardwebhooks@1.0.0:
+    dependencies:
+      '@stablelib/base64': 1.0.1
+      fast-sha256: 1.3.0
 
   std-env@3.10.0: {}
 

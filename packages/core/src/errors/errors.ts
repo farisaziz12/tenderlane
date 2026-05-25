@@ -126,3 +126,31 @@ export class UnsupportedCapabilityError extends TenderlaneError {
     this.name = 'UnsupportedCapabilityError';
   }
 }
+
+/**
+ * Thrown when catalog resolution fails. Common causes include:
+ * - SKU not found in the configured catalog
+ * - Required `providerRefs` missing for the routed provider (e.g., Polar
+ *   requires `providerRefs.polar.productId`)
+ * - Remote catalog endpoint returning a non-OK status
+ *
+ * Carries the offending `sku` and (where applicable) the `provider` that
+ * triggered the validation.
+ *
+ * Error code: `'CATALOG_ERROR'`
+ */
+export class CatalogError extends TenderlaneError {
+  readonly sku?: string;
+
+  constructor(
+    message: string,
+    options?: { sku?: string; provider?: string; cause?: unknown },
+  ) {
+    super(message, 'CATALOG_ERROR', {
+      provider: options?.provider,
+      cause: options?.cause,
+    });
+    this.name = 'CatalogError';
+    this.sku = options?.sku;
+  }
+}

@@ -4,6 +4,7 @@ import type {
   InferProviderIds,
   InferCapabilities,
   InferPaymentMethods,
+  InferCatalogSkus,
   BrowserPaymentProvider,
   ProviderCapabilities,
   PaymentMethodId,
@@ -13,6 +14,7 @@ import type {
   KnownCurrencyCode,
   CurrencyCode,
 } from '../../src/index.js';
+import { createInlineCatalog } from '../../src/index.js';
 
 test('InferProviderId extracts literal provider ID', () => {
   type StripeAdapter = BrowserPaymentProvider<'stripe', ProviderCapabilities>;
@@ -100,4 +102,17 @@ test('KnownCurrencyCode is a strict union', () => {
 test('CurrencyCode accepts known codes and arbitrary strings', () => {
   expectTypeOf<'usd'>().toMatchTypeOf<CurrencyCode>();
   expectTypeOf<'custom_coin'>().toMatchTypeOf<CurrencyCode>();
+});
+
+test('InferCatalogSkus extracts literal SKU union from an inline catalog', () => {
+  const catalog = createInlineCatalog({
+    'pro-plan': { name: 'Pro', pricing: { amount: 2900, currency: 'usd' } },
+    'team-plan': { name: 'Team', pricing: { amount: 9900, currency: 'usd' } },
+  });
+  type SKU = InferCatalogSkus<typeof catalog>;
+  expectTypeOf<SKU>().toEqualTypeOf<'pro-plan' | 'team-plan'>();
+});
+
+test('InferCatalogSkus returns never for non-catalog types', () => {
+  expectTypeOf<InferCatalogSkus<{ id: string }>>().toEqualTypeOf<never>();
 });

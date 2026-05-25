@@ -1,0 +1,216 @@
+---
+title: "Polar Checkout Redirect"
+description: "End-to-end guide for building a Polar.sh hosted checkout flow with Tenderlane."
+sidebar:
+  order: 3
+---
+
+This cookbook walks through wiring Polar.sh into Tenderlane: server adapter, browser provider, and a catalog entry that maps your SKU to Polar's pre-created product ID.
+
+Polar runs as **redirect-only** in Tenderlane v1 — the iframe embedded flow is deferred (it's a whole-page iframe, not a field-level Stripe-Elements analog; warrants its own design pass).
+
+## What you will build
+
+- A checkout page that routes to Polar
+- A server endpoint that creates Polar checkouts via `@polar-sh/sdk`
+- A catalog that declares Polar product IDs alongside any other PSPs you use
+
+## Prerequisites
+
+- Node.js 18+
+- A React project with a server-side API capability (Next.js App Router, Remix, etc.)
+- A [Polar account](https://polar.sh) (sandbox is fine for testing)
+- One pre-created product in your Polar org (Polar is product-first — you cannot pass arbitrary line items at checkout time)
+
+## 1. Create a Polar sandbox token
+
+1. Sign up at [sandbox.polar.sh](https://sandbox.polar.sh) (production tokens live at [polar.sh](https://polar.sh))
+2. Create an organization and add at least one product
+3. Note your **organization ID** and create an **Organization Access Token** (OAT) in the dashboard
+4. Note the product ID of the SKU you want to sell
+
+Sandbox and production are different hostnames (`sandbox-api.polar.sh` vs. `api.polar.sh`), not the same host with different key prefixes — the adapter takes an explicit `server` knob.
+
+## 2. Install packages
+
+```bash
+pnpm add tenderlane @polar-sh/sdk
+```
+
+`@polar-sh/sdk` is only needed on the server side. The browser bundle of `tenderlane/polar` imports zero bytes of it.
+
+## 3. Set up environment variables
+
+```bash
+# .env
+POLAR_ACCESS_TOKEN=polar_oat_...
+POLAR_ORGANIZATION_ID=org_...
+```
+
+## 4. Build the server endpoint
+
+The cleanest setup uses `createPolarCatalog` — the catalog calls `polar.products.get(...)` at submit time, so the canonical price lives in Polar (not in your code or DB).
+
+```ts
+// app/api/payments/polar/route.ts (Next.js App Router)
+import { createTenderlaneHandler } from 'tenderlane/server';
+import {
+  polarServerAdapter,
+  createPolarCatalog,
+} from 'tenderlane/polar/server';
+
+const polarCatalog = createPolarCatalog({
+  accessToken: process.env.POLAR_ACCESS_TOKEN!,
+  organizationId: process.env.POLAR_ORGANIZATION_ID!,
+  server: 'sandbox', // or 'production'
+  skus: {
+    'premium-plan': { productId: process.env.POLAR_PRODUCT_ID! },
+  },
+});
+
+const handler = createTenderlaneHandler({
+  providers: [
+    polarServerAdapter({
+      accessToken: process.env.POLAR_ACCESS_TOKEN!,
+      organizationId: process.env.POLAR_ORGANIZATION_ID!,
+      server: 'sandbox',
+    }),
+  ],
+  catalogs: {
+    polar: polarCatalog,
+  },
+});
+
+export const POST = handler.POST;
+```
+
+The catalog reads each SKU's mapped Polar product at resolve time, picks the first fixed-amount price (or a specific `priceId` if you declared one on the SKU config), and populates `providerRefs.polar.productId` on the resolved item. The adapter then sends `products: [productId]` to Polar's checkout API — Polar charges its own canonical price.
+
+If you have multiple prices on the same Polar product (e.g., monthly + annual), declare the specific one:
+
+```ts
+skus: {
+  'premium-monthly': { productId: 'polar_prod_abc', priceId: 'price_monthly' },
+  'premium-annual':  { productId: 'polar_prod_abc', priceId: 'price_annual' },
+}
+```
+
+If your client uses `createRemoteCatalog` for preview, also wire up the resolve route:
+
+```ts
+// app/api/payments/polar/resolve/route.ts
+export const POST = handler.resolve;
+```
+
+## 5. Build the React checkout page
+
+```tsx
+// app/checkout/page.tsx
+'use client';
+
+import { useState } from 'react';
+import {
+  TenderlaneProvider,
+  useTenderlaneCheckout,
+  createRulesRouter,
+} from 'tenderlane/react';
+import { polarProvider } from 'tenderlane/polar';
+
+const polar = polarProvider({
+  organizationId: process.env.NEXT_PUBLIC_POLAR_ORG_ID!,
+  serverEndpoint: '/api/payments/polar',
+});
+
+const routing = createRulesRouter({
+  rules: [],
+  fallback: {
+    provider: 'polar',
+    flow: 'checkout-session',
+    paymentMethods: ['card'],
+  },
+});
+
+export default function CheckoutPage() {
+  const [currency, setCurrency] = useState<'usd' | 'eur'>('usd');
+
+  return (
+    <TenderlaneProvider
+      config={{
+        context: { currency },
+        providers: [polar],
+        routing,
+      }}
+    >
+      <PayButton currency={currency} />
+      <button onClick={() => setCurrency(currency === 'usd' ? 'eur' : 'usd')}>
+        Switch currency
+      </button>
+    </TenderlaneProvider>
+  );
+}
+
+function PayButton({ currency }: { currency: 'usd' | 'eur' }) {
+  const checkout = useTenderlaneCheckout();
+  return (
+    <button
+      disabled={!checkout.canSubmit}
+      onClick={() =>
+        checkout.submit({
+          items: [{ sku: 'pro-plan', quantity: 1 }],
+          context: { currency },
+          successUrl: 'https://example.com/success',
+          cancelUrl: 'https://example.com/cancel',
+        })
+      }
+    >
+      {checkout.status === 'submitting' ? 'Redirecting…' : 'Pay with Polar'}
+    </button>
+  );
+}
+```
+
+Note that `submit()` posts only `{ items, context, successUrl, cancelUrl }` — no `unitAmount` anywhere. The server runs its own `catalog.resolve()` to determine real pricing. See the [Catalog concepts page](/concepts/catalog) for the full price-integrity contract.
+
+## 6. Test the redirect
+
+1. Run `pnpm dev`
+2. Open `/checkout`, click **Pay with Polar**
+3. You should be redirected to `sandbox.polar.sh/c/...` for the hosted checkout
+4. Complete the test payment; you return to your `successUrl`
+
+## Fulfillment via webhooks (not the redirect)
+
+**The redirect to `successUrl` is UX-only — it is not authoritative for fulfillment.** Polar's source of truth for "was this paid?" is webhooks, which implement the [Standard Webhooks](https://www.standardwebhooks.com/) spec. The relevant events are `checkout.created`, `checkout.updated`, `order.created`, `order.paid`.
+
+Tenderlane v1 does not ship a Polar webhook verifier — wire that up directly against `@polar-sh/sdk`'s `validateEvent` helper from `@polar-sh/sdk/webhooks` until cross-PSP webhook helpers land in core.
+
+## Mixing Polar with Stripe in the same app
+
+Because the catalog is provider-agnostic, you can route to either PSP from the same checkout. Declare `providerRefs` for both on each SKU:
+
+```ts
+const catalog = defineCatalog({
+  async resolve(items, context) {
+    return items.map((item) => ({
+      sku: item.sku,
+      quantity: item.quantity,
+      name: 'Pro Plan',
+      unitAmount: 2900,
+      currency: context.currency ?? 'usd',
+      providerRefs: {
+        stripe: { priceId: 'price_xyz' },          // Stripe will use this
+        polar:  { productId: 'polar_prod_abc' },   // Polar will use this
+      },
+    }));
+  },
+});
+```
+
+Then routing rules pick the PSP based on context (country, currency, experiment variant, etc.), and the adapter reads the ref it understands. See the [Country-based routing cookbook](/cookbooks/country-based-routing) for a full multi-PSP example.
+
+## What's not in v1
+
+- **Iframe embedded checkout** (`@polar-sh/checkout`) — deferred
+- **Subscriptions** — Polar supports them natively, but Tenderlane v1 is one-off-only across all providers
+- **Webhook verification helper** — wire `@polar-sh/sdk/webhooks` directly for now
+- **Multi-currency** — Polar's multi-currency support is partial; v1 declares `currencies: ['usd']`. Track [polarsource/polar#7842](https://github.com/polarsource/polar/issues/7842).

@@ -2,6 +2,7 @@ import type { TenderlaneMiddleware } from '../types/middleware.js';
 import type { TenderlaneContext } from '../types/context.js';
 import type { SelectedPaymentRoute } from '../types/routing.js';
 import type { CheckoutInput, CheckoutResult } from '../types/checkout.js';
+import type { ResolvedCatalogItem } from '../types/catalog.js';
 import type { ProviderSession } from '../types/provider.js';
 import type { TenderlaneError } from '../errors/errors.js';
 
@@ -15,6 +16,10 @@ export type MiddlewareHook = keyof Omit<TenderlaneMiddleware, 'name'>;
 type HookEventMap = {
   onContextChange: { previousContext: TenderlaneContext; nextContext: TenderlaneContext };
   onRouteEvaluated: { context: TenderlaneContext; route: SelectedPaymentRoute };
+  onCatalogResolved: {
+    context: TenderlaneContext;
+    resolved: readonly ResolvedCatalogItem[];
+  };
   onSessionCreated: {
     context: TenderlaneContext;
     route: SelectedPaymentRoute;

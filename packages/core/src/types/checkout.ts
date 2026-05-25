@@ -1,4 +1,6 @@
 import type { CurrencyCode, ProviderId } from './capabilities.js';
+import type { CatalogRequest, ResolvedCatalogItem } from './catalog.js';
+import type { TenderlaneContext } from './context.js';
 
 /**
  * A single line item in a checkout session. Represents one product or service
@@ -29,19 +31,53 @@ export interface CheckoutLineItem {
  * that gets translated to the selected PSP's native format by the server
  * adapter.
  *
- * @example
+ * Two ways to declare what's being purchased:
+ *
+ * - **`items`** (preferred) — pairs of `{ sku, quantity }` resolved against a
+ *   configured {@link Catalog}. The server is the source of truth for pricing.
+ *   Client-supplied `unitAmount` (anywhere on the payload) is stripped before
+ *   resolution. This is the price-integrity contract.
+ *
+ * - **`lineItems`** (deprecated) — pre-catalog shape carrying `unitAmount` on
+ *   the wire. Kept for backwards compatibility; auto-wrapped by the server
+ *   handler when no catalog is configured.
+ *
+ * Provide one or the other; if both are present, `items` wins.
+ *
+ * @example Using items + a catalog
  * const checkoutInput: CheckoutInput = {
- *   lineItems: [
- *     { name: "Widget", quantity: 1, unitAmount: 2500 },
- *   ],
- *   successUrl: "https://example.com/success",
- *   cancelUrl: "https://example.com/cancel",
- *   customerEmail: "customer@example.com",
- *   idempotencyKey: "order_abc123",
+ *   items: [{ sku: 'pro-plan', quantity: 1 }],
+ *   context: { country: 'US', currency: 'usd' },
+ *   successUrl: 'https://example.com/success',
+ *   cancelUrl: 'https://example.com/cancel',
+ * };
+ *
+ * @example Legacy lineItems shape
+ * const checkoutInput: CheckoutInput = {
+ *   lineItems: [{ name: 'Widget', quantity: 1, unitAmount: 2500 }],
+ *   successUrl: 'https://example.com/success',
+ *   cancelUrl: 'https://example.com/cancel',
  * };
  */
 export interface CheckoutInput {
-  readonly lineItems: readonly CheckoutLineItem[];
+  /** Catalog-driven items. Server resolves these against the configured Catalog. */
+  readonly items?: readonly CatalogRequest[];
+
+  /**
+   * @deprecated Use {@link items} with a {@link Catalog}. Kept as a backwards-
+   * compatible shim; the server handler auto-wraps these into resolved items
+   * when no catalog is configured. Carries `unitAmount` on the wire and
+   * therefore does not benefit from server-authoritative price integrity.
+   */
+  readonly lineItems?: readonly CheckoutLineItem[];
+
+  /**
+   * Reactive payment context. Forwarded to the configured Catalog at resolve
+   * time and to routing decisions. Server-side resolution always uses the
+   * server's interpretation of this context.
+   */
+  readonly context?: TenderlaneContext;
+
   readonly successUrl: string;
   readonly cancelUrl: string;
   readonly customerEmail?: string;
@@ -49,6 +85,20 @@ export interface CheckoutInput {
   readonly metadata?: Record<string, string>;
   readonly idempotencyKey?: string;
   readonly providerOptions?: Record<string, unknown>;
+}
+
+/**
+ * What a {@link ServerProviderAdapter} receives — a {@link CheckoutInput}
+ * after the server handler has run catalog resolution. The `items` field is
+ * the canonical, server-authoritative resolved cart contents. Adapters read
+ * pricing exclusively from here.
+ *
+ * `lineItems` from the wire shape is dropped: the server handler consumed it
+ * via the legacy shim, and downstream code should never branch on it.
+ */
+export interface ResolvedCheckoutInput
+  extends Omit<CheckoutInput, 'items' | 'lineItems'> {
+  readonly items: readonly ResolvedCatalogItem[];
 }
 
 /**

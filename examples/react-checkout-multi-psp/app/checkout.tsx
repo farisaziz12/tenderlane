@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   TenderlaneProvider,
   TenderlaneCheckoutForm,
@@ -8,17 +8,30 @@ import {
 } from 'tenderlane/react';
 import { stripeProvider } from 'tenderlane/stripe';
 import { StripePaymentElement } from 'tenderlane/stripe/react';
+import { polarProvider } from 'tenderlane/polar';
 import { createRulesRouter } from 'tenderlane';
 import type { TenderlaneClientConfig } from 'tenderlane/client';
-import type { CheckoutInput } from 'tenderlane';
+import type { CheckoutInput, ResolvedCatalogItem } from 'tenderlane';
+import { previewCatalog, formatAmount } from './catalog';
 import styles from './checkout.module.css';
 
 const stripe = stripeProvider({
-  publishableKey: process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? 'pk_test_placeholder',
-  serverEndpoint: '/api/payments/stripe',
+  publishableKey:
+    process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? 'pk_test_placeholder',
+  serverEndpoint: '/api/payments',
 });
 
-function RouteDebug() {
+const polar = polarProvider({
+  organizationId:
+    process.env.NEXT_PUBLIC_POLAR_ORGANIZATION_ID ?? 'org_placeholder',
+  serverEndpoint: '/api/payments',
+});
+
+function RouteDebug({
+  resolvedItems,
+}: {
+  resolvedItems: readonly ResolvedCatalogItem[] | null;
+}) {
   const checkout = useTenderlaneCheckout();
 
   const statusDotClass = {
@@ -31,6 +44,14 @@ function RouteDebug() {
     success: styles.statusDotReady,
     error: styles.statusDotError,
   }[checkout.status];
+
+  const previewTotal = resolvedItems
+    ? resolvedItems.reduce(
+        (total, item) => total + item.unitAmount * item.quantity,
+        0,
+      )
+    : null;
+  const previewCurrency = resolvedItems?.[0]?.currency ?? 'usd';
 
   return (
     <div className={styles.debugCard}>
@@ -51,13 +72,23 @@ function RouteDebug() {
         <div className={styles.debugItem}>
           <span className={styles.debugLabel}>Route</span>
           <span className={styles.debugValue}>
-            {checkout.selectedRoute?.ruleId ?? checkout.selectedRoute?.source ?? '...'}
+            {checkout.selectedRoute?.ruleId ??
+              checkout.selectedRoute?.source ??
+              '...'}
           </span>
         </div>
         <div className={styles.debugItem}>
           <span className={styles.debugLabel}>Flow</span>
           <span className={styles.debugValue}>
             {checkout.selectedRoute?.flow ?? '...'}
+          </span>
+        </div>
+        <div className={styles.debugItem}>
+          <span className={styles.debugLabel}>Catalog preview</span>
+          <span className={styles.debugValue}>
+            {previewTotal !== null
+              ? formatAmount(previewTotal, previewCurrency)
+              : '...'}
           </span>
         </div>
       </div>
@@ -68,23 +99,44 @@ function RouteDebug() {
 export function CheckoutPage() {
   const [country, setCountry] = useState('CH');
   const [currency, setCurrency] = useState('chf');
-  const [variant, setVariant] = useState('stripe-first');
+  const [preference, setPreference] = useState<
+    'stripe-first' | 'polar-first' | 'auto'
+  >('stripe-first');
+
+  // Client-side catalog preview — display only, never trusted server-side.
+  // The server re-resolves the same catalog at submit time and decides the
+  // canonical amount; this state is purely for showing a running total.
+  const [resolvedItems, setResolvedItems] = useState<
+    readonly ResolvedCatalogItem[] | null
+  >(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    Promise.resolve(
+      previewCatalog.resolve([{ sku: 'premium-plan', quantity: 1 }], {
+        country,
+        currency,
+      }),
+    )
+      .then((items) => {
+        if (!cancelled) setResolvedItems(items);
+      })
+      .catch(() => {
+        if (!cancelled) setResolvedItems(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [country, currency]);
 
   const checkoutInput: CheckoutInput = useMemo(
     () => ({
-      lineItems: [
-        {
-          name: 'Premium Plan',
-          description: 'Monthly access to all features',
-          quantity: 1,
-          unitAmount: 2900,
-          currency,
-        },
-      ],
+      items: [{ sku: 'premium-plan', quantity: 1 }],
+      context: { country, currency },
       successUrl: `${typeof window !== 'undefined' ? window.location.origin : ''}/success`,
       cancelUrl: `${typeof window !== 'undefined' ? window.location.origin : ''}/cancel`,
     }),
-    [currency],
+    [country, currency],
   );
 
   const config: TenderlaneClientConfig = useMemo(
@@ -92,19 +144,30 @@ export function CheckoutPage() {
       context: {
         country,
         currency,
-        amount: 2900,
-        experiment: { checkoutRouting: variant },
+        experiment: { providerPreference: preference },
       },
-      providers: [stripe],
+      providers: [stripe, polar],
       routing: createRulesRouter({
         rules: [
           {
-            id: 'ch-elements',
-            description: 'Swiss inline card payments via Stripe Elements',
+            id: 'polar-preferred',
+            description: 'Variant: customer routed to Polar hosted checkout',
+            when: {
+              experiment: { providerPreference: 'polar-first' },
+            },
+            use: {
+              provider: 'polar',
+              flow: 'checkout-session',
+              paymentMethods: ['card'],
+            },
+          },
+          {
+            id: 'ch-stripe-inline',
+            description: 'Swiss inline card + Twint via Stripe Elements',
             when: {
               country: 'CH',
               currency: 'chf',
-              experiment: { checkoutRouting: 'stripe-first' },
+              experiment: { providerPreference: 'stripe-first' },
             },
             use: {
               provider: 'stripe',
@@ -113,28 +176,42 @@ export function CheckoutPage() {
             },
           },
           {
-            id: 'dach-redirect',
+            id: 'dach-stripe-redirect',
             description: 'DACH region redirect via Stripe Checkout',
             when: {
               country: { in: ['CH', 'DE', 'AT'] },
+              experiment: { providerPreference: 'stripe-first' },
             },
             use: {
               provider: 'stripe',
-              flow: 'payment-intent',
+              flow: 'checkout-session',
               paymentMethods: ['card'],
             },
           },
           {
-            id: 'high-value',
-            description: 'High-value orders via Stripe with promo codes',
+            id: 'auto-usd-polar',
+            description: 'Auto: USD purchases routed to Polar (MoR)',
             when: {
-              amount: { gte: 10000 },
+              currency: 'usd',
+              experiment: { providerPreference: 'auto' },
+            },
+            use: {
+              provider: 'polar',
+              flow: 'checkout-session',
+              paymentMethods: ['card'],
+            },
+          },
+          {
+            id: 'auto-eu-stripe',
+            description: 'Auto: EU currencies via Stripe inline',
+            when: {
+              currency: { in: ['eur', 'gbp', 'chf'] },
+              experiment: { providerPreference: 'auto' },
             },
             use: {
               provider: 'stripe',
               flow: 'payment-intent',
               paymentMethods: ['card'],
-              providerOptions: { allow_promotion_codes: true },
             },
           },
         ],
@@ -149,7 +226,11 @@ export function CheckoutPage() {
           name: 'debug',
           onRouteEvaluated({ context, route }) {
             console.log('[tenderlane] Route evaluated:', {
-              context: { country: context.country, currency: context.currency },
+              context: {
+                country: context.country,
+                currency: context.currency,
+                preference: context.experiment?.providerPreference,
+              },
               provider: route.provider,
               flow: route.flow,
               ruleId: route.ruleId,
@@ -174,21 +255,19 @@ export function CheckoutPage() {
         },
       ],
     }),
-    [country, currency, variant],
+    [country, currency, preference],
   );
-
-  const formattedPrice = (2900 / 100).toLocaleString(undefined, {
-    style: 'currency',
-    currency: currency.toUpperCase(),
-  });
 
   return (
     <div className={styles.container}>
       <div className={styles.header}>
         <h1 className={styles.title}>Tenderlane Checkout</h1>
         <p className={styles.subtitle}>
-          Change the controls below to see reactive routing. Switzerland + CHF + Stripe First uses
-          inline Elements. Other combinations use redirect checkout.
+          One catalog, two PSPs. Change the controls to see routing pick a
+          different provider, flow, and payment method. The catalog runs on
+          both client (preview) and server (canonical); the wire payload
+          carries only <code>{'{ sku, quantity, context }'}</code> — never
+          amounts.
         </p>
       </div>
 
@@ -225,26 +304,36 @@ export function CheckoutPage() {
         </div>
 
         <div className={styles.controlGroup}>
-          <span className={styles.controlLabel}>Experiment</span>
+          <span className={styles.controlLabel}>Provider preference</span>
           <select
             className={styles.controlSelect}
-            value={variant}
-            onChange={(event) => setVariant(event.target.value)}
+            value={preference}
+            onChange={(event) =>
+              setPreference(event.target.value as typeof preference)
+            }
           >
-            <option value="stripe-first">Stripe First</option>
-            <option value="control">Control</option>
+            <option value="stripe-first">Stripe first</option>
+            <option value="polar-first">Polar first</option>
+            <option value="auto">Auto (rules pick)</option>
           </select>
         </div>
       </div>
 
       <TenderlaneProvider config={config}>
-        <RouteDebug />
+        <RouteDebug resolvedItems={resolvedItems} />
 
         <div className={styles.orderCard}>
           <div className={styles.debugLabel}>Order summary</div>
           <div className={styles.orderRow}>
             <span className={styles.orderLabel}>Premium Plan (monthly)</span>
-            <span className={styles.orderPrice}>{formattedPrice}</span>
+            <span className={styles.orderPrice}>
+              {resolvedItems && resolvedItems[0]
+                ? formatAmount(
+                    resolvedItems[0].unitAmount,
+                    resolvedItems[0].currency,
+                  )
+                : '...'}
+            </span>
           </div>
         </div>
 
@@ -252,13 +341,9 @@ export function CheckoutPage() {
           input={checkoutInput}
           elements={{ stripe: StripePaymentElement as any }}
         >
-          {({ status, canSubmit, submit, error }) => (
+          {({ status, canSubmit, submit, error, selectedProvider }) => (
             <>
-              {error && (
-                <div className={styles.errorBanner}>
-                  {error.message}
-                </div>
-              )}
+              {error && <div className={styles.errorBanner}>{error.message}</div>}
               <button
                 className={styles.payButton}
                 disabled={!canSubmit || status === 'submitting'}
@@ -268,7 +353,9 @@ export function CheckoutPage() {
                   ? 'Processing...'
                   : status === 'preparing'
                     ? 'Loading payment form...'
-                    : `Pay ${formattedPrice}`}
+                    : selectedProvider
+                      ? `Pay with ${selectedProvider}`
+                      : 'Pay'}
               </button>
             </>
           )}

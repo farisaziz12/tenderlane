@@ -6,6 +6,7 @@ import {
   ProviderError,
   ValidationError,
   UnsupportedCapabilityError,
+  CatalogError,
 } from '../src/errors/errors.js';
 
 describe('Error hierarchy', () => {
@@ -51,6 +52,18 @@ describe('Error hierarchy', () => {
     const err = new UnsupportedCapabilityError('no twint support', 'stripe');
     expect(err.code).toBe('UNSUPPORTED_CAPABILITY');
     expect(err.provider).toBe('stripe');
+    expect(err).toBeInstanceOf(TenderlaneError);
+  });
+
+  it('CatalogError carries CATALOG_ERROR code and optional sku/provider', () => {
+    const err = new CatalogError('Polar requires productId', {
+      sku: 'pro-plan',
+      provider: 'polar',
+    });
+    expect(err.code).toBe('CATALOG_ERROR');
+    expect(err.sku).toBe('pro-plan');
+    expect(err.provider).toBe('polar');
+    expect(err.name).toBe('CatalogError');
     expect(err).toBeInstanceOf(TenderlaneError);
   });
 

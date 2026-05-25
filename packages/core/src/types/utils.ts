@@ -46,6 +46,21 @@ export type InferPaymentMethods<T> = T extends {
     : never;
 
 /**
+ * Extract the literal union of SKUs declared by a Catalog. Works on any
+ * Catalog implementation that carries the `~types` phantom metadata.
+ *
+ * ```ts
+ * const catalog = createInlineCatalog({ 'pro-plan': { ... }, 'team-plan': { ... } });
+ * type SKU = InferCatalogSkus<typeof catalog>; // "pro-plan" | "team-plan"
+ * ```
+ */
+export type InferCatalogSkus<T> = T extends {
+  '~types': { skus: infer S extends string };
+}
+  ? S
+  : never;
+
+/**
  * Utility type that flattens intersection types into a single object type
  * for better IDE display and hover tooltips. Without this, intersections like
  * `{ a: string } & { b: number }` show as-is in IDE tooltips; with `Expand`,
