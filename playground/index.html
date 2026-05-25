@@ -1,0 +1,282 @@
+<!DOCTYPE html><html lang="en"> <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>Playground · Tenderlane</title><meta name="description" content="Try Tenderlane in your browser — change context, watch routing decide."><link rel="icon" href="/tenderlane/favicon.svg" type="image/svg+xml"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"><link rel="stylesheet" href="/tenderlane/_astro/_slug_.DKaDDpxz.css">
+<link rel="stylesheet" href="/tenderlane/_astro/playground.Cxwh4RXv.css"></head> <body class="pg-body"> <div class="pg-shell"> <!-- Top bar --> <header class="pg-top"> <div class="pg-top-left"> <a href="/tenderlane/" class="pg-logo" aria-label="Tenderlane home"> <span class="logo" style="font-size:14.25px;" data-astro-cid-tvrurpns> <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true" data-astro-cid-tvrurpns> <path d="M12 2 L22 12 L12 22 L2 12 Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" data-astro-cid-tvrurpns></path> <path d="M12 2 L22 12 L12 12 Z" fill="var(--accent)" data-astro-cid-tvrurpns></path> <circle cx="12" cy="12" r="1.5" fill="var(--bg-0)" stroke="currentColor" stroke-width="1.2" data-astro-cid-tvrurpns></circle> </svg> <span class="word" data-astro-cid-tvrurpns>tenderlane</span> </span>  </a> <span class="pg-divider"></span> <span class="t-cap pg-eyebrow">PLAYGROUND</span> <span class="pg-status"> <span class="pg-status-dot"></span>
+connected · test-mode
+</span> </div> <div class="pg-top-right"> <div class="pg-scenario" role="tablist" aria-label="Scenario"> <button data-scenario="subscription" data-active="true" class="pg-scenario-btn">Subscription</button> <button data-scenario="cart" class="pg-scenario-btn">Marketplace cart</button> <button data-scenario="donation" class="pg-scenario-btn">Donation</button> </div> <span class="pg-divider"></span> <a class="btn btn-ghost pg-fork" href="https://github.com/farisaziz12/tenderlane" target="_blank" rel="noopener"> <svg width="11" height="11" viewBox="0 0 16 16" fill="none"><path d="M5 11l6-6M11 5H6M11 5v5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"></path></svg> Fork on GitHub
+</a> <button class="btn btn-primary pg-install" id="pg-install" aria-label="Copy install command"> <span class="t-mono">npx create-tenderlane-app</span> <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><rect x="5" y="5" width="8" height="9" rx="1.2" stroke="currentColor" stroke-width="1.2"></rect><path d="M3 11V3.2c0-.6.5-1.2 1.2-1.2H11" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"></path></svg> </button> </div> </header> <!-- Workspace --> <div class="pg-grid"> <!-- LEFT: storefront preview --> <section class="pg-preview"> <div class="pg-preview-head"> <div class="pg-preview-meta"> <span class="t-cap" style="color:var(--text-3)">PREVIEW</span> <span class="badge pg-pill"><span class="dot"></span>route · <span id="pg-route-id">ch-inline</span></span> <span class="badge pg-pill">flow · <span id="pg-route-flow">payment-intent</span></span> </div> <div class="pg-device" role="group" aria-label="Viewport size"> <button data-device="desktop" data-active="true" class="pg-device-btn" aria-label="Desktop"> <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><rect x="2" y="3" width="12" height="9" rx="1" stroke="currentColor" stroke-width="1.3"></rect><path d="M5 13h6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"></path></svg> </button> <button data-device="tablet" class="pg-device-btn" aria-label="Tablet"> <svg width="11" height="13" viewBox="0 0 14 16" fill="none"><rect x="2" y="2" width="10" height="12" rx="1.2" stroke="currentColor" stroke-width="1.3"></rect></svg> </button> <button data-device="mobile" class="pg-device-btn" aria-label="Mobile"> <svg width="9" height="13" viewBox="0 0 12 16" fill="none"><rect x="2" y="2" width="8" height="12" rx="1.2" stroke="currentColor" stroke-width="1.3"></rect></svg> </button> </div> </div> <div class="pg-frame" id="pg-frame"> <!-- Storefront --> <div class="sf-root"> <div class="sf-nav"> <span class="sf-brand"> <span class="sf-glyph">S</span> <span class="sf-wordmark">stitch</span> <span class="sf-tag">example app</span> </span> <div class="sf-nav-links"> <a href="#">Product</a> <a href="#">Docs</a> <a href="#" class="sf-active">Pricing</a> <button class="sf-signin">Sign in</button> </div> </div> <div class="sf-checkout"> <div class="sf-summary"> <div class="sf-back">← Back to plans</div> <div class="t-eyebrow sf-eyebrow">UPGRADING TO</div> <h1 class="sf-plan-name"> <span id="sf-plan-name">Pro</span> <span style="color:var(--text-3)">plan</span> </h1> <p class="sf-plan-copy" id="sf-plan-copy">For small teams</p> <div class="sf-order"> <div class="sf-order-head"> <div> <div class="sf-order-row-name"><span id="sf-order-name">Pro</span> · monthly</div> <div class="sf-order-row-sub">Renews monthly · cancel anytime</div> </div> <div class="sf-order-row-amt t-mono" id="sf-price-top">CHF 27.00</div> </div> <div class="sf-order-line"> <span>Subtotal</span><span class="t-mono" id="sf-subtotal">CHF 27.00</span> </div> <div class="sf-order-line"> <span>VAT / Tax</span><span class="t-mono" style="color:var(--text-3)">calculated at confirmation</span> </div> <div class="sf-order-total"> <span>Total today</span> <span class="t-mono sf-total-amt" id="sf-total">CHF 27.00</span> </div> </div> <ul class="sf-features" id="sf-features"></ul> </div> <div class="sf-pay"> <div class="sf-route-badge"> <span class="dot"></span>
+route · <span id="sf-route-id">ch-inline</span> </div> <h2 class="sf-pay-title">How would you like to pay?</h2> <div class="sf-field"> <label>email</label> <div class="sf-input">you@stitch.example</div> </div> <div class="sf-field"> <label>payment method</label> <div class="sf-methods" id="sf-methods"></div> </div> <div class="sf-card-form" id="sf-card-form"> <div class="sf-input sf-card-num t-mono"> <span>4242 4242 4242 4242</span> <span class="sf-card-glyphs"> <span class="sf-card-glyph" style="background:#1a1f71">V</span> <span class="sf-card-glyph" style="background:#eb001b">M</span> </span> </div> <div class="sf-card-row"> <div class="sf-input t-mono" style="color:var(--text-3)">MM / YY</div> <div class="sf-input t-mono" style="color:var(--text-3)">CVC</div> </div> </div> <button class="sf-pay-btn">
+Pay <span id="sf-pay-amt">CHF 27.00</span> <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M4 8h8M8 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path></svg> </button> <p class="sf-foot t-mono">Powered by <span id="sf-provider">stripe</span> via tenderlane · By paying, you agree to the Terms.</p> </div> </div> </div> </div> </section> <!-- RIGHT: tabbed panel --> <section class="pg-side"> <div class="pg-tabs" role="tablist"> <button data-tab="rules" data-active="true" class="pg-tab"> <span>Rules</span><span class="pg-tab-n">5</span><span class="kbd">R</span> </button> <button data-tab="context" class="pg-tab"> <span>Context</span><span class="pg-tab-n">5</span><span class="kbd">C</span> </button> <button data-tab="events" class="pg-tab"> <span>Events</span><span class="pg-tab-n" id="pg-events-n">12</span><span class="kbd">E</span> </button> <button data-tab="code" class="pg-tab"> <span>Code</span><span class="kbd">V</span> </button> </div> <div class="pg-tab-body"> <!-- Rules panel --> <div class="pg-panel" data-panel="rules" data-active="true"> <div class="pg-panel-head"> <div> <div class="t-cap" style="color:var(--text-3);margin-bottom:6px">RULES · routing.ts</div> <div class="t-mono pg-panel-sub">first-match-wins · 5 rules · 1 fallback</div> </div> <div class="pg-panel-actions"> <button class="btn btn-ghost pg-mini-btn">+ Add rule</button> <button class="btn btn-ghost pg-mini-btn">↗ Export</button> </div> </div> <div class="pg-rules"> <div class="pg-rule" data-rule-id="ch-inline"> <div class="pg-rule-head"> <div class="pg-rule-id"> <span class="t-mono pg-rule-idx">#1</span> <span class="t-mono pg-rule-name">ch-inline</span> <span class="pg-rule-match live-dot">matched</span> </div> <div class="pg-rule-actions"> <button class="pg-rule-btn" aria-label="Activate"> <svg width="11" height="11" viewBox="0 0 16 16" fill="none"><path d="M5 10l3 3 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path></svg> </button> <button class="pg-rule-btn" aria-label="More"> <svg width="11" height="11" viewBox="0 0 16 16" fill="none"><circle cx="3" cy="8" r="1" fill="currentColor"></circle><circle cx="8" cy="8" r="1" fill="currentColor"></circle><circle cx="13" cy="8" r="1" fill="currentColor"></circle></svg> </button> </div> </div> <div class="pg-rule-body"> <span class="pg-rule-k">when</span> <span class="t-mono pg-rule-v">{&#39;country&#39;:&#39;CH&#39;,&#39;currency&#39;:&#39;chf&#39;}</span> <span class="pg-rule-k">use</span> <span class="t-mono pg-rule-v">{&#39;provider&#39;:&#39;stripe&#39;,&#39;flow&#39;:&#39;payment-intent&#39;,&#39;paymentMethods&#39;:[&#39;card&#39;,&#39;twint&#39;]}</span> </div> </div><div class="pg-rule" data-rule-id="nl-ideal"> <div class="pg-rule-head"> <div class="pg-rule-id"> <span class="t-mono pg-rule-idx">#2</span> <span class="t-mono pg-rule-name">nl-ideal</span> <span class="pg-rule-match live-dot">matched</span> </div> <div class="pg-rule-actions"> <button class="pg-rule-btn" aria-label="Activate"> <svg width="11" height="11" viewBox="0 0 16 16" fill="none"><path d="M5 10l3 3 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path></svg> </button> <button class="pg-rule-btn" aria-label="More"> <svg width="11" height="11" viewBox="0 0 16 16" fill="none"><circle cx="3" cy="8" r="1" fill="currentColor"></circle><circle cx="8" cy="8" r="1" fill="currentColor"></circle><circle cx="13" cy="8" r="1" fill="currentColor"></circle></svg> </button> </div> </div> <div class="pg-rule-body"> <span class="pg-rule-k">when</span> <span class="t-mono pg-rule-v">{&#39;country&#39;:&#39;NL&#39;,&#39;currency&#39;:&#39;eur&#39;}</span> <span class="pg-rule-k">use</span> <span class="t-mono pg-rule-v">{&#39;provider&#39;:&#39;stripe&#39;,&#39;flow&#39;:&#39;payment-intent&#39;,&#39;paymentMethods&#39;:[&#39;card&#39;,&#39;ideal&#39;,&#39;sepa&#39;]}</span> </div> </div><div class="pg-rule" data-rule-id="de-klarna"> <div class="pg-rule-head"> <div class="pg-rule-id"> <span class="t-mono pg-rule-idx">#3</span> <span class="t-mono pg-rule-name">de-klarna</span> <span class="pg-rule-match live-dot">matched</span> </div> <div class="pg-rule-actions"> <button class="pg-rule-btn" aria-label="Activate"> <svg width="11" height="11" viewBox="0 0 16 16" fill="none"><path d="M5 10l3 3 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path></svg> </button> <button class="pg-rule-btn" aria-label="More"> <svg width="11" height="11" viewBox="0 0 16 16" fill="none"><circle cx="3" cy="8" r="1" fill="currentColor"></circle><circle cx="8" cy="8" r="1" fill="currentColor"></circle><circle cx="13" cy="8" r="1" fill="currentColor"></circle></svg> </button> </div> </div> <div class="pg-rule-body"> <span class="pg-rule-k">when</span> <span class="t-mono pg-rule-v">{&#39;country&#39;:&#39;DE&#39;,&#39;currency&#39;:&#39;eur&#39;}</span> <span class="pg-rule-k">use</span> <span class="t-mono pg-rule-v">{&#39;provider&#39;:&#39;stripe&#39;,&#39;flow&#39;:&#39;payment-intent&#39;,&#39;paymentMethods&#39;:[&#39;card&#39;,&#39;sepa&#39;,&#39;klarna&#39;]}</span> </div> </div><div class="pg-rule" data-rule-id="br-pix"> <div class="pg-rule-head"> <div class="pg-rule-id"> <span class="t-mono pg-rule-idx">#4</span> <span class="t-mono pg-rule-name">br-pix</span> <span class="pg-rule-match live-dot">matched</span> </div> <div class="pg-rule-actions"> <button class="pg-rule-btn" aria-label="Activate"> <svg width="11" height="11" viewBox="0 0 16 16" fill="none"><path d="M5 10l3 3 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path></svg> </button> <button class="pg-rule-btn" aria-label="More"> <svg width="11" height="11" viewBox="0 0 16 16" fill="none"><circle cx="3" cy="8" r="1" fill="currentColor"></circle><circle cx="8" cy="8" r="1" fill="currentColor"></circle><circle cx="13" cy="8" r="1" fill="currentColor"></circle></svg> </button> </div> </div> <div class="pg-rule-body"> <span class="pg-rule-k">when</span> <span class="t-mono pg-rule-v">{&#39;country&#39;:&#39;BR&#39;,&#39;currency&#39;:&#39;brl&#39;}</span> <span class="pg-rule-k">use</span> <span class="t-mono pg-rule-v">{&#39;provider&#39;:&#39;stripe&#39;,&#39;flow&#39;:&#39;payment-intent&#39;,&#39;paymentMethods&#39;:[&#39;card&#39;,&#39;pix&#39;]}</span> </div> </div><div class="pg-rule" data-rule-id="gb-card"> <div class="pg-rule-head"> <div class="pg-rule-id"> <span class="t-mono pg-rule-idx">#5</span> <span class="t-mono pg-rule-name">gb-card</span> <span class="pg-rule-match live-dot">matched</span> </div> <div class="pg-rule-actions"> <button class="pg-rule-btn" aria-label="Activate"> <svg width="11" height="11" viewBox="0 0 16 16" fill="none"><path d="M5 10l3 3 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path></svg> </button> <button class="pg-rule-btn" aria-label="More"> <svg width="11" height="11" viewBox="0 0 16 16" fill="none"><circle cx="3" cy="8" r="1" fill="currentColor"></circle><circle cx="8" cy="8" r="1" fill="currentColor"></circle><circle cx="13" cy="8" r="1" fill="currentColor"></circle></svg> </button> </div> </div> <div class="pg-rule-body"> <span class="pg-rule-k">when</span> <span class="t-mono pg-rule-v">{&#39;country&#39;:&#39;GB&#39;,&#39;currency&#39;:&#39;gbp&#39;}</span> <span class="pg-rule-k">use</span> <span class="t-mono pg-rule-v">{&#39;provider&#39;:&#39;stripe&#39;,&#39;flow&#39;:&#39;payment-intent&#39;,&#39;paymentMethods&#39;:[&#39;card&#39;]}</span> </div> </div> <div class="pg-rule pg-rule-fallback" data-rule-id="fallback"> <div class="pg-rule-head"> <span class="t-mono pg-rule-name" style="color:var(--text-2)">fallback</span> <span class="pg-rule-match live-dot">matched</span> </div> <div class="t-mono" style="font-size:11px;color:var(--text-1)">{&#39;provider&#39;:&#39;stripe&#39;,&#39;flow&#39;:&#39;checkout-session&#39;,&#39;paymentMethods&#39;:[&#39;card&#39;]}</div> </div> </div> </div> <!-- Context panel --> <div class="pg-panel" data-panel="context"> <div class="t-cap" style="color:var(--text-3);margin-bottom:16px">CONTEXT · the inputs your rules read</div> <div class="pg-field"> <div class="pg-field-label">country</div> <div class="pg-country-grid" id="pg-country-grid"> <button data-country="US" data-cur="usd" class="pg-country-btn"> <span class="pg-country-flag">🇺🇸</span> <span class="pg-country-code">US</span> </button><button data-country="CH" data-cur="chf" class="pg-country-btn"> <span class="pg-country-flag">🇨🇭</span> <span class="pg-country-code">CH</span> </button><button data-country="NL" data-cur="eur" class="pg-country-btn"> <span class="pg-country-flag">🇳🇱</span> <span class="pg-country-code">NL</span> </button><button data-country="DE" data-cur="eur" class="pg-country-btn"> <span class="pg-country-flag">🇩🇪</span> <span class="pg-country-code">DE</span> </button><button data-country="BR" data-cur="brl" class="pg-country-btn"> <span class="pg-country-flag">🇧🇷</span> <span class="pg-country-code">BR</span> </button><button data-country="GB" data-cur="gbp" class="pg-country-btn"> <span class="pg-country-flag">🇬🇧</span> <span class="pg-country-code">GB</span> </button><button data-country="JP" data-cur="jpy" class="pg-country-btn"> <span class="pg-country-flag">🇯🇵</span> <span class="pg-country-code">JP</span> </button> </div> </div> <div class="pg-field"> <div class="pg-field-label">currency</div> <div class="pg-chip-row" id="pg-currency-row"> <button data-currency="usd" class="pg-chip">USD</button><button data-currency="eur" class="pg-chip">EUR</button><button data-currency="chf" class="pg-chip">CHF</button><button data-currency="brl" class="pg-chip">BRL</button><button data-currency="jpy" class="pg-chip">JPY</button><button data-currency="gbp" class="pg-chip">GBP</button> </div> </div> <div class="pg-field"> <div class="pg-field-label">plan</div> <div class="pg-chip-row pg-chip-row-stretch" id="pg-plan-row"> <button data-plan="starter" class="pg-chip pg-chip-stretch">Starter</button><button data-plan="pro" class="pg-chip pg-chip-stretch">Pro</button><button data-plan="team" class="pg-chip pg-chip-stretch">Team</button> </div> </div> <div class="pg-field"> <div class="pg-field-label">user.tier</div> <div class="pg-chip-row pg-chip-row-stretch" id="pg-tier-row"> <button data-tier="free" class="pg-chip pg-chip-stretch">free</button><button data-tier="starter" class="pg-chip pg-chip-stretch">starter</button><button data-tier="pro" class="pg-chip pg-chip-stretch">pro</button><button data-tier="team" class="pg-chip pg-chip-stretch">team</button> </div> </div> <div class="pg-field"> <div class="pg-field-label">flags</div> <div class="pg-flags"> <div class="pg-flag-row"> <span class="t-mono pg-flag-label">inline-checkout · ramp 64%</span> <button data-flag="flag_inline" class="pg-toggle" data-active="true"> <span class="pg-toggle-knob"></span> </button> </div><div class="pg-flag-row"> <span class="t-mono pg-flag-label">3ds-always · ramp 100%</span> <button data-flag="flag_threeds" class="pg-toggle" data-active="true"> <span class="pg-toggle-knob"></span> </button> </div><div class="pg-flag-row"> <span class="t-mono pg-flag-label">localized-receipts · ramp 12%</span> <button data-flag="flag_localized" class="pg-toggle" data-active="false"> <span class="pg-toggle-knob"></span> </button> </div> </div> </div> <div class="pg-resolved"> <div class="pg-resolved-head"> <span class="t-cap" style="color:var(--text-3)">RESOLVED CONTEXT</span> <button class="pg-rule-btn" aria-label="Copy"> <svg width="11" height="11" viewBox="0 0 16 16" fill="none"><rect x="5" y="5" width="8" height="9" rx="1.2" stroke="currentColor" stroke-width="1.2"></rect><path d="M3 11V3.2c0-.6.5-1.2 1.2-1.2H11" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"></path></svg> </button> </div> <pre class="t-mono" id="pg-ctx-json"></pre> </div> </div> <!-- Events panel --> <div class="pg-panel" data-panel="events"> <div class="pg-panel-head"> <div> <div class="t-cap" style="color:var(--text-3);margin-bottom:6px">EVENT STREAM</div> <div class="t-mono pg-panel-sub">onRouteEvaluated · onStateChange</div> </div> <div class="pg-panel-actions"> <button class="btn btn-ghost pg-mini-btn">⏸ Pause</button> <button class="btn btn-ghost pg-mini-btn">Clear</button> </div> </div> <div class="pg-events" id="pg-events"></div> <div class="pg-events-legend t-mono"> <span><span class="pg-leg pg-leg-ctx"></span>context</span> <span><span class="pg-leg pg-leg-route"></span>routing</span> <span><span class="pg-leg pg-leg-state"></span>state</span> <span><span class="pg-leg pg-leg-adapter"></span>adapter</span> </div> </div> <!-- Code panel --> <div class="pg-panel" data-panel="code"> <div class="t-cap" style="color:var(--text-3);margin-bottom:16px">SOURCE · the code that wires this playground</div> <div class="pg-code"> <div class="pg-code-tabs"> <button data-active="true">Checkout.tsx</button> <button>routing.ts</button> <button>context.ts</button> </div> <pre class="pg-code-body t-mono">import { TenderlaneProvider,
+         TenderlaneCheckoutForm } from &#39;tenderlane/react&#39;;
+import { createRulesRouter }       from &#39;tenderlane&#39;;
+import { stripeProvider }          from &#39;tenderlane/stripe&#39;;
+import { StripePaymentElement }    from &#39;tenderlane/stripe/react&#39;;
+
+import { rules, fallback } from &#39;./routing&#39;;
+import { useAppContext }   from &#39;./context&#39;;
+
+const stripe = stripeProvider({
+  publishableKey: env.STRIPE_PK,
+  serverEndpoint: &#39;/api/pay&#39;,
+});
+
+export function Checkout({ plan }) {
+  const ctx = useAppContext();   // country, currency, tier, flags
+
+  return (
+    &lt;TenderlaneProvider config={{
+      context: ctx,
+      providers: [stripe],
+      routing: createRulesRouter({ rules, fallback }),
+    }}&gt;
+      &lt;OrderSummary plan={plan} /&gt;
+      &lt;TenderlaneCheckoutForm
+        input={{ amount: plan.amount[ctx.currency], currency: ctx.currency }}
+        elements={{ stripe: StripePaymentElement }}
+      &gt;
+        {({ canSubmit, submit, status }) =&gt; (
+          &lt;button disabled={!canSubmit} onClick={submit}&gt;
+            {status === &#39;submitting&#39; ? &#39;Processing…&#39; : &#39;Pay&#39;}
+          &lt;/button&gt;
+        )}
+      &lt;/TenderlaneCheckoutForm&gt;
+    &lt;/TenderlaneProvider&gt;
+  );
+}</pre> </div> <div class="pg-code-cta"> <a class="btn btn-ghost pg-mini-btn" href="https://github.com/farisaziz12/tenderlane" target="_blank" rel="noopener"> <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5C5.7.5.5 5.7.5 12c0 5.1 3.3 9.4 7.9 10.9.6.1.8-.3.8-.6v-2.1c-3.2.7-3.9-1.5-3.9-1.5-.5-1.3-1.3-1.7-1.3-1.7-1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1.1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.8-1.6-2.6-.3-5.3-1.3-5.3-5.7 0-1.3.5-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.1 0 0 1-.3 3.3 1.2 1-.3 2-.4 3-.4s2 .1 3 .4c2.3-1.5 3.3-1.2 3.3-1.2.6 1.6.2 2.8.1 3.1.8.8 1.2 1.8 1.2 3.1 0 4.4-2.7 5.4-5.3 5.7.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6 4.6-1.5 7.9-5.8 7.9-10.9C23.5 5.7 18.3.5 12 .5z"></path></svg> View on GitHub
+</a> <a class="btn btn-ghost pg-mini-btn" href="#" aria-disabled="true">↗ Open in StackBlitz</a> <a class="btn btn-ghost pg-mini-btn" href="#" aria-disabled="true">↗ Open in CodeSandbox</a> </div> </div> </div> </section> </div> </div> <script>
+      window.__PG = {"PLANS":[{"id":"starter","name":"Starter","copy":"For solo builders","features":["1 project","5GB storage","Community support"]},{"id":"pro","name":"Pro","copy":"For small teams","features":["Unlimited projects","50GB storage","Priority support","Webhooks"]},{"id":"team","name":"Team","copy":"For growing studios","features":["Everything in Pro","SSO","SOC2 reports","Audit logs"]}],"RULES":[{"id":"ch-inline","when":{"country":"CH","currency":"chf"},"use":{"provider":"stripe","flow":"payment-intent","paymentMethods":["card","twint"]}},{"id":"nl-ideal","when":{"country":"NL","currency":"eur"},"use":{"provider":"stripe","flow":"payment-intent","paymentMethods":["card","ideal","sepa"]}},{"id":"de-klarna","when":{"country":"DE","currency":"eur"},"use":{"provider":"stripe","flow":"payment-intent","paymentMethods":["card","sepa","klarna"]}},{"id":"br-pix","when":{"country":"BR","currency":"brl"},"use":{"provider":"stripe","flow":"payment-intent","paymentMethods":["card","pix"]}},{"id":"gb-card","when":{"country":"GB","currency":"gbp"},"use":{"provider":"stripe","flow":"payment-intent","paymentMethods":["card"]}}],"FALLBACK":{"provider":"stripe","flow":"checkout-session","paymentMethods":["card"]},"COUNTRIES":[{"code":"US","flag":"🇺🇸","cur":"usd"},{"code":"CH","flag":"🇨🇭","cur":"chf"},{"code":"NL","flag":"🇳🇱","cur":"eur"},{"code":"DE","flag":"🇩🇪","cur":"eur"},{"code":"BR","flag":"🇧🇷","cur":"brl"},{"code":"GB","flag":"🇬🇧","cur":"gbp"},{"code":"JP","flag":"🇯🇵","cur":"jpy"}]};
+    </script> <script>
+      // ───────── state ─────────
+      const { PLANS, RULES, FALLBACK, COUNTRIES } = window.__PG;
+      const state = {
+        ctx: { country: 'CH', currency: 'chf', plan: 'pro', tier: 'free', flag_inline: true, flag_threeds: true, flag_localized: false },
+        tab: 'rules',
+        device: 'desktop',
+        scenario: 'subscription',
+      };
+
+      const PRICE_BY_CURRENCY = {
+        starter: { usd: 12, eur: 11, chf: 11, brl: 59, jpy: 1800, gbp: 9 },
+        pro:     { usd: 29, eur: 27, chf: 27, brl: 145, jpy: 4400, gbp: 23 },
+        team:    { usd: 79, eur: 73, chf: 75, brl: 395, jpy: 11900, gbp: 62 },
+      };
+      const CUR_SYM = { usd: '$', eur: '€', chf: 'CHF', brl: 'R$', jpy: '¥', gbp: '£' };
+
+      function priceFmt(amount, cur) {
+        if (amount == null) return `${CUR_SYM[cur] || ''} —`;
+        if (cur === 'jpy') return `¥${amount.toLocaleString()}`;
+        if (cur === 'chf') return `CHF ${amount}.00`;
+        if (cur === 'brl') return `R$ ${amount}.00`;
+        return `${CUR_SYM[cur] || ''}${amount}.00`;
+      }
+
+      function matchRoute(ctx) {
+        const rule = RULES.find((r) => Object.entries(r.when).every(([k, v]) => ctx[k] === v));
+        return rule ? { id: rule.id, ...rule.use } : { id: 'fallback', ...FALLBACK };
+      }
+
+      const METHOD_META = {
+        card:   { label: 'Card', sub: 'Visa · Mastercard · Amex',   color: '#3b3f49', letter: 'C', dark: false },
+        twint:  { label: 'TWINT', sub: 'Pay with your phone (CH)',  color: '#ED1C24', letter: 'T' },
+        ideal:  { label: 'iDEAL', sub: 'Dutch bank transfer',        color: '#CC0066', letter: 'i' },
+        sepa:   { label: 'SEPA Direct', sub: 'Bank debit (EU)',      color: '#0033A0', letter: 'S' },
+        klarna: { label: 'Klarna', sub: 'Pay later or in 3',         color: '#FFB3C7', letter: 'K', dark: true },
+        pix:    { label: 'Pix', sub: 'Instant transfer (BR)',        color: '#32BCAD', letter: 'P' },
+      };
+
+      // ───────── renderers ─────────
+      function renderStorefront() {
+        const { ctx } = state;
+        const plan = PLANS.find((p) => p.id === ctx.plan) || PLANS[1];
+        const route = matchRoute(ctx);
+        const amount = PRICE_BY_CURRENCY[plan.id][ctx.currency];
+        const price = priceFmt(amount, ctx.currency);
+
+        document.getElementById('sf-plan-name').textContent = plan.name;
+        document.getElementById('sf-plan-copy').textContent = plan.copy;
+        document.getElementById('sf-order-name').textContent = plan.name;
+        document.getElementById('sf-price-top').textContent = price;
+        document.getElementById('sf-subtotal').textContent = price;
+        document.getElementById('sf-total').textContent = price;
+        document.getElementById('sf-pay-amt').textContent = price;
+        document.getElementById('sf-route-id').textContent = route.id;
+        document.getElementById('sf-provider').textContent = route.provider;
+
+        const featuresList = document.getElementById('sf-features');
+        featuresList.innerHTML = plan.features
+          .map((f) => `<li><span class="sf-check">✓</span>${f}</li>`)
+          .join('');
+
+        const methodsList = document.getElementById('sf-methods');
+        methodsList.innerHTML = route.paymentMethods
+          .map((method, index) => {
+            const meta = METHOD_META[method] || { label: method, sub: '', color: '#888', letter: (method[0] || '?').toUpperCase() };
+            const selected = index === 0;
+            return `
+              <label class="sf-method${selected ? ' sf-method-selected' : ''}">
+                <span class="sf-radio">${selected ? '<span></span>' : ''}</span>
+                <span class="sf-method-glyph" style="background:${meta.color};color:${meta.dark ? '#000' : '#fff'}">${meta.letter}</span>
+                <span class="sf-method-text">
+                  <span class="sf-method-label">${meta.label}</span>
+                  <span class="sf-method-sub">${meta.sub}</span>
+                </span>
+              </label>`;
+          })
+          .join('');
+
+        const showCard = route.paymentMethods[0] === 'card';
+        document.getElementById('sf-card-form').style.display = showCard ? '' : 'none';
+
+        // preview head
+        document.getElementById('pg-route-id').textContent = route.id;
+        document.getElementById('pg-route-flow').textContent = route.flow;
+      }
+
+      function renderRulesHighlight() {
+        const { ctx } = state;
+        const matched = matchRoute(ctx).id;
+        document.querySelectorAll('.pg-rule').forEach((node) => {
+          const isMatch = node.getAttribute('data-rule-id') === matched;
+          node.setAttribute('data-matched', isMatch ? 'true' : 'false');
+        });
+      }
+
+      function renderContextPanel() {
+        const { ctx } = state;
+        document.querySelectorAll('[data-country]').forEach((b) => {
+          b.setAttribute('data-active', b.getAttribute('data-country') === ctx.country ? 'true' : 'false');
+        });
+        document.querySelectorAll('[data-currency]').forEach((b) => {
+          b.setAttribute('data-active', b.getAttribute('data-currency') === ctx.currency ? 'true' : 'false');
+        });
+        document.querySelectorAll('[data-plan]').forEach((b) => {
+          b.setAttribute('data-active', b.getAttribute('data-plan') === ctx.plan ? 'true' : 'false');
+        });
+        document.querySelectorAll('[data-tier]').forEach((b) => {
+          b.setAttribute('data-active', b.getAttribute('data-tier') === ctx.tier ? 'true' : 'false');
+        });
+        document.querySelectorAll('[data-flag]').forEach((b) => {
+          const key = b.getAttribute('data-flag');
+          b.setAttribute('data-active', ctx[key] ? 'true' : 'false');
+        });
+        document.getElementById('pg-ctx-json').textContent = JSON.stringify(state.ctx, null, 2);
+      }
+
+      function renderEvents() {
+        const { ctx } = state;
+        const route = matchRoute(ctx);
+        const events = [
+          { t: 0, kind: 'context:set', detail: `country = ${ctx.country}, currency = ${ctx.currency}`, cls: 'ev-ctx' },
+          { t: 12, kind: 'route:eval', detail: `${RULES.length} rules tested → matched '${route.id}'`, cls: 'ev-route' },
+          { t: 14, kind: 'route:resolved', detail: `provider: ${route.provider} · flow: ${route.flow} · methods: [${route.paymentMethods.join(', ')}]`, cls: 'ev-default' },
+          { t: 18, kind: 'adapter:load', detail: `lazy: tenderlane/${route.provider} (5.8kb)`, cls: 'ev-adapter' },
+          { t: 280, kind: 'state:idle→ready', detail: 'PaymentElement mounted', cls: 'ev-adapter' },
+          { t: 1840, kind: 'plan:change', detail: `plan = ${ctx.plan}`, cls: 'ev-ctx' },
+          { t: 1848, kind: 'route:eval', detail: 'context unchanged in routable keys · no re-route', cls: 'ev-muted' },
+          { t: 3120, kind: 'context:set', detail: 'preview re-render', cls: 'ev-ctx' },
+          { t: 3128, kind: 'route:eval', detail: `→ '${route.id}'`, cls: 'ev-route' },
+          { t: 3140, kind: 'adapter:reuse', detail: `cached: tenderlane/${route.provider}`, cls: 'ev-adapter' },
+          { t: 3160, kind: 'ui:swap', detail: `methods rendered: [${route.paymentMethods.join(', ')}]`, cls: 'ev-route' },
+          { t: 3210, kind: 'state:ready', detail: 'ready in 50ms', cls: 'ev-state' },
+        ];
+        document.getElementById('pg-events').innerHTML = events
+          .map(
+            (e) => `
+            <div class="pg-event">
+              <span class="pg-event-t">+${e.t}ms</span>
+              <span class="pg-event-k ${e.cls}">${e.kind}</span>
+              <span class="pg-event-d">${e.detail}</span>
+            </div>`,
+          )
+          .join('');
+        document.getElementById('pg-events-n').textContent = String(events.length);
+      }
+
+      function renderAll() {
+        renderStorefront();
+        renderRulesHighlight();
+        renderContextPanel();
+        renderEvents();
+      }
+
+      // ───────── wire interactions ─────────
+      document.querySelectorAll('[data-country]').forEach((b) => {
+        b.addEventListener('click', () => {
+          state.ctx.country = b.getAttribute('data-country');
+          state.ctx.currency = b.getAttribute('data-cur');
+          renderAll();
+        });
+      });
+      document.querySelectorAll('[data-currency]').forEach((b) => {
+        b.addEventListener('click', () => {
+          state.ctx.currency = b.getAttribute('data-currency');
+          renderAll();
+        });
+      });
+      document.querySelectorAll('[data-plan]').forEach((b) => {
+        b.addEventListener('click', () => {
+          state.ctx.plan = b.getAttribute('data-plan');
+          renderAll();
+        });
+      });
+      document.querySelectorAll('[data-tier]').forEach((b) => {
+        b.addEventListener('click', () => {
+          state.ctx.tier = b.getAttribute('data-tier');
+          renderAll();
+        });
+      });
+      document.querySelectorAll('[data-flag]').forEach((b) => {
+        b.addEventListener('click', () => {
+          const key = b.getAttribute('data-flag');
+          state.ctx[key] = !state.ctx[key];
+          renderAll();
+        });
+      });
+
+      document.querySelectorAll('.pg-tab').forEach((tab) => {
+        tab.addEventListener('click', () => {
+          state.tab = tab.getAttribute('data-tab');
+          document.querySelectorAll('.pg-tab').forEach((t) => {
+            t.setAttribute('data-active', t === tab ? 'true' : 'false');
+          });
+          document.querySelectorAll('.pg-panel').forEach((p) => {
+            p.setAttribute('data-active', p.getAttribute('data-panel') === state.tab ? 'true' : 'false');
+          });
+        });
+      });
+
+      document.querySelectorAll('[data-scenario]').forEach((b) => {
+        b.addEventListener('click', () => {
+          state.scenario = b.getAttribute('data-scenario');
+          document.querySelectorAll('[data-scenario]').forEach((s) => {
+            s.setAttribute('data-active', s === b ? 'true' : 'false');
+          });
+        });
+      });
+
+      document.querySelectorAll('[data-device]').forEach((b) => {
+        b.addEventListener('click', () => {
+          state.device = b.getAttribute('data-device');
+          document.querySelectorAll('[data-device]').forEach((d) => {
+            d.setAttribute('data-active', d === b ? 'true' : 'false');
+          });
+          document.getElementById('pg-frame').setAttribute('data-device', state.device);
+        });
+      });
+
+      // keyboard shortcuts
+      document.addEventListener('keydown', (event) => {
+        if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) return;
+        const k = event.key.toLowerCase();
+        const map = { r: 'rules', c: 'context', e: 'events', v: 'code' };
+        if (map[k]) {
+          const target = document.querySelector(`.pg-tab[data-tab="${map[k]}"]`);
+          target?.click();
+        }
+      });
+
+      // install copy
+      document.getElementById('pg-install')?.addEventListener('click', () => {
+        navigator.clipboard?.writeText('npx create-tenderlane-app').catch(() => {});
+      });
+
+      renderAll();
+    </script>  </body> </html>
