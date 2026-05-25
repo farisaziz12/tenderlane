@@ -1,0 +1,324 @@
+<!DOCTYPE html><html lang="en"> <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Providers · Tenderlane docs</title><meta name="description" content="How payment provider adapters work in Tenderlane, from capabilities to phantom types."><meta property="og:title" content="Providers · Tenderlane docs"><meta property="og:description" content="How payment provider adapters work in Tenderlane, from capabilities to phantom types."><meta property="og:type" content="website"><link rel="icon" href="/tenderlane/favicon.svg" type="image/svg+xml"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"><link rel="stylesheet" href="/tenderlane/_astro/_slug_.Dhh66NRb.css">
+<link rel="stylesheet" href="/tenderlane/_astro/_slug_.Cu5bmsxF.css"></head> <body> <nav class="nav"> <div class="nav-left"> <a href="/tenderlane/" aria-label="Tenderlane home" style="color: var(--text-0)"> <span class="logo" style="font-size:15.2px;" data-astro-cid-tvrurpns> <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" data-astro-cid-tvrurpns> <path d="M12 2 L22 12 L12 22 L2 12 Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" data-astro-cid-tvrurpns></path> <path d="M12 2 L22 12 L12 12 Z" fill="var(--accent)" data-astro-cid-tvrurpns></path> <circle cx="12" cy="12" r="1.5" fill="var(--bg-0)" stroke="currentColor" stroke-width="1.2" data-astro-cid-tvrurpns></circle> </svg> <span class="word" data-astro-cid-tvrurpns>tenderlane</span> </span>  </a> <span style="width:1px;height:18px;background:var(--line-2)"></span> <div class="nav-links"> <a href="/tenderlane/docs/getting-started/introduction" data-active="false">Getting started</a><a href="/tenderlane/docs/concepts/routing" data-active="false">Concepts</a><a href="/tenderlane/docs/cookbooks/stripe-checkout-redirect" data-active="false">Cookbooks</a><a href="https://github.com/farisaziz12/tenderlane" data-active="false">GitHub</a> </div> <span class="badge" style="margin-left:4px"><span style="color:var(--text-3)">v</span>0.4.0-alpha</span> </div> <div class="nav-right"> <div class="nav-search"> <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.3"></circle><path d="M11 11l3 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"></path></svg> <span class="flex">Search docs…</span> <span class="kbd">⌘</span><span class="kbd">K</span> </div> <a class="btn btn-link nav-icon-link" href="https://github.com/farisaziz12/tenderlane" title="GitHub" style="color:var(--text-1)"> <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5C5.7.5.5 5.7.5 12c0 5.1 3.3 9.4 7.9 10.9.6.1.8-.3.8-.6v-2.1c-3.2.7-3.9-1.5-3.9-1.5-.5-1.3-1.3-1.7-1.3-1.7-1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1.1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.8-1.6-2.6-.3-5.3-1.3-5.3-5.7 0-1.3.5-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.1 0 0 1-.3 3.3 1.2 1-.3 2-.4 3-.4s2 .1 3 .4c2.3-1.5 3.3-1.2 3.3-1.2.6 1.6.2 2.8.1 3.1.8.8 1.2 1.8 1.2 3.1 0 4.4-2.7 5.4-5.3 5.7.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6 4.6-1.5 7.9-5.8 7.9-10.9C23.5 5.7 18.3.5 12 .5z"></path></svg> </a> <a class="btn btn-ghost" href="/tenderlane/docs">Docs</a> <a class="btn btn-primary" href="/tenderlane/docs/getting-started/quick-start">
+Get started <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M4 8h8M8 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path></svg> </a> <button class="nav-toggle" id="nav-toggle" aria-label="Open menu"> <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M2 8h12M2 12h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></path></svg> </button> </div> </nav> <div class="mobile-drawer" id="mobile-drawer"> <div class="drawer-head"> <span class="logo" style="font-size:15.2px;" data-astro-cid-tvrurpns> <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" data-astro-cid-tvrurpns> <path d="M12 2 L22 12 L12 22 L2 12 Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" data-astro-cid-tvrurpns></path> <path d="M12 2 L22 12 L12 12 Z" fill="var(--accent)" data-astro-cid-tvrurpns></path> <circle cx="12" cy="12" r="1.5" fill="var(--bg-0)" stroke="currentColor" stroke-width="1.2" data-astro-cid-tvrurpns></circle> </svg> <span class="word" data-astro-cid-tvrurpns>tenderlane</span> </span>  <button class="nav-toggle" id="nav-close" style="display:inline-flex" aria-label="Close menu"> <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></path></svg> </button> </div> <nav> <a href="/tenderlane/docs/getting-started/introduction">Getting started</a><a href="/tenderlane/docs/concepts/routing">Concepts</a><a href="/tenderlane/docs/cookbooks/stripe-checkout-redirect">Cookbooks</a><a href="https://github.com/farisaziz12/tenderlane">GitHub</a> <a href="/tenderlane/docs">Docs</a> <a href="/tenderlane/docs/getting-started/quick-start" style="color: var(--accent)">Get started →</a> </nav> </div> <script type="module">const t=document.getElementById("nav-toggle"),n=document.getElementById("nav-close"),e=document.getElementById("mobile-drawer");t?.addEventListener("click",()=>e?.setAttribute("data-open","true"));n?.addEventListener("click",()=>e?.setAttribute("data-open","false"));</script> <main>  <div class="docs-page" data-astro-cid-mw7aashj> <aside class="docs-sidebar" data-astro-cid-qrwn6rcr> <div class="docs-sidebar-inner" data-astro-cid-qrwn6rcr> <div data-astro-cid-qrwn6rcr> <div class="t-cap" style="margin-bottom:10px;color:var(--text-3)" data-astro-cid-qrwn6rcr>Getting started</div> <ul data-astro-cid-qrwn6rcr> <li data-astro-cid-qrwn6rcr> <a href="/tenderlane/docs/getting-started/introduction" data-active="false" data-astro-cid-qrwn6rcr> Introduction </a> </li><li data-astro-cid-qrwn6rcr> <a href="/tenderlane/docs/getting-started/installation" data-active="false" data-astro-cid-qrwn6rcr> Installation </a> </li><li data-astro-cid-qrwn6rcr> <a href="/tenderlane/docs/getting-started/quick-start" data-active="false" data-astro-cid-qrwn6rcr> Quick Start </a> </li> </ul> </div><div data-astro-cid-qrwn6rcr> <div class="t-cap" style="margin-bottom:10px;color:var(--text-3)" data-astro-cid-qrwn6rcr>Core concepts</div> <ul data-astro-cid-qrwn6rcr> <li data-astro-cid-qrwn6rcr> <a href="/tenderlane/docs/concepts/routing" data-active="false" data-astro-cid-qrwn6rcr> Routing </a> </li><li data-astro-cid-qrwn6rcr> <a href="/tenderlane/docs/concepts/providers" data-active="true" data-astro-cid-qrwn6rcr> Providers </a> </li><li data-astro-cid-qrwn6rcr> <a href="/tenderlane/docs/concepts/state-machine" data-active="false" data-astro-cid-qrwn6rcr> State Machine </a> </li><li data-astro-cid-qrwn6rcr> <a href="/tenderlane/docs/concepts/catalog" data-active="false" data-astro-cid-qrwn6rcr> Catalog </a> </li><li data-astro-cid-qrwn6rcr> <a href="/tenderlane/docs/concepts/middleware" data-active="false" data-astro-cid-qrwn6rcr> Middleware </a> </li><li data-astro-cid-qrwn6rcr> <a href="/tenderlane/docs/concepts/type-safety" data-active="false" data-astro-cid-qrwn6rcr> Type Safety </a> </li> </ul> </div><div data-astro-cid-qrwn6rcr> <div class="t-cap" style="margin-bottom:10px;color:var(--text-3)" data-astro-cid-qrwn6rcr>Cookbooks</div> <ul data-astro-cid-qrwn6rcr> <li data-astro-cid-qrwn6rcr> <a href="/tenderlane/docs/cookbooks/stripe-checkout-redirect" data-active="false" data-astro-cid-qrwn6rcr> Stripe Checkout Redirect </a> </li><li data-astro-cid-qrwn6rcr> <a href="/tenderlane/docs/cookbooks/stripe-elements-inline" data-active="false" data-astro-cid-qrwn6rcr> Stripe Elements Inline </a> </li><li data-astro-cid-qrwn6rcr> <a href="/tenderlane/docs/cookbooks/country-based-routing" data-active="false" data-astro-cid-qrwn6rcr> Country-Based Routing </a> </li><li data-astro-cid-qrwn6rcr> <a href="/tenderlane/docs/cookbooks/polar-checkout-redirect" data-active="false" data-astro-cid-qrwn6rcr> Polar Checkout Redirect </a> </li><li data-astro-cid-qrwn6rcr> <a href="/tenderlane/docs/cookbooks/ab-testing-payment-flows" data-active="false" data-astro-cid-qrwn6rcr> A/B Testing Payment Flows </a> </li><li data-astro-cid-qrwn6rcr> <a href="/tenderlane/docs/cookbooks/nextjs-app-router" data-active="false" data-astro-cid-qrwn6rcr> Next.js App Router </a> </li><li data-astro-cid-qrwn6rcr> <a href="/tenderlane/docs/cookbooks/middleware-analytics" data-active="false" data-astro-cid-qrwn6rcr> Middleware Analytics </a> </li> </ul> </div> </div> </aside>  <main class="docs-main" data-astro-cid-mw7aashj> <div class="docs-breadcrumb" data-astro-cid-mw7aashj> <span data-astro-cid-mw7aashj>Docs</span> <span data-astro-cid-mw7aashj>/</span> <span data-astro-cid-mw7aashj>Core concepts</span> <span data-astro-cid-mw7aashj>/</span> <span style="color:var(--text-1)" data-astro-cid-mw7aashj>Providers</span> <span style="margin-left:auto" data-astro-cid-mw7aashj>v0.4.0-alpha</span> </div> <article class="docs-article" data-astro-cid-mw7aashj>  <h1 data-astro-cid-uadgga6g>Providers</h1> <p class="t-body-lg" style="margin:0 0 12px;color:var(--text-1);max-width:700px" data-astro-cid-uadgga6g>How payment provider adapters work in Tenderlane, from capabilities to phantom types.</p><div class="docs-meta" data-astro-cid-uadgga6g> <span class="badge" data-astro-cid-uadgga6g><span style="width:6px;height:6px;border-radius:50%;background:var(--accent);display:inline-block" data-astro-cid-uadgga6g></span>Core concepts</span> </div> <p>A <strong>provider</strong> in Tenderlane is an adapter that bridges the gap between Tenderlane’s normalized API and a specific payment service provider (PSP) like Stripe, Adyen, or PayPal. Each provider has two sides: a <strong>browser adapter</strong> that runs in the frontend, and a <strong>server adapter</strong> that runs on your backend.</p>
+<h2 id="browser-payment-provider">Browser payment provider</h2>
+<p>The <code>BrowserPaymentProvider</code> interface defines what every frontend provider adapter must implement:</p>
+<pre class="astro-code github-dark-default" style="background-color:#0d1117;color:#e6edf3;overflow-x:auto" tabindex="0" data-language="ts"><code><span class="line"><span style="color:#FF7B72">interface</span><span style="color:#FFA657"> BrowserPaymentProvider</span><span style="color:#E6EDF3">&lt;</span></span>
+<span class="line"><span style="color:#FFA657">  TProviderId</span><span style="color:#FF7B72"> extends</span><span style="color:#79C0FF"> string</span><span style="color:#FF7B72"> =</span><span style="color:#79C0FF"> string</span><span style="color:#E6EDF3">,</span></span>
+<span class="line"><span style="color:#FFA657">  TCapabilities</span><span style="color:#FF7B72"> extends</span><span style="color:#FFA657"> ProviderCapabilities</span><span style="color:#FF7B72"> =</span><span style="color:#FFA657"> ProviderCapabilities</span><span style="color:#E6EDF3">,</span></span>
+<span class="line"><span style="color:#FFA657">  TProviderOptions</span><span style="color:#FF7B72"> =</span><span style="color:#79C0FF"> unknown</span><span style="color:#E6EDF3">,</span></span>
+<span class="line"><span style="color:#E6EDF3">&gt; {</span></span>
+<span class="line"><span style="color:#FF7B72">  readonly</span><span style="color:#A5D6FF"> &#39;~types&#39;</span><span style="color:#FF7B72">:</span><span style="color:#FFA657"> ProviderPhantomTypes</span><span style="color:#E6EDF3">&lt;</span><span style="color:#FFA657">TProviderId</span><span style="color:#E6EDF3">, </span><span style="color:#FFA657">TCapabilities</span><span style="color:#E6EDF3">, </span><span style="color:#FFA657">TProviderOptions</span><span style="color:#E6EDF3">&gt;;</span></span>
+<span class="line"><span style="color:#FF7B72">  readonly</span><span style="color:#FFA657"> id</span><span style="color:#FF7B72">:</span><span style="color:#FFA657"> TProviderId</span><span style="color:#E6EDF3">;</span></span>
+<span class="line"><span style="color:#FF7B72">  readonly</span><span style="color:#FFA657"> capabilities</span><span style="color:#FF7B72">:</span><span style="color:#FFA657"> TCapabilities</span><span style="color:#E6EDF3">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#D2A8FF">  getAvailablePaymentMethods</span><span style="color:#E6EDF3">(</span><span style="color:#FFA657">context</span><span style="color:#FF7B72">:</span><span style="color:#FFA657"> TenderlaneContext</span><span style="color:#E6EDF3">)</span><span style="color:#FF7B72">:</span><span style="color:#FFA657"> PaymentMethodDescriptor</span><span style="color:#E6EDF3">[];</span></span>
+<span class="line"><span style="color:#D2A8FF">  submit</span><span style="color:#E6EDF3">(</span><span style="color:#FFA657">input</span><span style="color:#FF7B72">:</span><span style="color:#FFA657"> CheckoutInput</span><span style="color:#E6EDF3">, </span><span style="color:#FFA657">route</span><span style="color:#FF7B72">:</span><span style="color:#FFA657"> SelectedPaymentRoute</span><span style="color:#E6EDF3">)</span><span style="color:#FF7B72">:</span><span style="color:#FFA657"> Promise</span><span style="color:#E6EDF3">&lt;</span><span style="color:#FFA657">CheckoutResult</span><span style="color:#E6EDF3">&gt;;</span></span>
+<span class="line"><span style="color:#D2A8FF">  createSession</span><span style="color:#FF7B72">?</span><span style="color:#E6EDF3">(</span><span style="color:#FFA657">input</span><span style="color:#FF7B72">:</span><span style="color:#FFA657"> CheckoutInput</span><span style="color:#E6EDF3">, </span><span style="color:#FFA657">route</span><span style="color:#FF7B72">:</span><span style="color:#FFA657"> SelectedPaymentRoute</span><span style="color:#E6EDF3">)</span><span style="color:#FF7B72">:</span><span style="color:#FFA657"> Promise</span><span style="color:#E6EDF3">&lt;</span><span style="color:#FFA657">ProviderSession</span><span style="color:#E6EDF3">&gt;;</span></span>
+<span class="line"><span style="color:#E6EDF3">}</span></span></code></pre>
+<h3 id="key-methods">Key methods</h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Method</th><th>Purpose</th><th>When called</th></tr></thead><tbody><tr><td><code>getAvailablePaymentMethods</code></td><td>Returns payment methods available for the current context</td><td>When a route is evaluated</td></tr><tr><td><code>submit</code></td><td>Initiates the checkout (redirect or inline confirmation)</td><td>When the user clicks Pay</td></tr><tr><td><code>createSession</code></td><td>Creates a server-side session for inline flows (optional)</td><td>Before rendering inline payment forms</td></tr></tbody></table>
+<h3 id="using-the-stripe-provider">Using the Stripe provider</h3>
+<pre class="astro-code github-dark-default" style="background-color:#0d1117;color:#e6edf3;overflow-x:auto" tabindex="0" data-language="ts"><code><span class="line"><span style="color:#FF7B72">import</span><span style="color:#E6EDF3"> { stripeProvider } </span><span style="color:#FF7B72">from</span><span style="color:#A5D6FF"> &#39;@tenderlane/stripe&#39;</span><span style="color:#E6EDF3">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#FF7B72">const</span><span style="color:#79C0FF"> stripe</span><span style="color:#FF7B72"> =</span><span style="color:#D2A8FF"> stripeProvider</span><span style="color:#E6EDF3">({</span></span>
+<span class="line"><span style="color:#E6EDF3">  publishableKey: </span><span style="color:#A5D6FF">&#39;pk_test_...&#39;</span><span style="color:#E6EDF3">,</span></span>
+<span class="line"><span style="color:#E6EDF3">  serverEndpoint: </span><span style="color:#A5D6FF">&#39;/api/checkout&#39;</span><span style="color:#E6EDF3">,</span></span>
+<span class="line"><span style="color:#E6EDF3">  stripeAccount: </span><span style="color:#A5D6FF">&#39;acct_...&#39;</span><span style="color:#E6EDF3">,  </span><span style="color:#8B949E">// Optional: for Stripe Connect</span></span>
+<span class="line"><span style="color:#E6EDF3">  locale: </span><span style="color:#A5D6FF">&#39;de&#39;</span><span style="color:#E6EDF3">,                </span><span style="color:#8B949E">// Optional: Stripe.js locale</span></span>
+<span class="line"><span style="color:#E6EDF3">});</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#8B949E">// stripe.id === &#39;stripe&#39; (literal type, not just string)</span></span>
+<span class="line"><span style="color:#8B949E">// stripe.capabilities.paymentMethods includes &#39;card&#39;, &#39;sepa_debit&#39;, &#39;twint&#39;, etc.</span></span></code></pre>
+<p>The Stripe browser provider never imports the <code>stripe</code> npm package. It communicates with your server endpoint via <code>fetch</code> and lazy-loads <code>@stripe/stripe-js</code> only when needed. This means zero Stripe.js bundle cost for pages that do not render a checkout.</p>
+<h2 id="server-provider-adapter">Server provider adapter</h2>
+<p>The <code>ServerProviderAdapter</code> interface handles operations that require secret API keys:</p>
+<pre class="astro-code github-dark-default" style="background-color:#0d1117;color:#e6edf3;overflow-x:auto" tabindex="0" data-language="ts"><code><span class="line"><span style="color:#FF7B72">interface</span><span style="color:#FFA657"> ServerProviderAdapter</span><span style="color:#E6EDF3">&lt;</span><span style="color:#FFA657">TProviderId</span><span style="color:#FF7B72"> extends</span><span style="color:#79C0FF"> string</span><span style="color:#FF7B72"> =</span><span style="color:#79C0FF"> string</span><span style="color:#E6EDF3">&gt; {</span></span>
+<span class="line"><span style="color:#FF7B72">  readonly</span><span style="color:#FFA657"> id</span><span style="color:#FF7B72">:</span><span style="color:#FFA657"> TProviderId</span><span style="color:#E6EDF3">;</span></span>
+<span class="line"><span style="color:#FF7B72">  readonly</span><span style="color:#FFA657"> actions</span><span style="color:#FF7B72">:</span><span style="color:#FF7B72"> readonly</span><span style="color:#79C0FF"> string</span><span style="color:#E6EDF3">[];</span></span>
+<span class="line"><span style="color:#D2A8FF">  handle</span><span style="color:#E6EDF3">(</span></span>
+<span class="line"><span style="color:#FFA657">    action</span><span style="color:#FF7B72">:</span><span style="color:#79C0FF"> string</span><span style="color:#E6EDF3">,</span></span>
+<span class="line"><span style="color:#FFA657">    payload</span><span style="color:#FF7B72">:</span><span style="color:#FFA657"> CheckoutInput</span><span style="color:#E6EDF3">,</span></span>
+<span class="line"><span style="color:#FFA657">    options</span><span style="color:#FF7B72">?:</span><span style="color:#FFA657"> Record</span><span style="color:#E6EDF3">&lt;</span><span style="color:#79C0FF">string</span><span style="color:#E6EDF3">, </span><span style="color:#79C0FF">unknown</span><span style="color:#E6EDF3">&gt;,</span></span>
+<span class="line"><span style="color:#E6EDF3">  )</span><span style="color:#FF7B72">:</span><span style="color:#FFA657"> Promise</span><span style="color:#E6EDF3">&lt;</span><span style="color:#FFA657">CheckoutResult</span><span style="color:#E6EDF3">&gt;;</span></span>
+<span class="line"><span style="color:#E6EDF3">}</span></span></code></pre>
+<p>The server adapter is registered with <code>createTenderlaneHandler</code>, which dispatches incoming requests to the right adapter based on the <code>provider</code> field.</p>
+<pre class="astro-code github-dark-default" style="background-color:#0d1117;color:#e6edf3;overflow-x:auto" tabindex="0" data-language="ts"><code><span class="line"><span style="color:#FF7B72">import</span><span style="color:#E6EDF3"> { createTenderlaneHandler } </span><span style="color:#FF7B72">from</span><span style="color:#A5D6FF"> &#39;@tenderlane/core/server&#39;</span><span style="color:#E6EDF3">;</span></span>
+<span class="line"><span style="color:#FF7B72">import</span><span style="color:#E6EDF3"> { stripeServerAdapter } </span><span style="color:#FF7B72">from</span><span style="color:#A5D6FF"> &#39;@tenderlane/stripe/server&#39;</span><span style="color:#E6EDF3">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#FF7B72">const</span><span style="color:#79C0FF"> handler</span><span style="color:#FF7B72"> =</span><span style="color:#D2A8FF"> createTenderlaneHandler</span><span style="color:#E6EDF3">({</span></span>
+<span class="line"><span style="color:#E6EDF3">  providers: [</span></span>
+<span class="line"><span style="color:#D2A8FF">    stripeServerAdapter</span><span style="color:#E6EDF3">({ secretKey: process.env.</span><span style="color:#79C0FF">STRIPE_SECRET_KEY</span><span style="color:#FF7B72">!</span><span style="color:#E6EDF3"> }),</span></span>
+<span class="line"><span style="color:#E6EDF3">  ],</span></span>
+<span class="line"><span style="color:#E6EDF3">});</span></span></code></pre>
+<h3 id="stripe-server-adapter-actions">Stripe server adapter actions</h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Action</th><th>What it does</th><th>Used for</th></tr></thead><tbody><tr><td><code>&#39;checkout&#39;</code></td><td>Creates a Stripe Checkout Session</td><td>Redirect flow (<code>checkout-session</code>)</td></tr><tr><td><code>&#39;create-payment-intent&#39;</code></td><td>Creates a Stripe PaymentIntent</td><td>Inline flow (<code>payment-intent</code>)</td></tr></tbody></table>
+<h2 id="capabilities">Capabilities</h2>
+<p>Every provider declares its capabilities: which flows, payment methods, currencies, and countries it supports, and which features it offers.</p>
+<pre class="astro-code github-dark-default" style="background-color:#0d1117;color:#e6edf3;overflow-x:auto" tabindex="0" data-language="ts"><code><span class="line"><span style="color:#FF7B72">interface</span><span style="color:#FFA657"> ProviderCapabilities</span><span style="color:#E6EDF3">&lt;</span><span style="color:#FFA657">TPaymentMethods</span><span style="color:#FF7B72"> extends</span><span style="color:#FFA657"> PaymentMethodId</span><span style="color:#FF7B72"> =</span><span style="color:#FFA657"> PaymentMethodId</span><span style="color:#E6EDF3">&gt; {</span></span>
+<span class="line"><span style="color:#FF7B72">  readonly</span><span style="color:#FFA657"> provider</span><span style="color:#FF7B72">:</span><span style="color:#79C0FF"> string</span><span style="color:#E6EDF3">;</span></span>
+<span class="line"><span style="color:#FF7B72">  readonly</span><span style="color:#FFA657"> flows</span><span style="color:#FF7B72">:</span><span style="color:#FF7B72"> readonly</span><span style="color:#FFA657"> PaymentFlow</span><span style="color:#E6EDF3">[];</span></span>
+<span class="line"><span style="color:#FF7B72">  readonly</span><span style="color:#FFA657"> paymentMethods</span><span style="color:#FF7B72">:</span><span style="color:#FF7B72"> readonly</span><span style="color:#FFA657"> TPaymentMethods</span><span style="color:#E6EDF3">[];</span></span>
+<span class="line"><span style="color:#FF7B72">  readonly</span><span style="color:#FFA657"> currencies</span><span style="color:#FF7B72">?:</span><span style="color:#FF7B72"> readonly</span><span style="color:#79C0FF"> string</span><span style="color:#E6EDF3">[];</span></span>
+<span class="line"><span style="color:#FF7B72">  readonly</span><span style="color:#FFA657"> countries</span><span style="color:#FF7B72">?:</span><span style="color:#FF7B72"> readonly</span><span style="color:#79C0FF"> string</span><span style="color:#E6EDF3">[];</span></span>
+<span class="line"><span style="color:#FF7B72">  readonly</span><span style="color:#FFA657"> supports</span><span style="color:#FF7B72">:</span><span style="color:#E6EDF3"> {</span></span>
+<span class="line"><span style="color:#FF7B72">    readonly</span><span style="color:#FFA657"> redirect</span><span style="color:#FF7B72">?:</span><span style="color:#79C0FF"> boolean</span><span style="color:#E6EDF3">;</span></span>
+<span class="line"><span style="color:#FF7B72">    readonly</span><span style="color:#FFA657"> embedded</span><span style="color:#FF7B72">?:</span><span style="color:#79C0FF"> boolean</span><span style="color:#E6EDF3">;</span></span>
+<span class="line"><span style="color:#FF7B72">    readonly</span><span style="color:#FFA657"> subscriptions</span><span style="color:#FF7B72">?:</span><span style="color:#79C0FF"> boolean</span><span style="color:#E6EDF3">;</span></span>
+<span class="line"><span style="color:#FF7B72">    readonly</span><span style="color:#FFA657"> refunds</span><span style="color:#FF7B72">?:</span><span style="color:#79C0FF"> boolean</span><span style="color:#E6EDF3">;</span></span>
+<span class="line"><span style="color:#FF7B72">    readonly</span><span style="color:#FFA657"> webhooks</span><span style="color:#FF7B72">?:</span><span style="color:#79C0FF"> boolean</span><span style="color:#E6EDF3">;</span></span>
+<span class="line"><span style="color:#E6EDF3">  };</span></span>
+<span class="line"><span style="color:#E6EDF3">}</span></span></code></pre>
+<p>The Stripe adapter declares these capabilities:</p>
+<pre class="astro-code github-dark-default" style="background-color:#0d1117;color:#e6edf3;overflow-x:auto" tabindex="0" data-language="ts"><code><span class="line"><span style="color:#FF7B72">const</span><span style="color:#79C0FF"> STRIPE_CAPABILITIES</span><span style="color:#FF7B72"> =</span><span style="color:#E6EDF3"> {</span></span>
+<span class="line"><span style="color:#E6EDF3">  provider: </span><span style="color:#A5D6FF">&#39;stripe&#39;</span><span style="color:#E6EDF3">,</span></span>
+<span class="line"><span style="color:#E6EDF3">  flows: [</span><span style="color:#A5D6FF">&#39;checkout-session&#39;</span><span style="color:#E6EDF3">, </span><span style="color:#A5D6FF">&#39;payment-intent&#39;</span><span style="color:#E6EDF3">],</span></span>
+<span class="line"><span style="color:#E6EDF3">  paymentMethods: [</span></span>
+<span class="line"><span style="color:#A5D6FF">    &#39;card&#39;</span><span style="color:#E6EDF3">, </span><span style="color:#A5D6FF">&#39;paypal&#39;</span><span style="color:#E6EDF3">, </span><span style="color:#A5D6FF">&#39;link&#39;</span><span style="color:#E6EDF3">, </span><span style="color:#A5D6FF">&#39;sepa_debit&#39;</span><span style="color:#E6EDF3">, </span><span style="color:#A5D6FF">&#39;ideal&#39;</span><span style="color:#E6EDF3">, </span><span style="color:#A5D6FF">&#39;bancontact&#39;</span><span style="color:#E6EDF3">,</span></span>
+<span class="line"><span style="color:#A5D6FF">    &#39;giropay&#39;</span><span style="color:#E6EDF3">, </span><span style="color:#A5D6FF">&#39;sofort&#39;</span><span style="color:#E6EDF3">, </span><span style="color:#A5D6FF">&#39;eps&#39;</span><span style="color:#E6EDF3">, </span><span style="color:#A5D6FF">&#39;p24&#39;</span><span style="color:#E6EDF3">, </span><span style="color:#A5D6FF">&#39;twint&#39;</span><span style="color:#E6EDF3">, </span><span style="color:#A5D6FF">&#39;klarna&#39;</span><span style="color:#E6EDF3">,</span></span>
+<span class="line"><span style="color:#A5D6FF">    &#39;afterpay_clearpay&#39;</span><span style="color:#E6EDF3">, </span><span style="color:#A5D6FF">&#39;affirm&#39;</span><span style="color:#E6EDF3">, </span><span style="color:#A5D6FF">&#39;alipay&#39;</span><span style="color:#E6EDF3">, </span><span style="color:#A5D6FF">&#39;wechat_pay&#39;</span><span style="color:#E6EDF3">, </span><span style="color:#A5D6FF">&#39;cash_app&#39;</span><span style="color:#E6EDF3">,</span></span>
+<span class="line"><span style="color:#A5D6FF">    &#39;apple_pay&#39;</span><span style="color:#E6EDF3">, </span><span style="color:#A5D6FF">&#39;google_pay&#39;</span><span style="color:#E6EDF3">,</span></span>
+<span class="line"><span style="color:#E6EDF3">  ],</span></span>
+<span class="line"><span style="color:#E6EDF3">  currencies: [</span><span style="color:#A5D6FF">&#39;usd&#39;</span><span style="color:#E6EDF3">, </span><span style="color:#A5D6FF">&#39;eur&#39;</span><span style="color:#E6EDF3">, </span><span style="color:#A5D6FF">&#39;gbp&#39;</span><span style="color:#E6EDF3">, </span><span style="color:#A5D6FF">&#39;chf&#39;</span><span style="color:#E6EDF3">, </span><span style="color:#A5D6FF">&#39;jpy&#39;</span><span style="color:#E6EDF3">, </span><span style="color:#A5D6FF">&#39;cad&#39;</span><span style="color:#E6EDF3">, </span><span style="color:#A5D6FF">&#39;aud&#39;</span><span style="color:#E6EDF3">],</span></span>
+<span class="line"><span style="color:#E6EDF3">  countries: [</span><span style="color:#A5D6FF">&#39;US&#39;</span><span style="color:#E6EDF3">, </span><span style="color:#A5D6FF">&#39;GB&#39;</span><span style="color:#E6EDF3">, </span><span style="color:#A5D6FF">&#39;DE&#39;</span><span style="color:#E6EDF3">, </span><span style="color:#A5D6FF">&#39;FR&#39;</span><span style="color:#E6EDF3">, </span><span style="color:#A5D6FF">&#39;CH&#39;</span><span style="color:#E6EDF3">, </span><span style="color:#A5D6FF">&#39;JP&#39;</span><span style="color:#E6EDF3">, </span><span style="color:#A5D6FF">&#39;CA&#39;</span><span style="color:#E6EDF3">, </span><span style="color:#A5D6FF">&#39;AU&#39;</span><span style="color:#E6EDF3">],</span></span>
+<span class="line"><span style="color:#E6EDF3">  supports: {</span></span>
+<span class="line"><span style="color:#E6EDF3">    redirect: </span><span style="color:#79C0FF">true</span><span style="color:#E6EDF3">,</span></span>
+<span class="line"><span style="color:#E6EDF3">    embedded: </span><span style="color:#79C0FF">true</span><span style="color:#E6EDF3">,</span></span>
+<span class="line"><span style="color:#E6EDF3">    subscriptions: </span><span style="color:#79C0FF">false</span><span style="color:#E6EDF3">,  </span><span style="color:#8B949E">// Not yet implemented</span></span>
+<span class="line"><span style="color:#E6EDF3">    refunds: </span><span style="color:#79C0FF">false</span><span style="color:#E6EDF3">,         </span><span style="color:#8B949E">// Not yet implemented</span></span>
+<span class="line"><span style="color:#E6EDF3">    webhooks: </span><span style="color:#79C0FF">true</span><span style="color:#E6EDF3">,</span></span>
+<span class="line"><span style="color:#E6EDF3">  },</span></span>
+<span class="line"><span style="color:#E6EDF3">};</span></span></code></pre>
+<h3 id="payment-flows">Payment flows</h3>
+<p>Tenderlane supports several payment flows:</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Flow</th><th>Description</th><th>Example</th></tr></thead><tbody><tr><td><code>&#39;checkout-session&#39;</code></td><td>Redirect to a provider-hosted checkout page</td><td>Stripe Checkout</td></tr><tr><td><code>&#39;payment-intent&#39;</code></td><td>Inline card form on your page</td><td>Stripe Elements</td></tr><tr><td><code>&#39;embedded-checkout&#39;</code></td><td>Embedded checkout widget</td><td>Stripe Embedded Checkout</td></tr><tr><td><code>&#39;redirect&#39;</code></td><td>Generic redirect to a provider URL</td><td>PayPal redirect</td></tr><tr><td><code>&#39;custom&#39;</code></td><td>Custom flow defined by your provider adapter</td><td>Any bespoke flow</td></tr></tbody></table>
+<h3 id="payment-method-descriptors">Payment method descriptors</h3>
+<p>When routing selects a provider, the client calls <code>getAvailablePaymentMethods(context)</code> to get human-readable descriptors for the UI:</p>
+<pre class="astro-code github-dark-default" style="background-color:#0d1117;color:#e6edf3;overflow-x:auto" tabindex="0" data-language="ts"><code><span class="line"><span style="color:#FF7B72">interface</span><span style="color:#FFA657"> PaymentMethodDescriptor</span><span style="color:#E6EDF3"> {</span></span>
+<span class="line"><span style="color:#FF7B72">  readonly</span><span style="color:#FFA657"> id</span><span style="color:#FF7B72">:</span><span style="color:#FFA657"> PaymentMethodId</span><span style="color:#E6EDF3">;    </span><span style="color:#8B949E">// e.g. &#39;card&#39;, &#39;sepa_debit&#39;</span></span>
+<span class="line"><span style="color:#FF7B72">  readonly</span><span style="color:#FFA657"> label</span><span style="color:#FF7B72">:</span><span style="color:#79C0FF"> string</span><span style="color:#E6EDF3">;          </span><span style="color:#8B949E">// e.g. &#39;Credit or debit card&#39;, &#39;SEPA Direct Debit&#39;</span></span>
+<span class="line"><span style="color:#FF7B72">  readonly</span><span style="color:#FFA657"> type</span><span style="color:#FF7B72">:</span><span style="color:#A5D6FF"> &#39;card&#39;</span><span style="color:#FF7B72"> |</span><span style="color:#A5D6FF"> &#39;bank&#39;</span><span style="color:#FF7B72"> |</span><span style="color:#A5D6FF"> &#39;wallet&#39;</span><span style="color:#FF7B72"> |</span><span style="color:#A5D6FF"> &#39;redirect&#39;</span><span style="color:#FF7B72"> |</span><span style="color:#A5D6FF"> &#39;local&#39;</span><span style="color:#FF7B72"> |</span><span style="color:#A5D6FF"> &#39;other&#39;</span><span style="color:#E6EDF3">;</span></span>
+<span class="line"><span style="color:#FF7B72">  readonly</span><span style="color:#FFA657"> provider</span><span style="color:#FF7B72">:</span><span style="color:#79C0FF"> string</span><span style="color:#E6EDF3">;       </span><span style="color:#8B949E">// e.g. &#39;stripe&#39;</span></span>
+<span class="line"><span style="color:#E6EDF3">}</span></span></code></pre>
+<h2 id="phantom-types-types">Phantom types (<code>~types</code>)</h2>
+<p>Provider adapters carry a <code>&#39;~types&#39;</code> property for compile-time type inference without runtime cost. This follows the TanStack pattern for preserving literal types through generic boundaries.</p>
+<pre class="astro-code github-dark-default" style="background-color:#0d1117;color:#e6edf3;overflow-x:auto" tabindex="0" data-language="ts"><code><span class="line"><span style="color:#FF7B72">interface</span><span style="color:#FFA657"> ProviderPhantomTypes</span><span style="color:#E6EDF3">&lt;</span></span>
+<span class="line"><span style="color:#FFA657">  TProviderId</span><span style="color:#FF7B72"> extends</span><span style="color:#79C0FF"> string</span><span style="color:#FF7B72"> =</span><span style="color:#79C0FF"> string</span><span style="color:#E6EDF3">,</span></span>
+<span class="line"><span style="color:#FFA657">  TCapabilities</span><span style="color:#FF7B72"> extends</span><span style="color:#FFA657"> ProviderCapabilities</span><span style="color:#FF7B72"> =</span><span style="color:#FFA657"> ProviderCapabilities</span><span style="color:#E6EDF3">,</span></span>
+<span class="line"><span style="color:#FFA657">  TProviderOptions</span><span style="color:#FF7B72"> =</span><span style="color:#79C0FF"> unknown</span><span style="color:#E6EDF3">,</span></span>
+<span class="line"><span style="color:#E6EDF3">&gt; {</span></span>
+<span class="line"><span style="color:#FF7B72">  readonly</span><span style="color:#FFA657"> providerId</span><span style="color:#FF7B72">:</span><span style="color:#FFA657"> TProviderId</span><span style="color:#E6EDF3">;</span></span>
+<span class="line"><span style="color:#FF7B72">  readonly</span><span style="color:#FFA657"> capabilities</span><span style="color:#FF7B72">:</span><span style="color:#FFA657"> TCapabilities</span><span style="color:#E6EDF3">;</span></span>
+<span class="line"><span style="color:#FF7B72">  readonly</span><span style="color:#FFA657"> providerOptions</span><span style="color:#FF7B72">:</span><span style="color:#FFA657"> TProviderOptions</span><span style="color:#E6EDF3">;</span></span>
+<span class="line"><span style="color:#E6EDF3">}</span></span></code></pre>
+<p>The <code>&#39;~types&#39;</code> property is never accessed at runtime. Its value is always <code>{} as StripePhantomTypes</code>. It exists purely so that TypeScript can infer the literal provider ID, capability types, and option types from the adapter instance.</p>
+<pre class="astro-code github-dark-default" style="background-color:#0d1117;color:#e6edf3;overflow-x:auto" tabindex="0" data-language="ts"><code><span class="line"><span style="color:#FF7B72">const</span><span style="color:#79C0FF"> stripe</span><span style="color:#FF7B72"> =</span><span style="color:#D2A8FF"> stripeProvider</span><span style="color:#E6EDF3">({ publishableKey: </span><span style="color:#A5D6FF">&#39;...&#39;</span><span style="color:#E6EDF3">, serverEndpoint: </span><span style="color:#A5D6FF">&#39;...&#39;</span><span style="color:#E6EDF3"> });</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#8B949E">// TypeScript infers:</span></span>
+<span class="line"><span style="color:#8B949E">// typeof stripe.id === &#39;stripe&#39; (literal, not string)</span></span>
+<span class="line"><span style="color:#8B949E">// typeof stripe.capabilities.paymentMethods === readonly [&#39;card&#39;, &#39;paypal&#39;, &#39;link&#39;, ...]</span></span></code></pre>
+<p>See <a href="/concepts/type-safety/">Type Safety</a> for more on how to use the inference utilities.</p>
+<h2 id="building-a-custom-provider">Building a custom provider</h2>
+<p>To integrate a PSP that Tenderlane does not yet support, implement both the browser and server interfaces.</p>
+<h3 id="browser-adapter">Browser adapter</h3>
+<pre class="astro-code github-dark-default" style="background-color:#0d1117;color:#e6edf3;overflow-x:auto" tabindex="0" data-language="ts"><code><span class="line"><span style="color:#FF7B72">import</span><span style="color:#FF7B72"> type</span><span style="color:#E6EDF3"> {</span></span>
+<span class="line"><span style="color:#E6EDF3">  BrowserPaymentProvider,</span></span>
+<span class="line"><span style="color:#E6EDF3">  ProviderCapabilities,</span></span>
+<span class="line"><span style="color:#E6EDF3">  ProviderPhantomTypes,</span></span>
+<span class="line"><span style="color:#E6EDF3">  TenderlaneContext,</span></span>
+<span class="line"><span style="color:#E6EDF3">  PaymentMethodDescriptor,</span></span>
+<span class="line"><span style="color:#E6EDF3">  CheckoutInput,</span></span>
+<span class="line"><span style="color:#E6EDF3">  CheckoutResult,</span></span>
+<span class="line"><span style="color:#E6EDF3">  SelectedPaymentRoute,</span></span>
+<span class="line"><span style="color:#E6EDF3">} </span><span style="color:#FF7B72">from</span><span style="color:#A5D6FF"> &#39;@tenderlane/core&#39;</span><span style="color:#E6EDF3">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#FF7B72">interface</span><span style="color:#FFA657"> AcmeProviderOptions</span><span style="color:#E6EDF3"> {</span></span>
+<span class="line"><span style="color:#FF7B72">  readonly</span><span style="color:#FFA657"> apiKey</span><span style="color:#FF7B72">:</span><span style="color:#79C0FF"> string</span><span style="color:#E6EDF3">;</span></span>
+<span class="line"><span style="color:#FF7B72">  readonly</span><span style="color:#FFA657"> serverEndpoint</span><span style="color:#FF7B72">:</span><span style="color:#79C0FF"> string</span><span style="color:#E6EDF3">;</span></span>
+<span class="line"><span style="color:#E6EDF3">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#FF7B72">const</span><span style="color:#79C0FF"> ACME_CAPABILITIES</span><span style="color:#FF7B72"> =</span><span style="color:#E6EDF3"> {</span></span>
+<span class="line"><span style="color:#E6EDF3">  provider: </span><span style="color:#A5D6FF">&#39;acme&#39;</span><span style="color:#E6EDF3">,</span></span>
+<span class="line"><span style="color:#E6EDF3">  flows: [</span><span style="color:#A5D6FF">&#39;redirect&#39;</span><span style="color:#E6EDF3">],</span></span>
+<span class="line"><span style="color:#E6EDF3">  paymentMethods: [</span><span style="color:#A5D6FF">&#39;card&#39;</span><span style="color:#E6EDF3">, </span><span style="color:#A5D6FF">&#39;bank_transfer&#39;</span><span style="color:#E6EDF3">],</span></span>
+<span class="line"><span style="color:#E6EDF3">  currencies: [</span><span style="color:#A5D6FF">&#39;usd&#39;</span><span style="color:#E6EDF3">, </span><span style="color:#A5D6FF">&#39;eur&#39;</span><span style="color:#E6EDF3">],</span></span>
+<span class="line"><span style="color:#E6EDF3">  supports: {</span></span>
+<span class="line"><span style="color:#E6EDF3">    redirect: </span><span style="color:#79C0FF">true</span><span style="color:#E6EDF3">,</span></span>
+<span class="line"><span style="color:#E6EDF3">    embedded: </span><span style="color:#79C0FF">false</span><span style="color:#E6EDF3">,</span></span>
+<span class="line"><span style="color:#E6EDF3">    subscriptions: </span><span style="color:#79C0FF">false</span><span style="color:#E6EDF3">,</span></span>
+<span class="line"><span style="color:#E6EDF3">    refunds: </span><span style="color:#79C0FF">false</span><span style="color:#E6EDF3">,</span></span>
+<span class="line"><span style="color:#E6EDF3">    webhooks: </span><span style="color:#79C0FF">false</span><span style="color:#E6EDF3">,</span></span>
+<span class="line"><span style="color:#E6EDF3">  },</span></span>
+<span class="line"><span style="color:#E6EDF3">} </span><span style="color:#FF7B72">as</span><span style="color:#FFA657"> const</span><span style="color:#FF7B72"> satisfies</span><span style="color:#FFA657"> ProviderCapabilities</span><span style="color:#E6EDF3">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#FF7B72">type</span><span style="color:#FFA657"> AcmeCapabilities</span><span style="color:#FF7B72"> =</span><span style="color:#FF7B72"> typeof</span><span style="color:#79C0FF"> ACME_CAPABILITIES</span><span style="color:#E6EDF3">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#FF7B72">export</span><span style="color:#FF7B72"> function</span><span style="color:#D2A8FF"> acmeProvider</span><span style="color:#E6EDF3">(</span></span>
+<span class="line"><span style="color:#FFA657">  options</span><span style="color:#FF7B72">:</span><span style="color:#FFA657"> AcmeProviderOptions</span><span style="color:#E6EDF3">,</span></span>
+<span class="line"><span style="color:#E6EDF3">)</span><span style="color:#FF7B72">:</span><span style="color:#FFA657"> BrowserPaymentProvider</span><span style="color:#E6EDF3">&lt;</span><span style="color:#A5D6FF">&#39;acme&#39;</span><span style="color:#E6EDF3">, </span><span style="color:#FFA657">AcmeCapabilities</span><span style="color:#E6EDF3">, </span><span style="color:#FFA657">AcmeProviderOptions</span><span style="color:#E6EDF3">&gt; {</span></span>
+<span class="line"><span style="color:#FF7B72">  return</span><span style="color:#E6EDF3"> {</span></span>
+<span class="line"><span style="color:#A5D6FF">    &#39;~types&#39;</span><span style="color:#E6EDF3">: {} </span><span style="color:#FF7B72">as</span><span style="color:#FFA657"> ProviderPhantomTypes</span><span style="color:#E6EDF3">&lt;</span><span style="color:#A5D6FF">&#39;acme&#39;</span><span style="color:#E6EDF3">, </span><span style="color:#FFA657">AcmeCapabilities</span><span style="color:#E6EDF3">, </span><span style="color:#FFA657">AcmeProviderOptions</span><span style="color:#E6EDF3">&gt;,</span></span>
+<span class="line"><span style="color:#E6EDF3">    id: </span><span style="color:#A5D6FF">&#39;acme&#39;</span><span style="color:#FF7B72"> as</span><span style="color:#FF7B72"> const</span><span style="color:#E6EDF3">,</span></span>
+<span class="line"><span style="color:#E6EDF3">    capabilities: </span><span style="color:#79C0FF">ACME_CAPABILITIES</span><span style="color:#E6EDF3">,</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#D2A8FF">    getAvailablePaymentMethods</span><span style="color:#E6EDF3">(</span><span style="color:#FFA657">_context</span><span style="color:#FF7B72">:</span><span style="color:#FFA657"> TenderlaneContext</span><span style="color:#E6EDF3">)</span><span style="color:#FF7B72">:</span><span style="color:#FFA657"> PaymentMethodDescriptor</span><span style="color:#E6EDF3">[] {</span></span>
+<span class="line"><span style="color:#FF7B72">      return</span><span style="color:#E6EDF3"> [</span></span>
+<span class="line"><span style="color:#E6EDF3">        { id: </span><span style="color:#A5D6FF">&#39;card&#39;</span><span style="color:#E6EDF3">, label: </span><span style="color:#A5D6FF">&#39;Credit Card&#39;</span><span style="color:#E6EDF3">, type: </span><span style="color:#A5D6FF">&#39;card&#39;</span><span style="color:#E6EDF3">, provider: </span><span style="color:#A5D6FF">&#39;acme&#39;</span><span style="color:#E6EDF3"> },</span></span>
+<span class="line"><span style="color:#E6EDF3">        { id: </span><span style="color:#A5D6FF">&#39;bank_transfer&#39;</span><span style="color:#E6EDF3">, label: </span><span style="color:#A5D6FF">&#39;Bank Transfer&#39;</span><span style="color:#E6EDF3">, type: </span><span style="color:#A5D6FF">&#39;bank&#39;</span><span style="color:#E6EDF3">, provider: </span><span style="color:#A5D6FF">&#39;acme&#39;</span><span style="color:#E6EDF3"> },</span></span>
+<span class="line"><span style="color:#E6EDF3">      ];</span></span>
+<span class="line"><span style="color:#E6EDF3">    },</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#FF7B72">    async</span><span style="color:#D2A8FF"> submit</span><span style="color:#E6EDF3">(</span><span style="color:#FFA657">input</span><span style="color:#FF7B72">:</span><span style="color:#FFA657"> CheckoutInput</span><span style="color:#E6EDF3">, </span><span style="color:#FFA657">route</span><span style="color:#FF7B72">:</span><span style="color:#FFA657"> SelectedPaymentRoute</span><span style="color:#E6EDF3">)</span><span style="color:#FF7B72">:</span><span style="color:#FFA657"> Promise</span><span style="color:#E6EDF3">&lt;</span><span style="color:#FFA657">CheckoutResult</span><span style="color:#E6EDF3">&gt; {</span></span>
+<span class="line"><span style="color:#FF7B72">      const</span><span style="color:#79C0FF"> response</span><span style="color:#FF7B72"> =</span><span style="color:#FF7B72"> await</span><span style="color:#D2A8FF"> fetch</span><span style="color:#E6EDF3">(options.serverEndpoint, {</span></span>
+<span class="line"><span style="color:#E6EDF3">        method: </span><span style="color:#A5D6FF">&#39;POST&#39;</span><span style="color:#E6EDF3">,</span></span>
+<span class="line"><span style="color:#E6EDF3">        headers: { </span><span style="color:#A5D6FF">&#39;Content-Type&#39;</span><span style="color:#E6EDF3">: </span><span style="color:#A5D6FF">&#39;application/json&#39;</span><span style="color:#E6EDF3"> },</span></span>
+<span class="line"><span style="color:#E6EDF3">        body: </span><span style="color:#79C0FF">JSON</span><span style="color:#E6EDF3">.</span><span style="color:#D2A8FF">stringify</span><span style="color:#E6EDF3">({</span></span>
+<span class="line"><span style="color:#E6EDF3">          provider: </span><span style="color:#A5D6FF">&#39;acme&#39;</span><span style="color:#E6EDF3">,</span></span>
+<span class="line"><span style="color:#E6EDF3">          action: </span><span style="color:#A5D6FF">&#39;create-checkout&#39;</span><span style="color:#E6EDF3">,</span></span>
+<span class="line"><span style="color:#E6EDF3">          payload: input,</span></span>
+<span class="line"><span style="color:#E6EDF3">          paymentMethods: route.paymentMethods,</span></span>
+<span class="line"><span style="color:#E6EDF3">        }),</span></span>
+<span class="line"><span style="color:#E6EDF3">      });</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#FF7B72">      const</span><span style="color:#79C0FF"> result</span><span style="color:#FF7B72"> =</span><span style="color:#FF7B72"> await</span><span style="color:#E6EDF3"> response.</span><span style="color:#D2A8FF">json</span><span style="color:#E6EDF3">() </span><span style="color:#FF7B72">as</span><span style="color:#FFA657"> CheckoutResult</span><span style="color:#E6EDF3">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#FF7B72">      if</span><span style="color:#E6EDF3"> (result.url </span><span style="color:#FF7B72">&amp;&amp;</span><span style="color:#FF7B72"> typeof</span><span style="color:#E6EDF3"> window </span><span style="color:#FF7B72">!==</span><span style="color:#A5D6FF"> &#39;undefined&#39;</span><span style="color:#E6EDF3">) {</span></span>
+<span class="line"><span style="color:#E6EDF3">        window.location.href </span><span style="color:#FF7B72">=</span><span style="color:#E6EDF3"> result.url;</span></span>
+<span class="line"><span style="color:#E6EDF3">      }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#FF7B72">      return</span><span style="color:#E6EDF3"> result;</span></span>
+<span class="line"><span style="color:#E6EDF3">    },</span></span>
+<span class="line"><span style="color:#E6EDF3">  };</span></span>
+<span class="line"><span style="color:#E6EDF3">}</span></span></code></pre>
+<h3 id="server-adapter">Server adapter</h3>
+<pre class="astro-code github-dark-default" style="background-color:#0d1117;color:#e6edf3;overflow-x:auto" tabindex="0" data-language="ts"><code><span class="line"><span style="color:#FF7B72">import</span><span style="color:#FF7B72"> type</span><span style="color:#E6EDF3"> { ServerProviderAdapter, CheckoutInput, CheckoutResult } </span><span style="color:#FF7B72">from</span><span style="color:#A5D6FF"> &#39;@tenderlane/core&#39;</span><span style="color:#E6EDF3">;</span></span>
+<span class="line"><span style="color:#FF7B72">import</span><span style="color:#E6EDF3"> { ProviderError } </span><span style="color:#FF7B72">from</span><span style="color:#A5D6FF"> &#39;@tenderlane/core&#39;</span><span style="color:#E6EDF3">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#FF7B72">export</span><span style="color:#FF7B72"> function</span><span style="color:#D2A8FF"> acmeServerAdapter</span><span style="color:#E6EDF3">(</span><span style="color:#FFA657">config</span><span style="color:#FF7B72">:</span><span style="color:#E6EDF3"> {</span></span>
+<span class="line"><span style="color:#FFA657">  secretKey</span><span style="color:#FF7B72">:</span><span style="color:#79C0FF"> string</span><span style="color:#E6EDF3">;</span></span>
+<span class="line"><span style="color:#E6EDF3">})</span><span style="color:#FF7B72">:</span><span style="color:#FFA657"> ServerProviderAdapter</span><span style="color:#E6EDF3">&lt;</span><span style="color:#A5D6FF">&#39;acme&#39;</span><span style="color:#E6EDF3">&gt; {</span></span>
+<span class="line"><span style="color:#FF7B72">  return</span><span style="color:#E6EDF3"> {</span></span>
+<span class="line"><span style="color:#E6EDF3">    id: </span><span style="color:#A5D6FF">&#39;acme&#39;</span><span style="color:#FF7B72"> as</span><span style="color:#FF7B72"> const</span><span style="color:#E6EDF3">,</span></span>
+<span class="line"><span style="color:#E6EDF3">    actions: [</span><span style="color:#A5D6FF">&#39;create-checkout&#39;</span><span style="color:#E6EDF3">] </span><span style="color:#FF7B72">as</span><span style="color:#FF7B72"> const</span><span style="color:#E6EDF3">,</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#FF7B72">    async</span><span style="color:#D2A8FF"> handle</span><span style="color:#E6EDF3">(</span></span>
+<span class="line"><span style="color:#FFA657">      action</span><span style="color:#FF7B72">:</span><span style="color:#79C0FF"> string</span><span style="color:#E6EDF3">,</span></span>
+<span class="line"><span style="color:#FFA657">      payload</span><span style="color:#FF7B72">:</span><span style="color:#FFA657"> CheckoutInput</span><span style="color:#E6EDF3">,</span></span>
+<span class="line"><span style="color:#FFA657">      _options</span><span style="color:#FF7B72">?:</span><span style="color:#FFA657"> Record</span><span style="color:#E6EDF3">&lt;</span><span style="color:#79C0FF">string</span><span style="color:#E6EDF3">, </span><span style="color:#79C0FF">unknown</span><span style="color:#E6EDF3">&gt;,</span></span>
+<span class="line"><span style="color:#E6EDF3">    )</span><span style="color:#FF7B72">:</span><span style="color:#FFA657"> Promise</span><span style="color:#E6EDF3">&lt;</span><span style="color:#FFA657">CheckoutResult</span><span style="color:#E6EDF3">&gt; {</span></span>
+<span class="line"><span style="color:#FF7B72">      if</span><span style="color:#E6EDF3"> (action </span><span style="color:#FF7B72">!==</span><span style="color:#A5D6FF"> &#39;create-checkout&#39;</span><span style="color:#E6EDF3">) {</span></span>
+<span class="line"><span style="color:#FF7B72">        throw</span><span style="color:#FF7B72"> new</span><span style="color:#D2A8FF"> ProviderError</span><span style="color:#E6EDF3">(</span></span>
+<span class="line"><span style="color:#A5D6FF">          `Acme adapter does not support action &quot;${</span><span style="color:#E6EDF3">action</span><span style="color:#A5D6FF">}&quot;`</span><span style="color:#E6EDF3">,</span></span>
+<span class="line"><span style="color:#A5D6FF">          &#39;acme&#39;</span><span style="color:#E6EDF3">,</span></span>
+<span class="line"><span style="color:#E6EDF3">        );</span></span>
+<span class="line"><span style="color:#E6EDF3">      }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#8B949E">      // Call the Acme PSP API with config.secretKey</span></span>
+<span class="line"><span style="color:#FF7B72">      const</span><span style="color:#79C0FF"> session</span><span style="color:#FF7B72"> =</span><span style="color:#FF7B72"> await</span><span style="color:#D2A8FF"> createAcmeSession</span><span style="color:#E6EDF3">(config.secretKey, payload);</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#FF7B72">      return</span><span style="color:#E6EDF3"> {</span></span>
+<span class="line"><span style="color:#E6EDF3">        provider: </span><span style="color:#A5D6FF">&#39;acme&#39;</span><span style="color:#E6EDF3">,</span></span>
+<span class="line"><span style="color:#E6EDF3">        id: session.id,</span></span>
+<span class="line"><span style="color:#E6EDF3">        status: </span><span style="color:#A5D6FF">&#39;created&#39;</span><span style="color:#E6EDF3">,</span></span>
+<span class="line"><span style="color:#E6EDF3">        url: session.checkoutUrl,</span></span>
+<span class="line"><span style="color:#E6EDF3">        raw: session,</span></span>
+<span class="line"><span style="color:#E6EDF3">      };</span></span>
+<span class="line"><span style="color:#E6EDF3">    },</span></span>
+<span class="line"><span style="color:#E6EDF3">  };</span></span>
+<span class="line"><span style="color:#E6EDF3">}</span></span></code></pre>
+<p>Register both adapters just like the Stripe provider:</p>
+<pre class="astro-code github-dark-default" style="background-color:#0d1117;color:#e6edf3;overflow-x:auto" tabindex="0" data-language="ts"><code><span class="line"><span style="color:#8B949E">// Browser</span></span>
+<span class="line"><span style="color:#FF7B72">const</span><span style="color:#79C0FF"> config</span><span style="color:#FF7B72"> =</span><span style="color:#E6EDF3"> {</span></span>
+<span class="line"><span style="color:#E6EDF3">  providers: [</span><span style="color:#D2A8FF">acmeProvider</span><span style="color:#E6EDF3">({ apiKey: </span><span style="color:#A5D6FF">&#39;...&#39;</span><span style="color:#E6EDF3">, serverEndpoint: </span><span style="color:#A5D6FF">&#39;/api/checkout&#39;</span><span style="color:#E6EDF3"> })],</span></span>
+<span class="line"><span style="color:#E6EDF3">  routing: </span><span style="color:#D2A8FF">createRulesRouter</span><span style="color:#E6EDF3">({</span></span>
+<span class="line"><span style="color:#E6EDF3">    rules: [{ id: </span><span style="color:#A5D6FF">&#39;default&#39;</span><span style="color:#E6EDF3">, when: {}, use: { provider: </span><span style="color:#A5D6FF">&#39;acme&#39;</span><span style="color:#E6EDF3">, flow: </span><span style="color:#A5D6FF">&#39;redirect&#39;</span><span style="color:#E6EDF3"> } }],</span></span>
+<span class="line"><span style="color:#E6EDF3">    fallback: { provider: </span><span style="color:#A5D6FF">&#39;acme&#39;</span><span style="color:#E6EDF3">, flow: </span><span style="color:#A5D6FF">&#39;redirect&#39;</span><span style="color:#E6EDF3"> },</span></span>
+<span class="line"><span style="color:#E6EDF3">  }),</span></span>
+<span class="line"><span style="color:#E6EDF3">};</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#8B949E">// Server</span></span>
+<span class="line"><span style="color:#FF7B72">const</span><span style="color:#79C0FF"> handler</span><span style="color:#FF7B72"> =</span><span style="color:#D2A8FF"> createTenderlaneHandler</span><span style="color:#E6EDF3">({</span></span>
+<span class="line"><span style="color:#E6EDF3">  providers: [</span><span style="color:#D2A8FF">acmeServerAdapter</span><span style="color:#E6EDF3">({ secretKey: </span><span style="color:#A5D6FF">&#39;...&#39;</span><span style="color:#E6EDF3"> })],</span></span>
+<span class="line"><span style="color:#E6EDF3">});</span></span></code></pre>  </article> </main> <aside class="docs-toc" data-astro-cid-kb6rcyzi><div class="t-cap" style="margin-bottom:10px;color:var(--text-3)" data-astro-cid-kb6rcyzi>On this page</div><ul data-astro-cid-kb6rcyzi><li data-astro-cid-kb6rcyzi><a href="#browser-payment-provider" data-depth="2" data-astro-cid-kb6rcyzi>Browser payment provider</a></li><li data-astro-cid-kb6rcyzi><a href="#key-methods" data-depth="3" data-astro-cid-kb6rcyzi>Key methods</a></li><li data-astro-cid-kb6rcyzi><a href="#using-the-stripe-provider" data-depth="3" data-astro-cid-kb6rcyzi>Using the Stripe provider</a></li><li data-astro-cid-kb6rcyzi><a href="#server-provider-adapter" data-depth="2" data-astro-cid-kb6rcyzi>Server provider adapter</a></li><li data-astro-cid-kb6rcyzi><a href="#stripe-server-adapter-actions" data-depth="3" data-astro-cid-kb6rcyzi>Stripe server adapter actions</a></li><li data-astro-cid-kb6rcyzi><a href="#capabilities" data-depth="2" data-astro-cid-kb6rcyzi>Capabilities</a></li><li data-astro-cid-kb6rcyzi><a href="#payment-flows" data-depth="3" data-astro-cid-kb6rcyzi>Payment flows</a></li><li data-astro-cid-kb6rcyzi><a href="#payment-method-descriptors" data-depth="3" data-astro-cid-kb6rcyzi>Payment method descriptors</a></li><li data-astro-cid-kb6rcyzi><a href="#phantom-types-types" data-depth="2" data-astro-cid-kb6rcyzi>Phantom types (~types)</a></li><li data-astro-cid-kb6rcyzi><a href="#building-a-custom-provider" data-depth="2" data-astro-cid-kb6rcyzi>Building a custom provider</a></li><li data-astro-cid-kb6rcyzi><a href="#browser-adapter" data-depth="3" data-astro-cid-kb6rcyzi>Browser adapter</a></li><li data-astro-cid-kb6rcyzi><a href="#server-adapter" data-depth="3" data-astro-cid-kb6rcyzi>Server adapter</a></li></ul><div class="toc-foot" data-astro-cid-kb6rcyzi><a href="https://github.com/farisaziz12/tenderlane" data-astro-cid-kb6rcyzi>↗ View on GitHub</a></div></aside> </div>  </main> <footer class="footer" data-astro-cid-sz7xmlte> <div class="container footer-grid" data-astro-cid-sz7xmlte> <div data-astro-cid-sz7xmlte> <span class="logo" style="font-size:17.099999999999998px;" data-astro-cid-tvrurpns> <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true" data-astro-cid-tvrurpns> <path d="M12 2 L22 12 L12 22 L2 12 Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" data-astro-cid-tvrurpns></path> <path d="M12 2 L22 12 L12 12 Z" fill="var(--accent)" data-astro-cid-tvrurpns></path> <circle cx="12" cy="12" r="1.5" fill="var(--bg-0)" stroke="currentColor" stroke-width="1.2" data-astro-cid-tvrurpns></circle> </svg> <span class="word" data-astro-cid-tvrurpns>tenderlane</span> </span>  <p class="t-body footer-tag" data-astro-cid-sz7xmlte>
+Reactive payment orchestration for modern web apps. MIT licensed, frontend-first, provider-agnostic.
+</p> <div class="footer-badges" data-astro-cid-sz7xmlte> <span class="badge alpha" data-astro-cid-sz7xmlte><span class="dot" data-astro-cid-sz7xmlte></span>v0.4.0-alpha</span> <span class="badge" data-astro-cid-sz7xmlte><span style="color:var(--text-2)" data-astro-cid-sz7xmlte>MIT</span></span> </div> </div> <div data-astro-cid-sz7xmlte> <div class="t-cap" style="margin-bottom:16px;color:var(--text-3)" data-astro-cid-sz7xmlte>Product</div> <ul class="footer-list" data-astro-cid-sz7xmlte> <li data-astro-cid-sz7xmlte><a href="/tenderlane/" data-astro-cid-sz7xmlte>Home</a></li><li data-astro-cid-sz7xmlte><a href="/tenderlane/why" data-astro-cid-sz7xmlte>Why Tenderlane</a></li><li data-astro-cid-sz7xmlte><a href="/tenderlane/docs" data-astro-cid-sz7xmlte>Docs</a></li><li data-astro-cid-sz7xmlte><a href="https://github.com/farisaziz12/tenderlane/releases" data-astro-cid-sz7xmlte>Changelog</a></li> </ul> </div><div data-astro-cid-sz7xmlte> <div class="t-cap" style="margin-bottom:16px;color:var(--text-3)" data-astro-cid-sz7xmlte>Docs</div> <ul class="footer-list" data-astro-cid-sz7xmlte> <li data-astro-cid-sz7xmlte><a href="/tenderlane/docs/getting-started/introduction" data-astro-cid-sz7xmlte>Getting started</a></li><li data-astro-cid-sz7xmlte><a href="/tenderlane/docs/concepts/routing" data-astro-cid-sz7xmlte>Routing</a></li><li data-astro-cid-sz7xmlte><a href="/tenderlane/docs/concepts/providers" data-astro-cid-sz7xmlte>Providers</a></li><li data-astro-cid-sz7xmlte><a href="/tenderlane/docs/concepts/catalog" data-astro-cid-sz7xmlte>Catalog</a></li><li data-astro-cid-sz7xmlte><a href="/tenderlane/docs/concepts/state-machine" data-astro-cid-sz7xmlte>State machine</a></li> </ul> </div><div data-astro-cid-sz7xmlte> <div class="t-cap" style="margin-bottom:16px;color:var(--text-3)" data-astro-cid-sz7xmlte>Cookbooks</div> <ul class="footer-list" data-astro-cid-sz7xmlte> <li data-astro-cid-sz7xmlte><a href="/tenderlane/docs/cookbooks/stripe-checkout-redirect" data-astro-cid-sz7xmlte>Stripe Checkout redirect</a></li><li data-astro-cid-sz7xmlte><a href="/tenderlane/docs/cookbooks/country-based-routing" data-astro-cid-sz7xmlte>Country-based routing</a></li><li data-astro-cid-sz7xmlte><a href="/tenderlane/docs/cookbooks/ab-testing-payment-flows" data-astro-cid-sz7xmlte>A/B test flows</a></li><li data-astro-cid-sz7xmlte><a href="/tenderlane/docs/cookbooks/nextjs-app-router" data-astro-cid-sz7xmlte>Next.js App Router</a></li> </ul> </div><div data-astro-cid-sz7xmlte> <div class="t-cap" style="margin-bottom:16px;color:var(--text-3)" data-astro-cid-sz7xmlte>Community</div> <ul class="footer-list" data-astro-cid-sz7xmlte> <li data-astro-cid-sz7xmlte><a href="https://github.com/farisaziz12/tenderlane" data-astro-cid-sz7xmlte>GitHub</a></li><li data-astro-cid-sz7xmlte><a href="https://github.com/farisaziz12/tenderlane/issues" data-astro-cid-sz7xmlte>Issues</a></li><li data-astro-cid-sz7xmlte><a href="https://github.com/farisaziz12/tenderlane/blob/main/README.md" data-astro-cid-sz7xmlte>MIT License</a></li> </ul> </div> </div> <div class="container footer-bottom" data-astro-cid-sz7xmlte> <span data-astro-cid-sz7xmlte>© 2026 tenderlane contributors</span> <span data-astro-cid-sz7xmlte>Reactive payments · MIT · built with Astro</span> </div> </footer>  </body></html>   

@@ -1,0 +1,194 @@
+<!DOCTYPE html><html lang="en"> <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>State Machine · Tenderlane docs</title><meta name="description" content="How the Tenderlane checkout client manages state transitions from idle to success."><meta property="og:title" content="State Machine · Tenderlane docs"><meta property="og:description" content="How the Tenderlane checkout client manages state transitions from idle to success."><meta property="og:type" content="website"><link rel="icon" href="/tenderlane/favicon.svg" type="image/svg+xml"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"><link rel="stylesheet" href="/tenderlane/_astro/_slug_.Dhh66NRb.css">
+<link rel="stylesheet" href="/tenderlane/_astro/_slug_.Cu5bmsxF.css"></head> <body> <nav class="nav"> <div class="nav-left"> <a href="/tenderlane/" aria-label="Tenderlane home" style="color: var(--text-0)"> <span class="logo" style="font-size:15.2px;" data-astro-cid-tvrurpns> <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" data-astro-cid-tvrurpns> <path d="M12 2 L22 12 L12 22 L2 12 Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" data-astro-cid-tvrurpns></path> <path d="M12 2 L22 12 L12 12 Z" fill="var(--accent)" data-astro-cid-tvrurpns></path> <circle cx="12" cy="12" r="1.5" fill="var(--bg-0)" stroke="currentColor" stroke-width="1.2" data-astro-cid-tvrurpns></circle> </svg> <span class="word" data-astro-cid-tvrurpns>tenderlane</span> </span>  </a> <span style="width:1px;height:18px;background:var(--line-2)"></span> <div class="nav-links"> <a href="/tenderlane/docs/getting-started/introduction" data-active="false">Getting started</a><a href="/tenderlane/docs/concepts/routing" data-active="false">Concepts</a><a href="/tenderlane/docs/cookbooks/stripe-checkout-redirect" data-active="false">Cookbooks</a><a href="https://github.com/farisaziz12/tenderlane" data-active="false">GitHub</a> </div> <span class="badge" style="margin-left:4px"><span style="color:var(--text-3)">v</span>0.4.0-alpha</span> </div> <div class="nav-right"> <div class="nav-search"> <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.3"></circle><path d="M11 11l3 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"></path></svg> <span class="flex">Search docs…</span> <span class="kbd">⌘</span><span class="kbd">K</span> </div> <a class="btn btn-link nav-icon-link" href="https://github.com/farisaziz12/tenderlane" title="GitHub" style="color:var(--text-1)"> <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5C5.7.5.5 5.7.5 12c0 5.1 3.3 9.4 7.9 10.9.6.1.8-.3.8-.6v-2.1c-3.2.7-3.9-1.5-3.9-1.5-.5-1.3-1.3-1.7-1.3-1.7-1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1.1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.8-1.6-2.6-.3-5.3-1.3-5.3-5.7 0-1.3.5-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.1 0 0 1-.3 3.3 1.2 1-.3 2-.4 3-.4s2 .1 3 .4c2.3-1.5 3.3-1.2 3.3-1.2.6 1.6.2 2.8.1 3.1.8.8 1.2 1.8 1.2 3.1 0 4.4-2.7 5.4-5.3 5.7.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6 4.6-1.5 7.9-5.8 7.9-10.9C23.5 5.7 18.3.5 12 .5z"></path></svg> </a> <a class="btn btn-ghost" href="/tenderlane/docs">Docs</a> <a class="btn btn-primary" href="/tenderlane/docs/getting-started/quick-start">
+Get started <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M4 8h8M8 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path></svg> </a> <button class="nav-toggle" id="nav-toggle" aria-label="Open menu"> <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M2 8h12M2 12h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></path></svg> </button> </div> </nav> <div class="mobile-drawer" id="mobile-drawer"> <div class="drawer-head"> <span class="logo" style="font-size:15.2px;" data-astro-cid-tvrurpns> <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" data-astro-cid-tvrurpns> <path d="M12 2 L22 12 L12 22 L2 12 Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" data-astro-cid-tvrurpns></path> <path d="M12 2 L22 12 L12 12 Z" fill="var(--accent)" data-astro-cid-tvrurpns></path> <circle cx="12" cy="12" r="1.5" fill="var(--bg-0)" stroke="currentColor" stroke-width="1.2" data-astro-cid-tvrurpns></circle> </svg> <span class="word" data-astro-cid-tvrurpns>tenderlane</span> </span>  <button class="nav-toggle" id="nav-close" style="display:inline-flex" aria-label="Close menu"> <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></path></svg> </button> </div> <nav> <a href="/tenderlane/docs/getting-started/introduction">Getting started</a><a href="/tenderlane/docs/concepts/routing">Concepts</a><a href="/tenderlane/docs/cookbooks/stripe-checkout-redirect">Cookbooks</a><a href="https://github.com/farisaziz12/tenderlane">GitHub</a> <a href="/tenderlane/docs">Docs</a> <a href="/tenderlane/docs/getting-started/quick-start" style="color: var(--accent)">Get started →</a> </nav> </div> <script type="module">const t=document.getElementById("nav-toggle"),n=document.getElementById("nav-close"),e=document.getElementById("mobile-drawer");t?.addEventListener("click",()=>e?.setAttribute("data-open","true"));n?.addEventListener("click",()=>e?.setAttribute("data-open","false"));</script> <main>  <div class="docs-page" data-astro-cid-mw7aashj> <aside class="docs-sidebar" data-astro-cid-qrwn6rcr> <div class="docs-sidebar-inner" data-astro-cid-qrwn6rcr> <div data-astro-cid-qrwn6rcr> <div class="t-cap" style="margin-bottom:10px;color:var(--text-3)" data-astro-cid-qrwn6rcr>Getting started</div> <ul data-astro-cid-qrwn6rcr> <li data-astro-cid-qrwn6rcr> <a href="/tenderlane/docs/getting-started/introduction" data-active="false" data-astro-cid-qrwn6rcr> Introduction </a> </li><li data-astro-cid-qrwn6rcr> <a href="/tenderlane/docs/getting-started/installation" data-active="false" data-astro-cid-qrwn6rcr> Installation </a> </li><li data-astro-cid-qrwn6rcr> <a href="/tenderlane/docs/getting-started/quick-start" data-active="false" data-astro-cid-qrwn6rcr> Quick Start </a> </li> </ul> </div><div data-astro-cid-qrwn6rcr> <div class="t-cap" style="margin-bottom:10px;color:var(--text-3)" data-astro-cid-qrwn6rcr>Core concepts</div> <ul data-astro-cid-qrwn6rcr> <li data-astro-cid-qrwn6rcr> <a href="/tenderlane/docs/concepts/routing" data-active="false" data-astro-cid-qrwn6rcr> Routing </a> </li><li data-astro-cid-qrwn6rcr> <a href="/tenderlane/docs/concepts/providers" data-active="false" data-astro-cid-qrwn6rcr> Providers </a> </li><li data-astro-cid-qrwn6rcr> <a href="/tenderlane/docs/concepts/state-machine" data-active="true" data-astro-cid-qrwn6rcr> State Machine </a> </li><li data-astro-cid-qrwn6rcr> <a href="/tenderlane/docs/concepts/catalog" data-active="false" data-astro-cid-qrwn6rcr> Catalog </a> </li><li data-astro-cid-qrwn6rcr> <a href="/tenderlane/docs/concepts/middleware" data-active="false" data-astro-cid-qrwn6rcr> Middleware </a> </li><li data-astro-cid-qrwn6rcr> <a href="/tenderlane/docs/concepts/type-safety" data-active="false" data-astro-cid-qrwn6rcr> Type Safety </a> </li> </ul> </div><div data-astro-cid-qrwn6rcr> <div class="t-cap" style="margin-bottom:10px;color:var(--text-3)" data-astro-cid-qrwn6rcr>Cookbooks</div> <ul data-astro-cid-qrwn6rcr> <li data-astro-cid-qrwn6rcr> <a href="/tenderlane/docs/cookbooks/stripe-checkout-redirect" data-active="false" data-astro-cid-qrwn6rcr> Stripe Checkout Redirect </a> </li><li data-astro-cid-qrwn6rcr> <a href="/tenderlane/docs/cookbooks/stripe-elements-inline" data-active="false" data-astro-cid-qrwn6rcr> Stripe Elements Inline </a> </li><li data-astro-cid-qrwn6rcr> <a href="/tenderlane/docs/cookbooks/country-based-routing" data-active="false" data-astro-cid-qrwn6rcr> Country-Based Routing </a> </li><li data-astro-cid-qrwn6rcr> <a href="/tenderlane/docs/cookbooks/polar-checkout-redirect" data-active="false" data-astro-cid-qrwn6rcr> Polar Checkout Redirect </a> </li><li data-astro-cid-qrwn6rcr> <a href="/tenderlane/docs/cookbooks/ab-testing-payment-flows" data-active="false" data-astro-cid-qrwn6rcr> A/B Testing Payment Flows </a> </li><li data-astro-cid-qrwn6rcr> <a href="/tenderlane/docs/cookbooks/nextjs-app-router" data-active="false" data-astro-cid-qrwn6rcr> Next.js App Router </a> </li><li data-astro-cid-qrwn6rcr> <a href="/tenderlane/docs/cookbooks/middleware-analytics" data-active="false" data-astro-cid-qrwn6rcr> Middleware Analytics </a> </li> </ul> </div> </div> </aside>  <main class="docs-main" data-astro-cid-mw7aashj> <div class="docs-breadcrumb" data-astro-cid-mw7aashj> <span data-astro-cid-mw7aashj>Docs</span> <span data-astro-cid-mw7aashj>/</span> <span data-astro-cid-mw7aashj>Core concepts</span> <span data-astro-cid-mw7aashj>/</span> <span style="color:var(--text-1)" data-astro-cid-mw7aashj>State Machine</span> <span style="margin-left:auto" data-astro-cid-mw7aashj>v0.4.0-alpha</span> </div> <article class="docs-article" data-astro-cid-mw7aashj>  <h1 data-astro-cid-uadgga6g>State Machine</h1> <p class="t-body-lg" style="margin:0 0 12px;color:var(--text-1);max-width:700px" data-astro-cid-uadgga6g>How the Tenderlane checkout client manages state transitions from idle to success.</p><div class="docs-meta" data-astro-cid-uadgga6g> <span class="badge" data-astro-cid-uadgga6g><span style="width:6px;height:6px;border-radius:50%;background:var(--accent);display:inline-block" data-astro-cid-uadgga6g></span>Core concepts</span> </div> <p>The Tenderlane client manages checkout state through a deterministic state machine. Every state transition produces a new immutable snapshot, making the client compatible with React’s <code>useSyncExternalStore</code> and similar external store patterns in other frameworks.</p>
+<h2 id="state-diagram">State diagram</h2>
+<pre class="astro-code github-dark-default" style="background-color:#0d1117;color:#e6edf3;overflow-x:auto" tabindex="0" data-language="plaintext"><code><span class="line"><span>                    ┌──────────────────────────────────────────────┐</span></span>
+<span class="line"><span>                    │                                              │</span></span>
+<span class="line"><span>                    ▼                                              │</span></span>
+<span class="line"><span>  ┌──────┐    ┌────────────┐    ┌───────┐    ┌───────────┐    ┌───────────┐</span></span>
+<span class="line"><span>  │ idle │───▶│ evaluating │───▶│ ready │───▶│ preparing │───▶│ prepared  │</span></span>
+<span class="line"><span>  └──────┘    └────────────┘    └───────┘    └───────────┘    └───────────┘</span></span>
+<span class="line"><span>                    │                │                              │</span></span>
+<span class="line"><span>                    │                │                              │</span></span>
+<span class="line"><span>                    │                ▼                              ▼</span></span>
+<span class="line"><span>                    │         ┌────────────┐                ┌────────────┐</span></span>
+<span class="line"><span>                    │         │ submitting │                │ submitting │</span></span>
+<span class="line"><span>                    │         └────────────┘                └────────────┘</span></span>
+<span class="line"><span>                    │                │                              │</span></span>
+<span class="line"><span>                    │           ┌────┴────┐                   ┌────┴────┐</span></span>
+<span class="line"><span>                    │           ▼         ▼                   ▼         ▼</span></span>
+<span class="line"><span>                    │     ┌─────────┐ ┌───────┐         ┌─────────┐ ┌───────┐</span></span>
+<span class="line"><span>                    └────▶│  error  │ │success│         │  error  │ │success│</span></span>
+<span class="line"><span>                          └─────────┘ └───────┘         └─────────┘ └───────┘</span></span></code></pre>
+<h2 id="states">States</h2>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>State</th><th>Description</th><th style="text-align:center"><code>canSubmit</code></th><th>Key properties</th></tr></thead><tbody><tr><td><code>idle</code></td><td>Initial state before first evaluation, or after <code>reset()</code></td><td style="text-align:center"><code>false</code></td><td>No route, no provider</td></tr><tr><td><code>evaluating</code></td><td>Router is evaluating the context (may be async for auto router)</td><td style="text-align:center"><code>false</code></td><td>Previous route cleared</td></tr><tr><td><code>ready</code></td><td>Route selected, provider resolved, payment methods available</td><td style="text-align:center"><code>true</code></td><td><code>route</code>, <code>selectedProvider</code>, <code>paymentMethods</code> populated</td></tr><tr><td><code>preparing</code></td><td>Creating a provider session for inline flows (e.g., PaymentIntent)</td><td style="text-align:center"><code>false</code></td><td>In-progress session creation</td></tr><tr><td><code>prepared</code></td><td>Provider session ready, inline payment form can render</td><td style="text-align:center"><code>true</code></td><td><code>providerSession</code> populated with <code>clientSecret</code></td></tr><tr><td><code>submitting</code></td><td>Provider’s <code>submit()</code> call is in progress</td><td style="text-align:center"><code>false</code></td><td>Waiting for provider response</td></tr><tr><td><code>success</code></td><td>Checkout completed successfully</td><td style="text-align:center"><code>false</code></td><td><code>checkoutResult</code> populated</td></tr><tr><td><code>error</code></td><td>Any failure during evaluation, preparation, or submission</td><td style="text-align:center">varies</td><td><code>error</code> populated with <code>TenderlaneError</code></td></tr></tbody></table>
+<h2 id="transitions">Transitions</h2>
+<h3 id="idle-to-evaluating"><code>idle</code> to <code>evaluating</code></h3>
+<p>Triggered automatically when you create a client with <code>createTenderlaneClient()</code>, or when you call <code>client.updateContext()</code>.</p>
+<pre class="astro-code github-dark-default" style="background-color:#0d1117;color:#e6edf3;overflow-x:auto" tabindex="0" data-language="ts"><code><span class="line"><span style="color:#FF7B72">const</span><span style="color:#79C0FF"> client</span><span style="color:#FF7B72"> =</span><span style="color:#D2A8FF"> createTenderlaneClient</span><span style="color:#E6EDF3">({</span></span>
+<span class="line"><span style="color:#E6EDF3">  context: { country: </span><span style="color:#A5D6FF">&#39;US&#39;</span><span style="color:#E6EDF3">, currency: </span><span style="color:#A5D6FF">&#39;usd&#39;</span><span style="color:#E6EDF3">, amount: </span><span style="color:#79C0FF">2500</span><span style="color:#E6EDF3"> },</span></span>
+<span class="line"><span style="color:#E6EDF3">  providers: [stripe],</span></span>
+<span class="line"><span style="color:#E6EDF3">  routing: router,</span></span>
+<span class="line"><span style="color:#E6EDF3">});</span></span>
+<span class="line"><span style="color:#8B949E">// For a rules router (synchronous), the state immediately reaches &#39;ready&#39;</span></span>
+<span class="line"><span style="color:#8B949E">// For an auto router (async), the state passes through &#39;evaluating&#39; first</span></span></code></pre>
+<aside class="callout" style="padding:14px 18px;border-radius:8px;margin:18px 0;background:color-mix(in oklab, var(--accent) 8%, var(--bg-1));border:1px solid color-mix(in oklab, var(--accent) 30%, transparent);color:var(--text-1);display:flex;gap:14px;align-items:flex-start;font-size:14px"><span style="color:var(--accent);font-family:var(--font-mono);font-size:10px;letter-spacing:0.06em;text-transform:uppercase;flex-shrink:0;margin-top:2px">tip</span><div><p>The rules router is <strong>synchronous</strong>, so <code>createTenderlaneClient</code> skips the <code>evaluating</code> state entirely. The initial state is <code>ready</code> with the route already resolved. This avoids SSR/hydration mismatches in React, since the server and client renders see the same initial state.</p></div></aside>
+<h3 id="evaluating-to-ready"><code>evaluating</code> to <code>ready</code></h3>
+<p>When the router returns a result, the client resolves the provider from the registered adapters, computes available payment methods, and enters <code>ready</code>.</p>
+<p>If the router is asynchronous (auto router), this transition happens after the promise resolves.</p>
+<h3 id="evaluating-to-error"><code>evaluating</code> to <code>error</code></h3>
+<p>If the router throws or the auto router times out and the fallback also fails, the state transitions to <code>error</code>.</p>
+<h3 id="ready-to-submitting"><code>ready</code> to <code>submitting</code></h3>
+<p>Triggered by calling <code>client.submit(input)</code>. The client calls the selected provider’s <code>submit()</code> method.</p>
+<pre class="astro-code github-dark-default" style="background-color:#0d1117;color:#e6edf3;overflow-x:auto" tabindex="0" data-language="ts"><code><span class="line"><span style="color:#FF7B72">await</span><span style="color:#E6EDF3"> client.</span><span style="color:#D2A8FF">submit</span><span style="color:#E6EDF3">({</span></span>
+<span class="line"><span style="color:#E6EDF3">  lineItems: [{ name: </span><span style="color:#A5D6FF">&#39;Widget&#39;</span><span style="color:#E6EDF3">, quantity: </span><span style="color:#79C0FF">1</span><span style="color:#E6EDF3">, unitAmount: </span><span style="color:#79C0FF">2500</span><span style="color:#E6EDF3"> }],</span></span>
+<span class="line"><span style="color:#E6EDF3">  successUrl: </span><span style="color:#A5D6FF">&#39;https://example.com/success&#39;</span><span style="color:#E6EDF3">,</span></span>
+<span class="line"><span style="color:#E6EDF3">  cancelUrl: </span><span style="color:#A5D6FF">&#39;https://example.com/cancel&#39;</span><span style="color:#E6EDF3">,</span></span>
+<span class="line"><span style="color:#E6EDF3">});</span></span></code></pre>
+<h3 id="ready-to-preparing"><code>ready</code> to <code>preparing</code></h3>
+<p>Triggered by calling <code>client.prepare(input)</code> for inline payment flows that need a server-side session (e.g., Stripe PaymentIntent). Not needed for redirect flows.</p>
+<pre class="astro-code github-dark-default" style="background-color:#0d1117;color:#e6edf3;overflow-x:auto" tabindex="0" data-language="ts"><code><span class="line"><span style="color:#FF7B72">await</span><span style="color:#E6EDF3"> client.</span><span style="color:#D2A8FF">prepare</span><span style="color:#E6EDF3">({</span></span>
+<span class="line"><span style="color:#E6EDF3">  lineItems: [{ name: </span><span style="color:#A5D6FF">&#39;Widget&#39;</span><span style="color:#E6EDF3">, quantity: </span><span style="color:#79C0FF">1</span><span style="color:#E6EDF3">, unitAmount: </span><span style="color:#79C0FF">2500</span><span style="color:#E6EDF3"> }],</span></span>
+<span class="line"><span style="color:#E6EDF3">  successUrl: </span><span style="color:#A5D6FF">&#39;https://example.com/success&#39;</span><span style="color:#E6EDF3">,</span></span>
+<span class="line"><span style="color:#E6EDF3">  cancelUrl: </span><span style="color:#A5D6FF">&#39;https://example.com/cancel&#39;</span><span style="color:#E6EDF3">,</span></span>
+<span class="line"><span style="color:#E6EDF3">});</span></span></code></pre>
+<h3 id="preparing-to-prepared"><code>preparing</code> to <code>prepared</code></h3>
+<p>After the provider’s <code>createSession()</code> method returns, the <code>providerSession</code> is stored in state and the client enters <code>prepared</code>. The <code>providerSession</code> contains the <code>clientSecret</code> needed to render inline payment forms.</p>
+<h3 id="prepared-to-submitting"><code>prepared</code> to <code>submitting</code></h3>
+<p>Triggered by calling <code>client.submit(input)</code> after preparation. For Stripe Elements, this confirms the PaymentIntent using the mounted Elements instance.</p>
+<h3 id="submitting-to-success"><code>submitting</code> to <code>success</code></h3>
+<p>The provider’s <code>submit()</code> method resolved successfully. For redirect flows, the browser may have already redirected. For inline flows, <code>checkoutResult</code> is populated.</p>
+<h3 id="submitting-to-error"><code>submitting</code> to <code>error</code></h3>
+<p>The provider’s <code>submit()</code> method threw. The error is wrapped in a <code>ProviderError</code> and stored in state. After a submission error, <code>canSubmit</code> remains <code>true</code> to allow retries.</p>
+<h3 id="any-state-to-idle-via-reset">Any state to <code>idle</code> (via <code>reset()</code>)</h3>
+<p>Calling <code>client.reset()</code> returns the client to <code>idle</code>, clearing the route, provider, payment methods, errors, and checkout result.</p>
+<h2 id="state-snapshot">State snapshot</h2>
+<p>Every state transition produces a new immutable object. The <code>getSnapshot()</code> method returns a stable reference until the next transition:</p>
+<pre class="astro-code github-dark-default" style="background-color:#0d1117;color:#e6edf3;overflow-x:auto" tabindex="0" data-language="ts"><code><span class="line"><span style="color:#FF7B72">interface</span><span style="color:#FFA657"> TenderlaneClientState</span><span style="color:#E6EDF3"> {</span></span>
+<span class="line"><span style="color:#FF7B72">  readonly</span><span style="color:#FFA657"> status</span><span style="color:#FF7B72">:</span><span style="color:#FFA657"> ClientStatus</span><span style="color:#E6EDF3">;</span></span>
+<span class="line"><span style="color:#FF7B72">  readonly</span><span style="color:#FFA657"> context</span><span style="color:#FF7B72">:</span><span style="color:#FFA657"> TenderlaneContext</span><span style="color:#E6EDF3">;</span></span>
+<span class="line"><span style="color:#FF7B72">  readonly</span><span style="color:#FFA657"> route</span><span style="color:#FF7B72">:</span><span style="color:#FFA657"> SelectedPaymentRoute</span><span style="color:#FF7B72"> |</span><span style="color:#79C0FF"> null</span><span style="color:#E6EDF3">;</span></span>
+<span class="line"><span style="color:#FF7B72">  readonly</span><span style="color:#FFA657"> selectedProvider</span><span style="color:#FF7B72">:</span><span style="color:#79C0FF"> string</span><span style="color:#FF7B72"> |</span><span style="color:#79C0FF"> null</span><span style="color:#E6EDF3">;</span></span>
+<span class="line"><span style="color:#FF7B72">  readonly</span><span style="color:#FFA657"> paymentMethods</span><span style="color:#FF7B72">:</span><span style="color:#FFA657"> PaymentMethodDescriptor</span><span style="color:#E6EDF3">[];</span></span>
+<span class="line"><span style="color:#FF7B72">  readonly</span><span style="color:#FFA657"> selectedPaymentMethod</span><span style="color:#FF7B72">:</span><span style="color:#79C0FF"> string</span><span style="color:#FF7B72"> |</span><span style="color:#79C0FF"> null</span><span style="color:#E6EDF3">;</span></span>
+<span class="line"><span style="color:#FF7B72">  readonly</span><span style="color:#FFA657"> canSubmit</span><span style="color:#FF7B72">:</span><span style="color:#79C0FF"> boolean</span><span style="color:#E6EDF3">;</span></span>
+<span class="line"><span style="color:#FF7B72">  readonly</span><span style="color:#FFA657"> error</span><span style="color:#FF7B72">:</span><span style="color:#FFA657"> TenderlaneError</span><span style="color:#FF7B72"> |</span><span style="color:#79C0FF"> null</span><span style="color:#E6EDF3">;</span></span>
+<span class="line"><span style="color:#FF7B72">  readonly</span><span style="color:#FFA657"> checkoutResult</span><span style="color:#FF7B72">:</span><span style="color:#FFA657"> CheckoutResult</span><span style="color:#FF7B72"> |</span><span style="color:#79C0FF"> null</span><span style="color:#E6EDF3">;</span></span>
+<span class="line"><span style="color:#FF7B72">  readonly</span><span style="color:#FFA657"> providerSession</span><span style="color:#FF7B72">:</span><span style="color:#FFA657"> ProviderSession</span><span style="color:#FF7B72"> |</span><span style="color:#79C0FF"> null</span><span style="color:#E6EDF3">;</span></span>
+<span class="line"><span style="color:#E6EDF3">}</span></span></code></pre>
+<h2 id="usesyncexternalstore-integration"><code>useSyncExternalStore</code> integration</h2>
+<p>The client implements the <code>subscribe</code>/<code>getSnapshot</code> contract that React’s <code>useSyncExternalStore</code> expects:</p>
+<pre class="astro-code github-dark-default" style="background-color:#0d1117;color:#e6edf3;overflow-x:auto" tabindex="0" data-language="ts"><code><span class="line"><span style="color:#FF7B72">const</span><span style="color:#79C0FF"> client</span><span style="color:#FF7B72"> =</span><span style="color:#D2A8FF"> createTenderlaneClient</span><span style="color:#E6EDF3">({ </span><span style="color:#FF7B72">...</span><span style="color:#E6EDF3"> });</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#8B949E">// In React:</span></span>
+<span class="line"><span style="color:#FF7B72">const</span><span style="color:#79C0FF"> state</span><span style="color:#FF7B72"> =</span><span style="color:#D2A8FF"> useSyncExternalStore</span><span style="color:#E6EDF3">(</span></span>
+<span class="line"><span style="color:#E6EDF3">  client.subscribe,</span></span>
+<span class="line"><span style="color:#E6EDF3">  client.getSnapshot,</span></span>
+<span class="line"><span style="color:#E6EDF3">  client.getSnapshot,  </span><span style="color:#8B949E">// Server snapshot (same as client for SSR)</span></span>
+<span class="line"><span style="color:#E6EDF3">);</span></span></code></pre>
+<p>You do not need to call <code>useSyncExternalStore</code> directly. The <code>useTenderlaneCheckout()</code> hook does this for you and returns a memoized derived state object.</p>
+<h2 id="stale-evaluation-handling">Stale evaluation handling</h2>
+<p>When <code>updateContext()</code> is called rapidly (e.g., user types quickly in a search field), each call increments an internal version counter. When an async evaluation completes, it checks whether its version is still current. If a newer evaluation has been started, the stale result is discarded.</p>
+<pre class="astro-code github-dark-default" style="background-color:#0d1117;color:#e6edf3;overflow-x:auto" tabindex="0" data-language="ts"><code><span class="line"><span style="color:#8B949E">// These happen in rapid succession:</span></span>
+<span class="line"><span style="color:#E6EDF3">client.</span><span style="color:#D2A8FF">updateContext</span><span style="color:#E6EDF3">({ country: </span><span style="color:#A5D6FF">&#39;US&#39;</span><span style="color:#E6EDF3">, amount: </span><span style="color:#79C0FF">1000</span><span style="color:#E6EDF3"> });  </span><span style="color:#8B949E">// version 1</span></span>
+<span class="line"><span style="color:#E6EDF3">client.</span><span style="color:#D2A8FF">updateContext</span><span style="color:#E6EDF3">({ country: </span><span style="color:#A5D6FF">&#39;DE&#39;</span><span style="color:#E6EDF3">, amount: </span><span style="color:#79C0FF">1000</span><span style="color:#E6EDF3"> });  </span><span style="color:#8B949E">// version 2</span></span>
+<span class="line"><span style="color:#E6EDF3">client.</span><span style="color:#D2A8FF">updateContext</span><span style="color:#E6EDF3">({ country: </span><span style="color:#A5D6FF">&#39;CH&#39;</span><span style="color:#E6EDF3">, amount: </span><span style="color:#79C0FF">1000</span><span style="color:#E6EDF3"> });  </span><span style="color:#8B949E">// version 3</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#8B949E">// Only version 3&#39;s result is applied. Versions 1 and 2 are discarded.</span></span></code></pre>
+<h2 id="middleware-integration">Middleware integration</h2>
+<p>Middleware hooks fire at each state transition point. See <a href="/concepts/middleware/">Middleware</a> for details.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Transition</th><th>Middleware hook</th></tr></thead><tbody><tr><td>Context changed</td><td><code>onContextChange</code></td></tr><tr><td>Route evaluated</td><td><code>onRouteEvaluated</code></td></tr><tr><td>Session created</td><td><code>onSessionCreated</code></td></tr><tr><td>Submit started</td><td><code>onCheckoutStart</code></td></tr><tr><td>Submit succeeded</td><td><code>onCheckoutSuccess</code></td></tr><tr><td>Any error</td><td><code>onCheckoutError</code></td></tr></tbody></table>  </article> </main> <aside class="docs-toc" data-astro-cid-kb6rcyzi><div class="t-cap" style="margin-bottom:10px;color:var(--text-3)" data-astro-cid-kb6rcyzi>On this page</div><ul data-astro-cid-kb6rcyzi><li data-astro-cid-kb6rcyzi><a href="#state-diagram" data-depth="2" data-astro-cid-kb6rcyzi>State diagram</a></li><li data-astro-cid-kb6rcyzi><a href="#states" data-depth="2" data-astro-cid-kb6rcyzi>States</a></li><li data-astro-cid-kb6rcyzi><a href="#transitions" data-depth="2" data-astro-cid-kb6rcyzi>Transitions</a></li><li data-astro-cid-kb6rcyzi><a href="#idle-to-evaluating" data-depth="3" data-astro-cid-kb6rcyzi>idle to evaluating</a></li><li data-astro-cid-kb6rcyzi><a href="#evaluating-to-ready" data-depth="3" data-astro-cid-kb6rcyzi>evaluating to ready</a></li><li data-astro-cid-kb6rcyzi><a href="#evaluating-to-error" data-depth="3" data-astro-cid-kb6rcyzi>evaluating to error</a></li><li data-astro-cid-kb6rcyzi><a href="#ready-to-submitting" data-depth="3" data-astro-cid-kb6rcyzi>ready to submitting</a></li><li data-astro-cid-kb6rcyzi><a href="#ready-to-preparing" data-depth="3" data-astro-cid-kb6rcyzi>ready to preparing</a></li><li data-astro-cid-kb6rcyzi><a href="#preparing-to-prepared" data-depth="3" data-astro-cid-kb6rcyzi>preparing to prepared</a></li><li data-astro-cid-kb6rcyzi><a href="#prepared-to-submitting" data-depth="3" data-astro-cid-kb6rcyzi>prepared to submitting</a></li><li data-astro-cid-kb6rcyzi><a href="#submitting-to-success" data-depth="3" data-astro-cid-kb6rcyzi>submitting to success</a></li><li data-astro-cid-kb6rcyzi><a href="#submitting-to-error" data-depth="3" data-astro-cid-kb6rcyzi>submitting to error</a></li><li data-astro-cid-kb6rcyzi><a href="#any-state-to-idle-via-reset" data-depth="3" data-astro-cid-kb6rcyzi>Any state to idle (via reset())</a></li><li data-astro-cid-kb6rcyzi><a href="#state-snapshot" data-depth="2" data-astro-cid-kb6rcyzi>State snapshot</a></li><li data-astro-cid-kb6rcyzi><a href="#usesyncexternalstore-integration" data-depth="2" data-astro-cid-kb6rcyzi>useSyncExternalStore integration</a></li><li data-astro-cid-kb6rcyzi><a href="#stale-evaluation-handling" data-depth="2" data-astro-cid-kb6rcyzi>Stale evaluation handling</a></li><li data-astro-cid-kb6rcyzi><a href="#middleware-integration" data-depth="2" data-astro-cid-kb6rcyzi>Middleware integration</a></li></ul><div class="toc-foot" data-astro-cid-kb6rcyzi><a href="https://github.com/farisaziz12/tenderlane" data-astro-cid-kb6rcyzi>↗ View on GitHub</a></div></aside> </div>  </main> <footer class="footer" data-astro-cid-sz7xmlte> <div class="container footer-grid" data-astro-cid-sz7xmlte> <div data-astro-cid-sz7xmlte> <span class="logo" style="font-size:17.099999999999998px;" data-astro-cid-tvrurpns> <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true" data-astro-cid-tvrurpns> <path d="M12 2 L22 12 L12 22 L2 12 Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" data-astro-cid-tvrurpns></path> <path d="M12 2 L22 12 L12 12 Z" fill="var(--accent)" data-astro-cid-tvrurpns></path> <circle cx="12" cy="12" r="1.5" fill="var(--bg-0)" stroke="currentColor" stroke-width="1.2" data-astro-cid-tvrurpns></circle> </svg> <span class="word" data-astro-cid-tvrurpns>tenderlane</span> </span>  <p class="t-body footer-tag" data-astro-cid-sz7xmlte>
+Reactive payment orchestration for modern web apps. MIT licensed, frontend-first, provider-agnostic.
+</p> <div class="footer-badges" data-astro-cid-sz7xmlte> <span class="badge alpha" data-astro-cid-sz7xmlte><span class="dot" data-astro-cid-sz7xmlte></span>v0.4.0-alpha</span> <span class="badge" data-astro-cid-sz7xmlte><span style="color:var(--text-2)" data-astro-cid-sz7xmlte>MIT</span></span> </div> </div> <div data-astro-cid-sz7xmlte> <div class="t-cap" style="margin-bottom:16px;color:var(--text-3)" data-astro-cid-sz7xmlte>Product</div> <ul class="footer-list" data-astro-cid-sz7xmlte> <li data-astro-cid-sz7xmlte><a href="/tenderlane/" data-astro-cid-sz7xmlte>Home</a></li><li data-astro-cid-sz7xmlte><a href="/tenderlane/why" data-astro-cid-sz7xmlte>Why Tenderlane</a></li><li data-astro-cid-sz7xmlte><a href="/tenderlane/docs" data-astro-cid-sz7xmlte>Docs</a></li><li data-astro-cid-sz7xmlte><a href="https://github.com/farisaziz12/tenderlane/releases" data-astro-cid-sz7xmlte>Changelog</a></li> </ul> </div><div data-astro-cid-sz7xmlte> <div class="t-cap" style="margin-bottom:16px;color:var(--text-3)" data-astro-cid-sz7xmlte>Docs</div> <ul class="footer-list" data-astro-cid-sz7xmlte> <li data-astro-cid-sz7xmlte><a href="/tenderlane/docs/getting-started/introduction" data-astro-cid-sz7xmlte>Getting started</a></li><li data-astro-cid-sz7xmlte><a href="/tenderlane/docs/concepts/routing" data-astro-cid-sz7xmlte>Routing</a></li><li data-astro-cid-sz7xmlte><a href="/tenderlane/docs/concepts/providers" data-astro-cid-sz7xmlte>Providers</a></li><li data-astro-cid-sz7xmlte><a href="/tenderlane/docs/concepts/catalog" data-astro-cid-sz7xmlte>Catalog</a></li><li data-astro-cid-sz7xmlte><a href="/tenderlane/docs/concepts/state-machine" data-astro-cid-sz7xmlte>State machine</a></li> </ul> </div><div data-astro-cid-sz7xmlte> <div class="t-cap" style="margin-bottom:16px;color:var(--text-3)" data-astro-cid-sz7xmlte>Cookbooks</div> <ul class="footer-list" data-astro-cid-sz7xmlte> <li data-astro-cid-sz7xmlte><a href="/tenderlane/docs/cookbooks/stripe-checkout-redirect" data-astro-cid-sz7xmlte>Stripe Checkout redirect</a></li><li data-astro-cid-sz7xmlte><a href="/tenderlane/docs/cookbooks/country-based-routing" data-astro-cid-sz7xmlte>Country-based routing</a></li><li data-astro-cid-sz7xmlte><a href="/tenderlane/docs/cookbooks/ab-testing-payment-flows" data-astro-cid-sz7xmlte>A/B test flows</a></li><li data-astro-cid-sz7xmlte><a href="/tenderlane/docs/cookbooks/nextjs-app-router" data-astro-cid-sz7xmlte>Next.js App Router</a></li> </ul> </div><div data-astro-cid-sz7xmlte> <div class="t-cap" style="margin-bottom:16px;color:var(--text-3)" data-astro-cid-sz7xmlte>Community</div> <ul class="footer-list" data-astro-cid-sz7xmlte> <li data-astro-cid-sz7xmlte><a href="https://github.com/farisaziz12/tenderlane" data-astro-cid-sz7xmlte>GitHub</a></li><li data-astro-cid-sz7xmlte><a href="https://github.com/farisaziz12/tenderlane/issues" data-astro-cid-sz7xmlte>Issues</a></li><li data-astro-cid-sz7xmlte><a href="https://github.com/farisaziz12/tenderlane/blob/main/README.md" data-astro-cid-sz7xmlte>MIT License</a></li> </ul> </div> </div> <div class="container footer-bottom" data-astro-cid-sz7xmlte> <span data-astro-cid-sz7xmlte>© 2026 tenderlane contributors</span> <span data-astro-cid-sz7xmlte>Reactive payments · MIT · built with Astro</span> </div> </footer>  </body></html>   

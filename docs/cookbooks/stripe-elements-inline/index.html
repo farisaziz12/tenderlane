@@ -1,0 +1,275 @@
+<!DOCTYPE html><html lang="en"> <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Stripe Elements Inline · Tenderlane docs</title><meta name="description" content="Build an inline card payment form using Stripe Elements and Tenderlane."><meta property="og:title" content="Stripe Elements Inline · Tenderlane docs"><meta property="og:description" content="Build an inline card payment form using Stripe Elements and Tenderlane."><meta property="og:type" content="website"><link rel="icon" href="/tenderlane/favicon.svg" type="image/svg+xml"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"><link rel="stylesheet" href="/tenderlane/_astro/_slug_.Dhh66NRb.css">
+<link rel="stylesheet" href="/tenderlane/_astro/_slug_.Cu5bmsxF.css"></head> <body> <nav class="nav"> <div class="nav-left"> <a href="/tenderlane/" aria-label="Tenderlane home" style="color: var(--text-0)"> <span class="logo" style="font-size:15.2px;" data-astro-cid-tvrurpns> <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" data-astro-cid-tvrurpns> <path d="M12 2 L22 12 L12 22 L2 12 Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" data-astro-cid-tvrurpns></path> <path d="M12 2 L22 12 L12 12 Z" fill="var(--accent)" data-astro-cid-tvrurpns></path> <circle cx="12" cy="12" r="1.5" fill="var(--bg-0)" stroke="currentColor" stroke-width="1.2" data-astro-cid-tvrurpns></circle> </svg> <span class="word" data-astro-cid-tvrurpns>tenderlane</span> </span>  </a> <span style="width:1px;height:18px;background:var(--line-2)"></span> <div class="nav-links"> <a href="/tenderlane/docs/getting-started/introduction" data-active="false">Getting started</a><a href="/tenderlane/docs/concepts/routing" data-active="false">Concepts</a><a href="/tenderlane/docs/cookbooks/stripe-checkout-redirect" data-active="false">Cookbooks</a><a href="https://github.com/farisaziz12/tenderlane" data-active="false">GitHub</a> </div> <span class="badge" style="margin-left:4px"><span style="color:var(--text-3)">v</span>0.4.0-alpha</span> </div> <div class="nav-right"> <div class="nav-search"> <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.3"></circle><path d="M11 11l3 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"></path></svg> <span class="flex">Search docs…</span> <span class="kbd">⌘</span><span class="kbd">K</span> </div> <a class="btn btn-link nav-icon-link" href="https://github.com/farisaziz12/tenderlane" title="GitHub" style="color:var(--text-1)"> <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5C5.7.5.5 5.7.5 12c0 5.1 3.3 9.4 7.9 10.9.6.1.8-.3.8-.6v-2.1c-3.2.7-3.9-1.5-3.9-1.5-.5-1.3-1.3-1.7-1.3-1.7-1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1.1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.8-1.6-2.6-.3-5.3-1.3-5.3-5.7 0-1.3.5-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.1 0 0 1-.3 3.3 1.2 1-.3 2-.4 3-.4s2 .1 3 .4c2.3-1.5 3.3-1.2 3.3-1.2.6 1.6.2 2.8.1 3.1.8.8 1.2 1.8 1.2 3.1 0 4.4-2.7 5.4-5.3 5.7.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6 4.6-1.5 7.9-5.8 7.9-10.9C23.5 5.7 18.3.5 12 .5z"></path></svg> </a> <a class="btn btn-ghost" href="/tenderlane/docs">Docs</a> <a class="btn btn-primary" href="/tenderlane/docs/getting-started/quick-start">
+Get started <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M4 8h8M8 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path></svg> </a> <button class="nav-toggle" id="nav-toggle" aria-label="Open menu"> <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M2 8h12M2 12h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></path></svg> </button> </div> </nav> <div class="mobile-drawer" id="mobile-drawer"> <div class="drawer-head"> <span class="logo" style="font-size:15.2px;" data-astro-cid-tvrurpns> <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" data-astro-cid-tvrurpns> <path d="M12 2 L22 12 L12 22 L2 12 Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" data-astro-cid-tvrurpns></path> <path d="M12 2 L22 12 L12 12 Z" fill="var(--accent)" data-astro-cid-tvrurpns></path> <circle cx="12" cy="12" r="1.5" fill="var(--bg-0)" stroke="currentColor" stroke-width="1.2" data-astro-cid-tvrurpns></circle> </svg> <span class="word" data-astro-cid-tvrurpns>tenderlane</span> </span>  <button class="nav-toggle" id="nav-close" style="display:inline-flex" aria-label="Close menu"> <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></path></svg> </button> </div> <nav> <a href="/tenderlane/docs/getting-started/introduction">Getting started</a><a href="/tenderlane/docs/concepts/routing">Concepts</a><a href="/tenderlane/docs/cookbooks/stripe-checkout-redirect">Cookbooks</a><a href="https://github.com/farisaziz12/tenderlane">GitHub</a> <a href="/tenderlane/docs">Docs</a> <a href="/tenderlane/docs/getting-started/quick-start" style="color: var(--accent)">Get started →</a> </nav> </div> <script type="module">const t=document.getElementById("nav-toggle"),n=document.getElementById("nav-close"),e=document.getElementById("mobile-drawer");t?.addEventListener("click",()=>e?.setAttribute("data-open","true"));n?.addEventListener("click",()=>e?.setAttribute("data-open","false"));</script> <main>  <div class="docs-page" data-astro-cid-mw7aashj> <aside class="docs-sidebar" data-astro-cid-qrwn6rcr> <div class="docs-sidebar-inner" data-astro-cid-qrwn6rcr> <div data-astro-cid-qrwn6rcr> <div class="t-cap" style="margin-bottom:10px;color:var(--text-3)" data-astro-cid-qrwn6rcr>Getting started</div> <ul data-astro-cid-qrwn6rcr> <li data-astro-cid-qrwn6rcr> <a href="/tenderlane/docs/getting-started/introduction" data-active="false" data-astro-cid-qrwn6rcr> Introduction </a> </li><li data-astro-cid-qrwn6rcr> <a href="/tenderlane/docs/getting-started/installation" data-active="false" data-astro-cid-qrwn6rcr> Installation </a> </li><li data-astro-cid-qrwn6rcr> <a href="/tenderlane/docs/getting-started/quick-start" data-active="false" data-astro-cid-qrwn6rcr> Quick Start </a> </li> </ul> </div><div data-astro-cid-qrwn6rcr> <div class="t-cap" style="margin-bottom:10px;color:var(--text-3)" data-astro-cid-qrwn6rcr>Core concepts</div> <ul data-astro-cid-qrwn6rcr> <li data-astro-cid-qrwn6rcr> <a href="/tenderlane/docs/concepts/routing" data-active="false" data-astro-cid-qrwn6rcr> Routing </a> </li><li data-astro-cid-qrwn6rcr> <a href="/tenderlane/docs/concepts/providers" data-active="false" data-astro-cid-qrwn6rcr> Providers </a> </li><li data-astro-cid-qrwn6rcr> <a href="/tenderlane/docs/concepts/state-machine" data-active="false" data-astro-cid-qrwn6rcr> State Machine </a> </li><li data-astro-cid-qrwn6rcr> <a href="/tenderlane/docs/concepts/catalog" data-active="false" data-astro-cid-qrwn6rcr> Catalog </a> </li><li data-astro-cid-qrwn6rcr> <a href="/tenderlane/docs/concepts/middleware" data-active="false" data-astro-cid-qrwn6rcr> Middleware </a> </li><li data-astro-cid-qrwn6rcr> <a href="/tenderlane/docs/concepts/type-safety" data-active="false" data-astro-cid-qrwn6rcr> Type Safety </a> </li> </ul> </div><div data-astro-cid-qrwn6rcr> <div class="t-cap" style="margin-bottom:10px;color:var(--text-3)" data-astro-cid-qrwn6rcr>Cookbooks</div> <ul data-astro-cid-qrwn6rcr> <li data-astro-cid-qrwn6rcr> <a href="/tenderlane/docs/cookbooks/stripe-checkout-redirect" data-active="false" data-astro-cid-qrwn6rcr> Stripe Checkout Redirect </a> </li><li data-astro-cid-qrwn6rcr> <a href="/tenderlane/docs/cookbooks/stripe-elements-inline" data-active="true" data-astro-cid-qrwn6rcr> Stripe Elements Inline </a> </li><li data-astro-cid-qrwn6rcr> <a href="/tenderlane/docs/cookbooks/country-based-routing" data-active="false" data-astro-cid-qrwn6rcr> Country-Based Routing </a> </li><li data-astro-cid-qrwn6rcr> <a href="/tenderlane/docs/cookbooks/polar-checkout-redirect" data-active="false" data-astro-cid-qrwn6rcr> Polar Checkout Redirect </a> </li><li data-astro-cid-qrwn6rcr> <a href="/tenderlane/docs/cookbooks/ab-testing-payment-flows" data-active="false" data-astro-cid-qrwn6rcr> A/B Testing Payment Flows </a> </li><li data-astro-cid-qrwn6rcr> <a href="/tenderlane/docs/cookbooks/nextjs-app-router" data-active="false" data-astro-cid-qrwn6rcr> Next.js App Router </a> </li><li data-astro-cid-qrwn6rcr> <a href="/tenderlane/docs/cookbooks/middleware-analytics" data-active="false" data-astro-cid-qrwn6rcr> Middleware Analytics </a> </li> </ul> </div> </div> </aside>  <main class="docs-main" data-astro-cid-mw7aashj> <div class="docs-breadcrumb" data-astro-cid-mw7aashj> <span data-astro-cid-mw7aashj>Docs</span> <span data-astro-cid-mw7aashj>/</span> <span data-astro-cid-mw7aashj>Cookbooks</span> <span data-astro-cid-mw7aashj>/</span> <span style="color:var(--text-1)" data-astro-cid-mw7aashj>Stripe Elements Inline</span> <span style="margin-left:auto" data-astro-cid-mw7aashj>v0.4.0-alpha</span> </div> <article class="docs-article" data-astro-cid-mw7aashj>  <h1 data-astro-cid-uadgga6g>Stripe Elements Inline</h1> <p class="t-body-lg" style="margin:0 0 12px;color:var(--text-1);max-width:700px" data-astro-cid-uadgga6g>Build an inline card payment form using Stripe Elements and Tenderlane.</p><div class="docs-meta" data-astro-cid-uadgga6g> <span class="badge" data-astro-cid-uadgga6g><span style="width:6px;height:6px;border-radius:50%;background:var(--accent);display:inline-block" data-astro-cid-uadgga6g></span>Cookbooks</span> </div> <p>This cookbook shows how to build an inline payment form using Stripe Elements (PaymentElement) instead of redirecting to Stripe’s hosted checkout page. The payment form renders directly on your page, and payment confirmation happens without a full-page redirect.</p>
+<h2 id="when-to-use-inline-vs-redirect">When to use inline vs. redirect</h2>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Aspect</th><th>Redirect (Checkout Session)</th><th>Inline (Payment Intent + Elements)</th></tr></thead><tbody><tr><td><strong>UX</strong></td><td>Leaves your site, Stripe-hosted page</td><td>Stays on your page, embedded form</td></tr><tr><td><strong>Customization</strong></td><td>Limited to Stripe’s checkout UI</td><td>Full control over form layout and styling</td></tr><tr><td><strong>Setup complexity</strong></td><td>Simpler (no Elements to mount)</td><td>More moving parts (session creation, element mounting)</td></tr><tr><td><strong>Conversion</strong></td><td>Stripe-optimized checkout page</td><td>Your own flow, your own design</td></tr></tbody></table>
+<h2 id="what-you-will-build">What you will build</h2>
+<p>A checkout page that:</p>
+<ul>
+<li>Creates a Stripe PaymentIntent via <code>client.prepare()</code></li>
+<li>Renders a Stripe PaymentElement inline on your page</li>
+<li>Confirms the payment without leaving your site</li>
+<li>Shows success/error states inline</li>
+</ul>
+<h2 id="prerequisites">Prerequisites</h2>
+<p>Same as the <a href="/cookbooks/stripe-checkout-redirect/">Stripe Checkout Redirect</a> cookbook, plus the Stripe React bindings:</p>
+<pre class="astro-code github-dark-default" style="background-color:#0d1117;color:#e6edf3;overflow-x:auto" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#FFA657">pnpm</span><span style="color:#A5D6FF"> add</span><span style="color:#A5D6FF"> @tenderlane/core</span><span style="color:#A5D6FF"> @tenderlane/client</span><span style="color:#A5D6FF"> @tenderlane/react</span><span style="color:#A5D6FF"> @tenderlane/stripe</span></span>
+<span class="line"><span style="color:#FFA657">pnpm</span><span style="color:#A5D6FF"> add</span><span style="color:#A5D6FF"> @stripe/stripe-js</span><span style="color:#A5D6FF"> @stripe/react-stripe-js</span></span>
+<span class="line"><span style="color:#FFA657">pnpm</span><span style="color:#A5D6FF"> add</span><span style="color:#A5D6FF"> stripe</span><span style="color:#8B949E">  # server-side</span></span></code></pre>
+<h2 id="1-server-endpoint">1. Server endpoint</h2>
+<p>The same server endpoint handles both checkout sessions and payment intents. The Stripe server adapter supports both actions.</p>
+<pre class="astro-code github-dark-default" style="background-color:#0d1117;color:#e6edf3;overflow-x:auto" tabindex="0" data-language="ts"><code><span class="line"><span style="color:#8B949E">// app/api/checkout/route.ts</span></span>
+<span class="line"><span style="color:#FF7B72">import</span><span style="color:#E6EDF3"> { createTenderlaneHandler } </span><span style="color:#FF7B72">from</span><span style="color:#A5D6FF"> &#39;@tenderlane/core/server&#39;</span><span style="color:#E6EDF3">;</span></span>
+<span class="line"><span style="color:#FF7B72">import</span><span style="color:#E6EDF3"> { stripeServerAdapter } </span><span style="color:#FF7B72">from</span><span style="color:#A5D6FF"> &#39;@tenderlane/stripe/server&#39;</span><span style="color:#E6EDF3">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#FF7B72">const</span><span style="color:#79C0FF"> handler</span><span style="color:#FF7B72"> =</span><span style="color:#D2A8FF"> createTenderlaneHandler</span><span style="color:#E6EDF3">({</span></span>
+<span class="line"><span style="color:#E6EDF3">  providers: [</span></span>
+<span class="line"><span style="color:#D2A8FF">    stripeServerAdapter</span><span style="color:#E6EDF3">({</span></span>
+<span class="line"><span style="color:#E6EDF3">      secretKey: process.env.</span><span style="color:#79C0FF">STRIPE_SECRET_KEY</span><span style="color:#FF7B72">!</span><span style="color:#E6EDF3">,</span></span>
+<span class="line"><span style="color:#E6EDF3">    }),</span></span>
+<span class="line"><span style="color:#E6EDF3">  ],</span></span>
+<span class="line"><span style="color:#E6EDF3">});</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#FF7B72">export</span><span style="color:#FF7B72"> const</span><span style="color:#79C0FF"> POST</span><span style="color:#FF7B72"> =</span><span style="color:#E6EDF3"> handler.</span><span style="color:#79C0FF">POST</span><span style="color:#E6EDF3">;</span></span></code></pre>
+<aside class="callout" style="padding:14px 18px;border-radius:8px;margin:18px 0;background:color-mix(in oklab, var(--info) 8%, var(--bg-1));border:1px solid color-mix(in oklab, var(--info) 30%, transparent);color:var(--text-1);display:flex;gap:14px;align-items:flex-start;font-size:14px"><span style="color:var(--info);font-family:var(--font-mono);font-size:10px;letter-spacing:0.06em;text-transform:uppercase;flex-shrink:0;margin-top:2px">note</span><div><p>No changes are needed from the redirect flow. The same endpoint handles <code>action: &#39;checkout&#39;</code> (redirect) and <code>action: &#39;create-payment-intent&#39;</code> (inline). Tenderlane selects the action based on the route’s <code>flow</code> setting.</p></div></aside>
+<h2 id="2-build-the-checkout-page">2. Build the checkout page</h2>
+<p>The key differences from the redirect flow:</p>
+<ol>
+<li>The routing rule uses <code>flow: &#39;payment-intent&#39;</code> instead of <code>flow: &#39;checkout-session&#39;</code></li>
+<li>We use <code>TenderlaneCheckoutForm</code> with an <code>elements</code> map to auto-prepare and render the inline form</li>
+<li>We import <code>StripePaymentElement</code> from <code>@tenderlane/stripe/react</code></li>
+</ol>
+<pre class="astro-code github-dark-default" style="background-color:#0d1117;color:#e6edf3;overflow-x:auto" tabindex="0" data-language="tsx"><code><span class="line"><span style="color:#8B949E">// app/checkout/page.tsx</span></span>
+<span class="line"><span style="color:#A5D6FF">&#39;use client&#39;</span><span style="color:#E6EDF3">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#FF7B72">import</span><span style="color:#E6EDF3"> { useState, useMemo } </span><span style="color:#FF7B72">from</span><span style="color:#A5D6FF"> &#39;react&#39;</span><span style="color:#E6EDF3">;</span></span>
+<span class="line"><span style="color:#FF7B72">import</span><span style="color:#E6EDF3"> { TenderlaneProvider, TenderlaneCheckoutForm } </span><span style="color:#FF7B72">from</span><span style="color:#A5D6FF"> &#39;@tenderlane/react&#39;</span><span style="color:#E6EDF3">;</span></span>
+<span class="line"><span style="color:#FF7B72">import</span><span style="color:#E6EDF3"> { createRulesRouter } </span><span style="color:#FF7B72">from</span><span style="color:#A5D6FF"> &#39;@tenderlane/core&#39;</span><span style="color:#E6EDF3">;</span></span>
+<span class="line"><span style="color:#FF7B72">import</span><span style="color:#E6EDF3"> { stripeProvider } </span><span style="color:#FF7B72">from</span><span style="color:#A5D6FF"> &#39;@tenderlane/stripe&#39;</span><span style="color:#E6EDF3">;</span></span>
+<span class="line"><span style="color:#FF7B72">import</span><span style="color:#E6EDF3"> { StripePaymentElement } </span><span style="color:#FF7B72">from</span><span style="color:#A5D6FF"> &#39;@tenderlane/stripe/react&#39;</span><span style="color:#E6EDF3">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#FF7B72">const</span><span style="color:#79C0FF"> stripe</span><span style="color:#FF7B72"> =</span><span style="color:#D2A8FF"> stripeProvider</span><span style="color:#E6EDF3">({</span></span>
+<span class="line"><span style="color:#E6EDF3">  publishableKey: process.env.</span><span style="color:#79C0FF">NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY</span><span style="color:#FF7B72">!</span><span style="color:#E6EDF3">,</span></span>
+<span class="line"><span style="color:#E6EDF3">  serverEndpoint: </span><span style="color:#A5D6FF">&#39;/api/checkout&#39;</span><span style="color:#E6EDF3">,</span></span>
+<span class="line"><span style="color:#E6EDF3">});</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#FF7B72">const</span><span style="color:#79C0FF"> router</span><span style="color:#FF7B72"> =</span><span style="color:#D2A8FF"> createRulesRouter</span><span style="color:#E6EDF3">({</span></span>
+<span class="line"><span style="color:#E6EDF3">  rules: [</span></span>
+<span class="line"><span style="color:#E6EDF3">    {</span></span>
+<span class="line"><span style="color:#E6EDF3">      id: </span><span style="color:#A5D6FF">&#39;inline-card&#39;</span><span style="color:#E6EDF3">,</span></span>
+<span class="line"><span style="color:#E6EDF3">      description: </span><span style="color:#A5D6FF">&#39;Inline card payment via Stripe Elements&#39;</span><span style="color:#E6EDF3">,</span></span>
+<span class="line"><span style="color:#E6EDF3">      when: {},</span></span>
+<span class="line"><span style="color:#E6EDF3">      use: {</span></span>
+<span class="line"><span style="color:#E6EDF3">        provider: </span><span style="color:#A5D6FF">&#39;stripe&#39;</span><span style="color:#E6EDF3">,</span></span>
+<span class="line"><span style="color:#E6EDF3">        flow: </span><span style="color:#A5D6FF">&#39;payment-intent&#39;</span><span style="color:#E6EDF3">,</span></span>
+<span class="line"><span style="color:#E6EDF3">        paymentMethods: [</span><span style="color:#A5D6FF">&#39;card&#39;</span><span style="color:#E6EDF3">],</span></span>
+<span class="line"><span style="color:#E6EDF3">      },</span></span>
+<span class="line"><span style="color:#E6EDF3">    },</span></span>
+<span class="line"><span style="color:#E6EDF3">  ],</span></span>
+<span class="line"><span style="color:#E6EDF3">  fallback: {</span></span>
+<span class="line"><span style="color:#E6EDF3">    provider: </span><span style="color:#A5D6FF">&#39;stripe&#39;</span><span style="color:#E6EDF3">,</span></span>
+<span class="line"><span style="color:#E6EDF3">    flow: </span><span style="color:#A5D6FF">&#39;payment-intent&#39;</span><span style="color:#E6EDF3">,</span></span>
+<span class="line"><span style="color:#E6EDF3">    paymentMethods: [</span><span style="color:#A5D6FF">&#39;card&#39;</span><span style="color:#E6EDF3">],</span></span>
+<span class="line"><span style="color:#E6EDF3">  },</span></span>
+<span class="line"><span style="color:#E6EDF3">});</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#FF7B72">const</span><span style="color:#79C0FF"> checkoutInput</span><span style="color:#FF7B72"> =</span><span style="color:#E6EDF3"> {</span></span>
+<span class="line"><span style="color:#E6EDF3">  lineItems: [</span></span>
+<span class="line"><span style="color:#E6EDF3">    {</span></span>
+<span class="line"><span style="color:#E6EDF3">      name: </span><span style="color:#A5D6FF">&#39;Premium Widget&#39;</span><span style="color:#E6EDF3">,</span></span>
+<span class="line"><span style="color:#E6EDF3">      description: </span><span style="color:#A5D6FF">&#39;A high-quality widget&#39;</span><span style="color:#E6EDF3">,</span></span>
+<span class="line"><span style="color:#E6EDF3">      quantity: </span><span style="color:#79C0FF">1</span><span style="color:#E6EDF3">,</span></span>
+<span class="line"><span style="color:#E6EDF3">      unitAmount: </span><span style="color:#79C0FF">2500</span><span style="color:#E6EDF3">,</span></span>
+<span class="line"><span style="color:#E6EDF3">    },</span></span>
+<span class="line"><span style="color:#E6EDF3">  ],</span></span>
+<span class="line"><span style="color:#E6EDF3">  successUrl: </span><span style="color:#FF7B72">typeof</span><span style="color:#E6EDF3"> window </span><span style="color:#FF7B72">!==</span><span style="color:#A5D6FF"> &#39;undefined&#39;</span></span>
+<span class="line"><span style="color:#FF7B72">    ?</span><span style="color:#E6EDF3"> window.location.origin </span><span style="color:#FF7B72">+</span><span style="color:#A5D6FF"> &#39;/success&#39;</span></span>
+<span class="line"><span style="color:#FF7B72">    :</span><span style="color:#A5D6FF"> &#39;http://localhost:3000/success&#39;</span><span style="color:#E6EDF3">,</span></span>
+<span class="line"><span style="color:#E6EDF3">  cancelUrl: </span><span style="color:#FF7B72">typeof</span><span style="color:#E6EDF3"> window </span><span style="color:#FF7B72">!==</span><span style="color:#A5D6FF"> &#39;undefined&#39;</span></span>
+<span class="line"><span style="color:#FF7B72">    ?</span><span style="color:#E6EDF3"> window.location.origin </span><span style="color:#FF7B72">+</span><span style="color:#A5D6FF"> &#39;/checkout&#39;</span></span>
+<span class="line"><span style="color:#FF7B72">    :</span><span style="color:#A5D6FF"> &#39;http://localhost:3000/checkout&#39;</span><span style="color:#E6EDF3">,</span></span>
+<span class="line"><span style="color:#E6EDF3">};</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#FF7B72">export</span><span style="color:#FF7B72"> default</span><span style="color:#FF7B72"> function</span><span style="color:#D2A8FF"> CheckoutPage</span><span style="color:#FFA657">() </span><span style="color:#E6EDF3">{</span></span>
+<span class="line"><span style="color:#FF7B72">  const</span><span style="color:#79C0FF"> config</span><span style="color:#FF7B72"> =</span><span style="color:#D2A8FF"> useMemo</span><span style="color:#E6EDF3">(</span></span>
+<span class="line"><span style="color:#E6EDF3">    () </span><span style="color:#FF7B72">=&gt;</span><span style="color:#E6EDF3"> ({</span></span>
+<span class="line"><span style="color:#E6EDF3">      context: { country: </span><span style="color:#A5D6FF">&#39;US&#39;</span><span style="color:#E6EDF3">, currency: </span><span style="color:#A5D6FF">&#39;usd&#39;</span><span style="color:#E6EDF3">, amount: </span><span style="color:#79C0FF">2500</span><span style="color:#E6EDF3"> },</span></span>
+<span class="line"><span style="color:#E6EDF3">      providers: [stripe] </span><span style="color:#FF7B72">as</span><span style="color:#FF7B72"> const</span><span style="color:#E6EDF3">,</span></span>
+<span class="line"><span style="color:#E6EDF3">      routing: router,</span></span>
+<span class="line"><span style="color:#E6EDF3">    }),</span></span>
+<span class="line"><span style="color:#E6EDF3">    [],</span></span>
+<span class="line"><span style="color:#E6EDF3">  );</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#FF7B72">  return</span><span style="color:#E6EDF3"> (</span></span>
+<span class="line"><span style="color:#E6EDF3">    &lt;</span><span style="color:#7EE787">TenderlaneProvider</span><span style="color:#79C0FF"> config</span><span style="color:#FF7B72">={</span><span style="color:#E6EDF3">config</span><span style="color:#FF7B72">}</span><span style="color:#E6EDF3">&gt;</span></span>
+<span class="line"><span style="color:#E6EDF3">      &lt;</span><span style="color:#7EE787">div</span><span style="color:#79C0FF"> style</span><span style="color:#FF7B72">={</span><span style="color:#E6EDF3">{ maxWidth: </span><span style="color:#79C0FF">480</span><span style="color:#E6EDF3">, margin: </span><span style="color:#A5D6FF">&#39;2rem auto&#39;</span><span style="color:#E6EDF3">, fontFamily: </span><span style="color:#A5D6FF">&#39;system-ui&#39;</span><span style="color:#E6EDF3"> }</span><span style="color:#FF7B72">}</span><span style="color:#E6EDF3">&gt;</span></span>
+<span class="line"><span style="color:#E6EDF3">        &lt;</span><span style="color:#7EE787">h1</span><span style="color:#E6EDF3">&gt;Checkout&lt;/</span><span style="color:#7EE787">h1</span><span style="color:#E6EDF3">&gt;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#E6EDF3">        &lt;</span><span style="color:#7EE787">h2</span><span style="color:#E6EDF3">&gt;Order Summary&lt;/</span><span style="color:#7EE787">h2</span><span style="color:#E6EDF3">&gt;</span></span>
+<span class="line"><span style="color:#E6EDF3">        &lt;</span><span style="color:#7EE787">p</span><span style="color:#E6EDF3">&gt;Premium Widget - $25.00&lt;/</span><span style="color:#7EE787">p</span><span style="color:#E6EDF3">&gt;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#E6EDF3">        &lt;</span><span style="color:#7EE787">TenderlaneCheckoutForm</span></span>
+<span class="line"><span style="color:#79C0FF">          input</span><span style="color:#FF7B72">={</span><span style="color:#E6EDF3">checkoutInput</span><span style="color:#FF7B72">}</span></span>
+<span class="line"><span style="color:#79C0FF">          elements</span><span style="color:#FF7B72">={</span><span style="color:#E6EDF3">{ stripe: StripePaymentElement }</span><span style="color:#FF7B72">}</span></span>
+<span class="line"><span style="color:#E6EDF3">        &gt;</span></span>
+<span class="line"><span style="color:#FF7B72">          {</span><span style="color:#E6EDF3">({ </span><span style="color:#FFA657">status</span><span style="color:#E6EDF3">, </span><span style="color:#FFA657">canSubmit</span><span style="color:#E6EDF3">, </span><span style="color:#FFA657">error</span><span style="color:#E6EDF3">, </span><span style="color:#FFA657">checkoutResult</span><span style="color:#E6EDF3">, </span><span style="color:#FFA657">submit</span><span style="color:#E6EDF3"> }) </span><span style="color:#FF7B72">=&gt;</span><span style="color:#E6EDF3"> (</span></span>
+<span class="line"><span style="color:#E6EDF3">            &lt;</span><span style="color:#7EE787">div</span><span style="color:#E6EDF3">&gt;</span></span>
+<span class="line"><span style="color:#FF7B72">              {</span><span style="color:#E6EDF3">error </span><span style="color:#FF7B72">&amp;&amp;</span><span style="color:#E6EDF3"> (</span></span>
+<span class="line"><span style="color:#E6EDF3">                &lt;</span><span style="color:#7EE787">div</span><span style="color:#79C0FF"> style</span><span style="color:#FF7B72">={</span><span style="color:#E6EDF3">{ color: </span><span style="color:#A5D6FF">&#39;red&#39;</span><span style="color:#E6EDF3">, marginBottom: </span><span style="color:#A5D6FF">&#39;1rem&#39;</span><span style="color:#E6EDF3"> }</span><span style="color:#FF7B72">}</span><span style="color:#E6EDF3">&gt;</span></span>
+<span class="line"><span style="color:#FF7B72">                  {</span><span style="color:#E6EDF3">error.message</span><span style="color:#FF7B72">}</span></span>
+<span class="line"><span style="color:#E6EDF3">                &lt;/</span><span style="color:#7EE787">div</span><span style="color:#E6EDF3">&gt;</span></span>
+<span class="line"><span style="color:#E6EDF3">              )</span><span style="color:#FF7B72">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#FF7B72">              {</span><span style="color:#E6EDF3">checkoutResult </span><span style="color:#FF7B72">&amp;&amp;</span><span style="color:#E6EDF3"> (</span></span>
+<span class="line"><span style="color:#E6EDF3">                &lt;</span><span style="color:#7EE787">div</span><span style="color:#79C0FF"> style</span><span style="color:#FF7B72">={</span><span style="color:#E6EDF3">{ color: </span><span style="color:#A5D6FF">&#39;green&#39;</span><span style="color:#E6EDF3">, marginBottom: </span><span style="color:#A5D6FF">&#39;1rem&#39;</span><span style="color:#E6EDF3"> }</span><span style="color:#FF7B72">}</span><span style="color:#E6EDF3">&gt;</span></span>
+<span class="line"><span style="color:#E6EDF3">                  Payment succeeded! ID: </span><span style="color:#FF7B72">{</span><span style="color:#E6EDF3">checkoutResult.id</span><span style="color:#FF7B72">}</span></span>
+<span class="line"><span style="color:#E6EDF3">                &lt;/</span><span style="color:#7EE787">div</span><span style="color:#E6EDF3">&gt;</span></span>
+<span class="line"><span style="color:#E6EDF3">              )</span><span style="color:#FF7B72">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#FF7B72">              {</span><span style="color:#E6EDF3">status </span><span style="color:#FF7B72">===</span><span style="color:#A5D6FF"> &#39;preparing&#39;</span><span style="color:#FF7B72"> &amp;&amp;</span><span style="color:#E6EDF3"> (</span></span>
+<span class="line"><span style="color:#E6EDF3">                &lt;</span><span style="color:#7EE787">p</span><span style="color:#E6EDF3">&gt;Loading payment form...&lt;/</span><span style="color:#7EE787">p</span><span style="color:#E6EDF3">&gt;</span></span>
+<span class="line"><span style="color:#E6EDF3">              )</span><span style="color:#FF7B72">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#E6EDF3">              &lt;</span><span style="color:#7EE787">button</span></span>
+<span class="line"><span style="color:#79C0FF">                disabled</span><span style="color:#FF7B72">={!</span><span style="color:#E6EDF3">canSubmit </span><span style="color:#FF7B72">||</span><span style="color:#E6EDF3"> status </span><span style="color:#FF7B72">===</span><span style="color:#A5D6FF"> &#39;submitting&#39;</span><span style="color:#FF7B72">}</span></span>
+<span class="line"><span style="color:#79C0FF">                onClick</span><span style="color:#FF7B72">={</span><span style="color:#E6EDF3">submit</span><span style="color:#FF7B72">}</span></span>
+<span class="line"><span style="color:#79C0FF">                style</span><span style="color:#FF7B72">={</span><span style="color:#E6EDF3">{</span></span>
+<span class="line"><span style="color:#E6EDF3">                  width: </span><span style="color:#A5D6FF">&#39;100%&#39;</span><span style="color:#E6EDF3">,</span></span>
+<span class="line"><span style="color:#E6EDF3">                  padding: </span><span style="color:#A5D6FF">&#39;0.75rem&#39;</span><span style="color:#E6EDF3">,</span></span>
+<span class="line"><span style="color:#E6EDF3">                  fontSize: </span><span style="color:#A5D6FF">&#39;1rem&#39;</span><span style="color:#E6EDF3">,</span></span>
+<span class="line"><span style="color:#E6EDF3">                  backgroundColor: canSubmit </span><span style="color:#FF7B72">?</span><span style="color:#A5D6FF"> &#39;#6c5ce7&#39;</span><span style="color:#FF7B72"> :</span><span style="color:#A5D6FF"> &#39;#ccc&#39;</span><span style="color:#E6EDF3">,</span></span>
+<span class="line"><span style="color:#E6EDF3">                  color: </span><span style="color:#A5D6FF">&#39;white&#39;</span><span style="color:#E6EDF3">,</span></span>
+<span class="line"><span style="color:#E6EDF3">                  border: </span><span style="color:#A5D6FF">&#39;none&#39;</span><span style="color:#E6EDF3">,</span></span>
+<span class="line"><span style="color:#E6EDF3">                  borderRadius: </span><span style="color:#79C0FF">4</span><span style="color:#E6EDF3">,</span></span>
+<span class="line"><span style="color:#E6EDF3">                  marginTop: </span><span style="color:#A5D6FF">&#39;1rem&#39;</span><span style="color:#E6EDF3">,</span></span>
+<span class="line"><span style="color:#E6EDF3">                  cursor: canSubmit </span><span style="color:#FF7B72">?</span><span style="color:#A5D6FF"> &#39;pointer&#39;</span><span style="color:#FF7B72"> :</span><span style="color:#A5D6FF"> &#39;not-allowed&#39;</span><span style="color:#E6EDF3">,</span></span>
+<span class="line"><span style="color:#E6EDF3">                }</span><span style="color:#FF7B72">}</span></span>
+<span class="line"><span style="color:#E6EDF3">              &gt;</span></span>
+<span class="line"><span style="color:#FF7B72">                {</span><span style="color:#E6EDF3">status </span><span style="color:#FF7B72">===</span><span style="color:#A5D6FF"> &#39;submitting&#39;</span><span style="color:#FF7B72"> ?</span><span style="color:#A5D6FF"> &#39;Processing...&#39;</span><span style="color:#FF7B72"> :</span><span style="color:#A5D6FF"> &#39;Pay $25.00&#39;</span><span style="color:#FF7B72">}</span></span>
+<span class="line"><span style="color:#E6EDF3">              &lt;/</span><span style="color:#7EE787">button</span><span style="color:#E6EDF3">&gt;</span></span>
+<span class="line"><span style="color:#E6EDF3">            &lt;/</span><span style="color:#7EE787">div</span><span style="color:#E6EDF3">&gt;</span></span>
+<span class="line"><span style="color:#E6EDF3">          )</span><span style="color:#FF7B72">}</span></span>
+<span class="line"><span style="color:#E6EDF3">        &lt;/</span><span style="color:#7EE787">TenderlaneCheckoutForm</span><span style="color:#E6EDF3">&gt;</span></span>
+<span class="line"><span style="color:#E6EDF3">      &lt;/</span><span style="color:#7EE787">div</span><span style="color:#E6EDF3">&gt;</span></span>
+<span class="line"><span style="color:#E6EDF3">    &lt;/</span><span style="color:#7EE787">TenderlaneProvider</span><span style="color:#E6EDF3">&gt;</span></span>
+<span class="line"><span style="color:#E6EDF3">  );</span></span>
+<span class="line"><span style="color:#E6EDF3">}</span></span></code></pre>
+<h2 id="how-tenderlanecheckoutform-works">How <code>TenderlaneCheckoutForm</code> works</h2>
+<p>The <code>TenderlaneCheckoutForm</code> component handles the inline flow lifecycle automatically:</p>
+<ol>
+<li>
+<p><strong>Auto-prepare</strong>: When the route selects an inline flow (<code>payment-intent</code>), the form automatically calls <code>client.prepare(input)</code> to create a PaymentIntent on the server. This transitions the state to <code>preparing</code> then <code>prepared</code>.</p>
+</li>
+<li>
+<p><strong>Element rendering</strong>: When <code>prepared</code>, the form looks up the matching element component from the <code>elements</code> map (keyed by provider ID) and renders it with the <code>clientSecret</code> from the provider session.</p>
+</li>
+<li>
+<p><strong>Re-prepare on changes</strong>: If the <code>input</code> prop changes (e.g., the user updates their cart), the form automatically creates a new PaymentIntent.</p>
+</li>
+<li>
+<p><strong>Children render prop</strong>: Your custom UI receives the current state and a <code>submit</code> function. The inline payment element renders above the children automatically.</p>
+</li>
+</ol>
+<pre class="astro-code github-dark-default" style="background-color:#0d1117;color:#e6edf3;overflow-x:auto" tabindex="0" data-language="tsx"><code><span class="line"><span style="color:#E6EDF3">&lt;</span><span style="color:#7EE787">TenderlaneCheckoutForm</span></span>
+<span class="line"><span style="color:#79C0FF">  input</span><span style="color:#FF7B72">={</span><span style="color:#E6EDF3">checkoutInput</span><span style="color:#FF7B72">}</span></span>
+<span class="line"><span style="color:#79C0FF">  elements</span><span style="color:#FF7B72">={</span><span style="color:#E6EDF3">{ stripe: StripePaymentElement }</span><span style="color:#FF7B72">}</span></span>
+<span class="line"><span style="color:#E6EDF3">&gt;</span></span>
+<span class="line"><span style="color:#FF7B72">  {</span><span style="color:#E6EDF3">({ </span><span style="color:#FFA657">status</span><span style="color:#E6EDF3">, </span><span style="color:#FFA657">canSubmit</span><span style="color:#E6EDF3">, </span><span style="color:#FFA657">error</span><span style="color:#E6EDF3">, </span><span style="color:#FFA657">submit</span><span style="color:#E6EDF3"> }) </span><span style="color:#FF7B72">=&gt;</span><span style="color:#E6EDF3"> (</span></span>
+<span class="line"><span style="color:#8B949E">    // Your custom pay button and error display</span></span>
+<span class="line"><span style="color:#E6EDF3">  )</span><span style="color:#FF7B72">}</span></span>
+<span class="line"><span style="color:#E6EDF3">&lt;/</span><span style="color:#7EE787">TenderlaneCheckoutForm</span><span style="color:#E6EDF3">&gt;</span></span></code></pre>
+<h2 id="lazy-loading-benefit">Lazy loading benefit</h2>
+<p>Both <code>@stripe/stripe-js</code> and <code>@stripe/react-stripe-js</code> are <strong>lazy-loaded</strong> when using Tenderlane’s Stripe integration:</p>
+<ul>
+<li><code>Stripe.js</code> loads via dynamic <code>import()</code> when the provider’s <code>getStripeInstance()</code> is first called</li>
+<li><code>@stripe/react-stripe-js</code> loads via <code>React.lazy</code> when <code>StripePaymentElement</code> first mounts</li>
+</ul>
+<p>This means pages that use redirect flows (or non-Stripe providers) pay zero bundle cost for the Elements integration. The heavy Stripe React library is code-split and only downloaded when the inline payment form actually renders.</p>
+<h2 id="state-flow-for-inline-payments">State flow for inline payments</h2>
+<pre class="astro-code github-dark-default" style="background-color:#0d1117;color:#e6edf3;overflow-x:auto" tabindex="0" data-language="plaintext"><code><span class="line"><span>ready ──▶ preparing ──▶ prepared ──▶ submitting ──▶ success</span></span>
+<span class="line"><span>                                                      │</span></span>
+<span class="line"><span>             (auto)         (render          (user      ▼</span></span>
+<span class="line"><span>           prepare()     PaymentElement)   clicks Pay)  error</span></span></code></pre>
+<ol>
+<li><strong>ready</strong> — Route evaluated, <code>flow: &#39;payment-intent&#39;</code> selected</li>
+<li><strong>preparing</strong> — <code>TenderlaneCheckoutForm</code> auto-calls <code>client.prepare(input)</code>, which sends <code>POST /api/checkout</code> with <code>action: &#39;create-payment-intent&#39;</code></li>
+<li><strong>prepared</strong> — Server returns the <code>clientSecret</code>, <code>StripePaymentElement</code> renders the card form</li>
+<li><strong>submitting</strong> — User fills the form and clicks Pay, <code>stripe.confirmPayment()</code> is called</li>
+<li><strong>success</strong> or <strong>error</strong> — Payment confirmed inline (no redirect needed for simple card payments)</li>
+</ol>
+<h2 id="test-with-stripe-test-cards">Test with Stripe test cards</h2>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Card Number</th><th>Result</th></tr></thead><tbody><tr><td><code>4242 4242 4242 4242</code></td><td>Successful payment (no redirect)</td></tr><tr><td><code>4000 0025 0000 3155</code></td><td>Requires authentication (shows 3D Secure modal)</td></tr><tr><td><code>4000 0000 0000 0002</code></td><td>Card declined</td></tr></tbody></table>
+<aside class="callout" style="padding:14px 18px;border-radius:8px;margin:18px 0;background:color-mix(in oklab, var(--accent) 8%, var(--bg-1));border:1px solid color-mix(in oklab, var(--accent) 30%, transparent);color:var(--text-1);display:flex;gap:14px;align-items:flex-start;font-size:14px"><span style="color:var(--accent);font-family:var(--font-mono);font-size:10px;letter-spacing:0.06em;text-transform:uppercase;flex-shrink:0;margin-top:2px">tip</span><div><p>With inline Elements, successful test card payments complete without any page navigation. The <code>checkoutResult</code> is populated directly in the component state, and you can show a success message inline.</p></div></aside>
+<h2 id="mixing-redirect-and-inline-flows">Mixing redirect and inline flows</h2>
+<p>You can use routing rules to choose between redirect and inline flows based on context:</p>
+<pre class="astro-code github-dark-default" style="background-color:#0d1117;color:#e6edf3;overflow-x:auto" tabindex="0" data-language="ts"><code><span class="line"><span style="color:#FF7B72">const</span><span style="color:#79C0FF"> router</span><span style="color:#FF7B72"> =</span><span style="color:#D2A8FF"> createRulesRouter</span><span style="color:#E6EDF3">({</span></span>
+<span class="line"><span style="color:#E6EDF3">  rules: [</span></span>
+<span class="line"><span style="color:#E6EDF3">    {</span></span>
+<span class="line"><span style="color:#E6EDF3">      id: </span><span style="color:#A5D6FF">&#39;high-value-redirect&#39;</span><span style="color:#E6EDF3">,</span></span>
+<span class="line"><span style="color:#E6EDF3">      description: </span><span style="color:#A5D6FF">&#39;High-value orders use Stripe Checkout for trust&#39;</span><span style="color:#E6EDF3">,</span></span>
+<span class="line"><span style="color:#E6EDF3">      when: { amount: { gte: </span><span style="color:#79C0FF">50000</span><span style="color:#E6EDF3"> } },</span></span>
+<span class="line"><span style="color:#E6EDF3">      use: { provider: </span><span style="color:#A5D6FF">&#39;stripe&#39;</span><span style="color:#E6EDF3">, flow: </span><span style="color:#A5D6FF">&#39;checkout-session&#39;</span><span style="color:#E6EDF3">, paymentMethods: [</span><span style="color:#A5D6FF">&#39;card&#39;</span><span style="color:#E6EDF3">] },</span></span>
+<span class="line"><span style="color:#E6EDF3">    },</span></span>
+<span class="line"><span style="color:#E6EDF3">    {</span></span>
+<span class="line"><span style="color:#E6EDF3">      id: </span><span style="color:#A5D6FF">&#39;default-inline&#39;</span><span style="color:#E6EDF3">,</span></span>
+<span class="line"><span style="color:#E6EDF3">      description: </span><span style="color:#A5D6FF">&#39;Standard orders use inline Elements&#39;</span><span style="color:#E6EDF3">,</span></span>
+<span class="line"><span style="color:#E6EDF3">      when: {},</span></span>
+<span class="line"><span style="color:#E6EDF3">      use: { provider: </span><span style="color:#A5D6FF">&#39;stripe&#39;</span><span style="color:#E6EDF3">, flow: </span><span style="color:#A5D6FF">&#39;payment-intent&#39;</span><span style="color:#E6EDF3">, paymentMethods: [</span><span style="color:#A5D6FF">&#39;card&#39;</span><span style="color:#E6EDF3">] },</span></span>
+<span class="line"><span style="color:#E6EDF3">    },</span></span>
+<span class="line"><span style="color:#E6EDF3">  ],</span></span>
+<span class="line"><span style="color:#E6EDF3">  fallback: { provider: </span><span style="color:#A5D6FF">&#39;stripe&#39;</span><span style="color:#E6EDF3">, flow: </span><span style="color:#A5D6FF">&#39;checkout-session&#39;</span><span style="color:#E6EDF3">, paymentMethods: [</span><span style="color:#A5D6FF">&#39;card&#39;</span><span style="color:#E6EDF3">] },</span></span>
+<span class="line"><span style="color:#E6EDF3">});</span></span></code></pre>
+<p>When the route switches between <code>checkout-session</code> and <code>payment-intent</code>, <code>TenderlaneCheckoutForm</code> automatically shows or hides the inline payment element and adjusts the submit behavior.</p>  </article> </main> <aside class="docs-toc" data-astro-cid-kb6rcyzi><div class="t-cap" style="margin-bottom:10px;color:var(--text-3)" data-astro-cid-kb6rcyzi>On this page</div><ul data-astro-cid-kb6rcyzi><li data-astro-cid-kb6rcyzi><a href="#when-to-use-inline-vs-redirect" data-depth="2" data-astro-cid-kb6rcyzi>When to use inline vs. redirect</a></li><li data-astro-cid-kb6rcyzi><a href="#what-you-will-build" data-depth="2" data-astro-cid-kb6rcyzi>What you will build</a></li><li data-astro-cid-kb6rcyzi><a href="#prerequisites" data-depth="2" data-astro-cid-kb6rcyzi>Prerequisites</a></li><li data-astro-cid-kb6rcyzi><a href="#1-server-endpoint" data-depth="2" data-astro-cid-kb6rcyzi>1. Server endpoint</a></li><li data-astro-cid-kb6rcyzi><a href="#2-build-the-checkout-page" data-depth="2" data-astro-cid-kb6rcyzi>2. Build the checkout page</a></li><li data-astro-cid-kb6rcyzi><a href="#how-tenderlanecheckoutform-works" data-depth="2" data-astro-cid-kb6rcyzi>How TenderlaneCheckoutForm works</a></li><li data-astro-cid-kb6rcyzi><a href="#lazy-loading-benefit" data-depth="2" data-astro-cid-kb6rcyzi>Lazy loading benefit</a></li><li data-astro-cid-kb6rcyzi><a href="#state-flow-for-inline-payments" data-depth="2" data-astro-cid-kb6rcyzi>State flow for inline payments</a></li><li data-astro-cid-kb6rcyzi><a href="#test-with-stripe-test-cards" data-depth="2" data-astro-cid-kb6rcyzi>Test with Stripe test cards</a></li><li data-astro-cid-kb6rcyzi><a href="#mixing-redirect-and-inline-flows" data-depth="2" data-astro-cid-kb6rcyzi>Mixing redirect and inline flows</a></li></ul><div class="toc-foot" data-astro-cid-kb6rcyzi><a href="https://github.com/farisaziz12/tenderlane" data-astro-cid-kb6rcyzi>↗ View on GitHub</a></div></aside> </div>  </main> <footer class="footer" data-astro-cid-sz7xmlte> <div class="container footer-grid" data-astro-cid-sz7xmlte> <div data-astro-cid-sz7xmlte> <span class="logo" style="font-size:17.099999999999998px;" data-astro-cid-tvrurpns> <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true" data-astro-cid-tvrurpns> <path d="M12 2 L22 12 L12 22 L2 12 Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" data-astro-cid-tvrurpns></path> <path d="M12 2 L22 12 L12 12 Z" fill="var(--accent)" data-astro-cid-tvrurpns></path> <circle cx="12" cy="12" r="1.5" fill="var(--bg-0)" stroke="currentColor" stroke-width="1.2" data-astro-cid-tvrurpns></circle> </svg> <span class="word" data-astro-cid-tvrurpns>tenderlane</span> </span>  <p class="t-body footer-tag" data-astro-cid-sz7xmlte>
+Reactive payment orchestration for modern web apps. MIT licensed, frontend-first, provider-agnostic.
+</p> <div class="footer-badges" data-astro-cid-sz7xmlte> <span class="badge alpha" data-astro-cid-sz7xmlte><span class="dot" data-astro-cid-sz7xmlte></span>v0.4.0-alpha</span> <span class="badge" data-astro-cid-sz7xmlte><span style="color:var(--text-2)" data-astro-cid-sz7xmlte>MIT</span></span> </div> </div> <div data-astro-cid-sz7xmlte> <div class="t-cap" style="margin-bottom:16px;color:var(--text-3)" data-astro-cid-sz7xmlte>Product</div> <ul class="footer-list" data-astro-cid-sz7xmlte> <li data-astro-cid-sz7xmlte><a href="/tenderlane/" data-astro-cid-sz7xmlte>Home</a></li><li data-astro-cid-sz7xmlte><a href="/tenderlane/why" data-astro-cid-sz7xmlte>Why Tenderlane</a></li><li data-astro-cid-sz7xmlte><a href="/tenderlane/docs" data-astro-cid-sz7xmlte>Docs</a></li><li data-astro-cid-sz7xmlte><a href="https://github.com/farisaziz12/tenderlane/releases" data-astro-cid-sz7xmlte>Changelog</a></li> </ul> </div><div data-astro-cid-sz7xmlte> <div class="t-cap" style="margin-bottom:16px;color:var(--text-3)" data-astro-cid-sz7xmlte>Docs</div> <ul class="footer-list" data-astro-cid-sz7xmlte> <li data-astro-cid-sz7xmlte><a href="/tenderlane/docs/getting-started/introduction" data-astro-cid-sz7xmlte>Getting started</a></li><li data-astro-cid-sz7xmlte><a href="/tenderlane/docs/concepts/routing" data-astro-cid-sz7xmlte>Routing</a></li><li data-astro-cid-sz7xmlte><a href="/tenderlane/docs/concepts/providers" data-astro-cid-sz7xmlte>Providers</a></li><li data-astro-cid-sz7xmlte><a href="/tenderlane/docs/concepts/catalog" data-astro-cid-sz7xmlte>Catalog</a></li><li data-astro-cid-sz7xmlte><a href="/tenderlane/docs/concepts/state-machine" data-astro-cid-sz7xmlte>State machine</a></li> </ul> </div><div data-astro-cid-sz7xmlte> <div class="t-cap" style="margin-bottom:16px;color:var(--text-3)" data-astro-cid-sz7xmlte>Cookbooks</div> <ul class="footer-list" data-astro-cid-sz7xmlte> <li data-astro-cid-sz7xmlte><a href="/tenderlane/docs/cookbooks/stripe-checkout-redirect" data-astro-cid-sz7xmlte>Stripe Checkout redirect</a></li><li data-astro-cid-sz7xmlte><a href="/tenderlane/docs/cookbooks/country-based-routing" data-astro-cid-sz7xmlte>Country-based routing</a></li><li data-astro-cid-sz7xmlte><a href="/tenderlane/docs/cookbooks/ab-testing-payment-flows" data-astro-cid-sz7xmlte>A/B test flows</a></li><li data-astro-cid-sz7xmlte><a href="/tenderlane/docs/cookbooks/nextjs-app-router" data-astro-cid-sz7xmlte>Next.js App Router</a></li> </ul> </div><div data-astro-cid-sz7xmlte> <div class="t-cap" style="margin-bottom:16px;color:var(--text-3)" data-astro-cid-sz7xmlte>Community</div> <ul class="footer-list" data-astro-cid-sz7xmlte> <li data-astro-cid-sz7xmlte><a href="https://github.com/farisaziz12/tenderlane" data-astro-cid-sz7xmlte>GitHub</a></li><li data-astro-cid-sz7xmlte><a href="https://github.com/farisaziz12/tenderlane/issues" data-astro-cid-sz7xmlte>Issues</a></li><li data-astro-cid-sz7xmlte><a href="https://github.com/farisaziz12/tenderlane/blob/main/README.md" data-astro-cid-sz7xmlte>MIT License</a></li> </ul> </div> </div> <div class="container footer-bottom" data-astro-cid-sz7xmlte> <span data-astro-cid-sz7xmlte>© 2026 tenderlane contributors</span> <span data-astro-cid-sz7xmlte>Reactive payments · MIT · built with Astro</span> </div> </footer>  </body></html>   
