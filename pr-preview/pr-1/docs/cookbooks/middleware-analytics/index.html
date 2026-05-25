@@ -1,0 +1,301 @@
+<!DOCTYPE html><html lang="en"> <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Middleware Analytics · Tenderlane docs</title><meta name="description" content="Track checkout events, route evaluations, and errors using Tenderlane middleware."><meta property="og:title" content="Middleware Analytics · Tenderlane docs"><meta property="og:description" content="Track checkout events, route evaluations, and errors using Tenderlane middleware."><meta property="og:type" content="website"><link rel="icon" href="/tenderlane/pr-preview/pr-1/favicon.svg" type="image/svg+xml"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"><link rel="stylesheet" href="/tenderlane/pr-preview/pr-1/_astro/_slug_.Dhh66NRb.css">
+<link rel="stylesheet" href="/tenderlane/pr-preview/pr-1/_astro/_slug_.Cu5bmsxF.css"></head> <body> <nav class="nav"> <div class="nav-left"> <a href="/tenderlane/pr-preview/pr-1/" aria-label="Tenderlane home" style="color: var(--text-0)"> <span class="logo" style="font-size:15.2px;" data-astro-cid-tvrurpns> <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" data-astro-cid-tvrurpns> <path d="M12 2 L22 12 L12 22 L2 12 Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" data-astro-cid-tvrurpns></path> <path d="M12 2 L22 12 L12 12 Z" fill="var(--accent)" data-astro-cid-tvrurpns></path> <circle cx="12" cy="12" r="1.5" fill="var(--bg-0)" stroke="currentColor" stroke-width="1.2" data-astro-cid-tvrurpns></circle> </svg> <span class="word" data-astro-cid-tvrurpns>tenderlane</span> </span>  </a> <span style="width:1px;height:18px;background:var(--line-2)"></span> <div class="nav-links"> <a href="/tenderlane/pr-preview/pr-1/docs/getting-started/introduction" data-active="false">Getting started</a><a href="/tenderlane/pr-preview/pr-1/docs/concepts/routing" data-active="false">Concepts</a><a href="/tenderlane/pr-preview/pr-1/docs/cookbooks/stripe-checkout-redirect" data-active="false">Cookbooks</a><a href="https://github.com/farisaziz12/tenderlane" data-active="false">GitHub</a> </div> <span class="badge" style="margin-left:4px"><span style="color:var(--text-3)">v</span>0.4.0-alpha</span> </div> <div class="nav-right"> <div class="nav-search"> <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.3"></circle><path d="M11 11l3 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"></path></svg> <span class="flex">Search docs…</span> <span class="kbd">⌘</span><span class="kbd">K</span> </div> <a class="btn btn-link nav-icon-link" href="https://github.com/farisaziz12/tenderlane" title="GitHub" style="color:var(--text-1)"> <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5C5.7.5.5 5.7.5 12c0 5.1 3.3 9.4 7.9 10.9.6.1.8-.3.8-.6v-2.1c-3.2.7-3.9-1.5-3.9-1.5-.5-1.3-1.3-1.7-1.3-1.7-1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1.1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.8-1.6-2.6-.3-5.3-1.3-5.3-5.7 0-1.3.5-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.1 0 0 1-.3 3.3 1.2 1-.3 2-.4 3-.4s2 .1 3 .4c2.3-1.5 3.3-1.2 3.3-1.2.6 1.6.2 2.8.1 3.1.8.8 1.2 1.8 1.2 3.1 0 4.4-2.7 5.4-5.3 5.7.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6 4.6-1.5 7.9-5.8 7.9-10.9C23.5 5.7 18.3.5 12 .5z"></path></svg> </a> <a class="btn btn-ghost" href="/tenderlane/pr-preview/pr-1/docs">Docs</a> <a class="btn btn-primary" href="/tenderlane/pr-preview/pr-1/docs/getting-started/quick-start">
+Get started <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M4 8h8M8 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path></svg> </a> <button class="nav-toggle" id="nav-toggle" aria-label="Open menu"> <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M2 8h12M2 12h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></path></svg> </button> </div> </nav> <div class="mobile-drawer" id="mobile-drawer"> <div class="drawer-head"> <span class="logo" style="font-size:15.2px;" data-astro-cid-tvrurpns> <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" data-astro-cid-tvrurpns> <path d="M12 2 L22 12 L12 22 L2 12 Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" data-astro-cid-tvrurpns></path> <path d="M12 2 L22 12 L12 12 Z" fill="var(--accent)" data-astro-cid-tvrurpns></path> <circle cx="12" cy="12" r="1.5" fill="var(--bg-0)" stroke="currentColor" stroke-width="1.2" data-astro-cid-tvrurpns></circle> </svg> <span class="word" data-astro-cid-tvrurpns>tenderlane</span> </span>  <button class="nav-toggle" id="nav-close" style="display:inline-flex" aria-label="Close menu"> <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></path></svg> </button> </div> <nav> <a href="/tenderlane/pr-preview/pr-1/docs/getting-started/introduction">Getting started</a><a href="/tenderlane/pr-preview/pr-1/docs/concepts/routing">Concepts</a><a href="/tenderlane/pr-preview/pr-1/docs/cookbooks/stripe-checkout-redirect">Cookbooks</a><a href="https://github.com/farisaziz12/tenderlane">GitHub</a> <a href="/tenderlane/pr-preview/pr-1/docs">Docs</a> <a href="/tenderlane/pr-preview/pr-1/docs/getting-started/quick-start" style="color: var(--accent)">Get started →</a> </nav> </div> <script type="module">const t=document.getElementById("nav-toggle"),n=document.getElementById("nav-close"),e=document.getElementById("mobile-drawer");t?.addEventListener("click",()=>e?.setAttribute("data-open","true"));n?.addEventListener("click",()=>e?.setAttribute("data-open","false"));</script> <main>  <div class="docs-page" data-astro-cid-mw7aashj> <aside class="docs-sidebar" data-astro-cid-qrwn6rcr> <div class="docs-sidebar-inner" data-astro-cid-qrwn6rcr> <div data-astro-cid-qrwn6rcr> <div class="t-cap" style="margin-bottom:10px;color:var(--text-3)" data-astro-cid-qrwn6rcr>Getting started</div> <ul data-astro-cid-qrwn6rcr> <li data-astro-cid-qrwn6rcr> <a href="/tenderlane/pr-preview/pr-1/docs/getting-started/introduction" data-active="false" data-astro-cid-qrwn6rcr> Introduction </a> </li><li data-astro-cid-qrwn6rcr> <a href="/tenderlane/pr-preview/pr-1/docs/getting-started/installation" data-active="false" data-astro-cid-qrwn6rcr> Installation </a> </li><li data-astro-cid-qrwn6rcr> <a href="/tenderlane/pr-preview/pr-1/docs/getting-started/quick-start" data-active="false" data-astro-cid-qrwn6rcr> Quick Start </a> </li> </ul> </div><div data-astro-cid-qrwn6rcr> <div class="t-cap" style="margin-bottom:10px;color:var(--text-3)" data-astro-cid-qrwn6rcr>Core concepts</div> <ul data-astro-cid-qrwn6rcr> <li data-astro-cid-qrwn6rcr> <a href="/tenderlane/pr-preview/pr-1/docs/concepts/routing" data-active="false" data-astro-cid-qrwn6rcr> Routing </a> </li><li data-astro-cid-qrwn6rcr> <a href="/tenderlane/pr-preview/pr-1/docs/concepts/providers" data-active="false" data-astro-cid-qrwn6rcr> Providers </a> </li><li data-astro-cid-qrwn6rcr> <a href="/tenderlane/pr-preview/pr-1/docs/concepts/state-machine" data-active="false" data-astro-cid-qrwn6rcr> State Machine </a> </li><li data-astro-cid-qrwn6rcr> <a href="/tenderlane/pr-preview/pr-1/docs/concepts/catalog" data-active="false" data-astro-cid-qrwn6rcr> Catalog </a> </li><li data-astro-cid-qrwn6rcr> <a href="/tenderlane/pr-preview/pr-1/docs/concepts/middleware" data-active="false" data-astro-cid-qrwn6rcr> Middleware </a> </li><li data-astro-cid-qrwn6rcr> <a href="/tenderlane/pr-preview/pr-1/docs/concepts/type-safety" data-active="false" data-astro-cid-qrwn6rcr> Type Safety </a> </li> </ul> </div><div data-astro-cid-qrwn6rcr> <div class="t-cap" style="margin-bottom:10px;color:var(--text-3)" data-astro-cid-qrwn6rcr>Cookbooks</div> <ul data-astro-cid-qrwn6rcr> <li data-astro-cid-qrwn6rcr> <a href="/tenderlane/pr-preview/pr-1/docs/cookbooks/stripe-checkout-redirect" data-active="false" data-astro-cid-qrwn6rcr> Stripe Checkout Redirect </a> </li><li data-astro-cid-qrwn6rcr> <a href="/tenderlane/pr-preview/pr-1/docs/cookbooks/stripe-elements-inline" data-active="false" data-astro-cid-qrwn6rcr> Stripe Elements Inline </a> </li><li data-astro-cid-qrwn6rcr> <a href="/tenderlane/pr-preview/pr-1/docs/cookbooks/country-based-routing" data-active="false" data-astro-cid-qrwn6rcr> Country-Based Routing </a> </li><li data-astro-cid-qrwn6rcr> <a href="/tenderlane/pr-preview/pr-1/docs/cookbooks/polar-checkout-redirect" data-active="false" data-astro-cid-qrwn6rcr> Polar Checkout Redirect </a> </li><li data-astro-cid-qrwn6rcr> <a href="/tenderlane/pr-preview/pr-1/docs/cookbooks/ab-testing-payment-flows" data-active="false" data-astro-cid-qrwn6rcr> A/B Testing Payment Flows </a> </li><li data-astro-cid-qrwn6rcr> <a href="/tenderlane/pr-preview/pr-1/docs/cookbooks/nextjs-app-router" data-active="false" data-astro-cid-qrwn6rcr> Next.js App Router </a> </li><li data-astro-cid-qrwn6rcr> <a href="/tenderlane/pr-preview/pr-1/docs/cookbooks/middleware-analytics" data-active="true" data-astro-cid-qrwn6rcr> Middleware Analytics </a> </li> </ul> </div> </div> </aside>  <main class="docs-main" data-astro-cid-mw7aashj> <div class="docs-breadcrumb" data-astro-cid-mw7aashj> <span data-astro-cid-mw7aashj>Docs</span> <span data-astro-cid-mw7aashj>/</span> <span data-astro-cid-mw7aashj>Cookbooks</span> <span data-astro-cid-mw7aashj>/</span> <span style="color:var(--text-1)" data-astro-cid-mw7aashj>Middleware Analytics</span> <span style="margin-left:auto" data-astro-cid-mw7aashj>v0.4.0-alpha</span> </div> <article class="docs-article" data-astro-cid-mw7aashj>  <h1 data-astro-cid-uadgga6g>Middleware Analytics</h1> <p class="t-body-lg" style="margin:0 0 12px;color:var(--text-1);max-width:700px" data-astro-cid-uadgga6g>Track checkout events, route evaluations, and errors using Tenderlane middleware.</p><div class="docs-meta" data-astro-cid-uadgga6g> <span class="badge" data-astro-cid-uadgga6g><span style="width:6px;height:6px;border-radius:50%;background:var(--accent);display:inline-block" data-astro-cid-uadgga6g></span>Cookbooks</span> </div> <p>This cookbook shows how to build middleware for logging, analytics (PostHog/Segment style), and error tracking. You will create reusable middleware modules that fire events at every stage of the checkout lifecycle.</p>
+<h2 id="logging-middleware">Logging middleware</h2>
+<p>Start with a simple logging middleware that outputs structured logs for every lifecycle event. This is useful during development and in production for debugging.</p>
+<pre class="astro-code github-dark-default" style="background-color:#0d1117;color:#e6edf3;overflow-x:auto" tabindex="0" data-language="ts"><code><span class="line"><span style="color:#FF7B72">import</span><span style="color:#FF7B72"> type</span><span style="color:#E6EDF3"> { TenderlaneMiddleware } </span><span style="color:#FF7B72">from</span><span style="color:#A5D6FF"> &#39;@tenderlane/core&#39;</span><span style="color:#E6EDF3">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#FF7B72">const</span><span style="color:#79C0FF"> loggingMiddleware</span><span style="color:#FF7B72">:</span><span style="color:#FFA657"> TenderlaneMiddleware</span><span style="color:#FF7B72"> =</span><span style="color:#E6EDF3"> {</span></span>
+<span class="line"><span style="color:#E6EDF3">  name: </span><span style="color:#A5D6FF">&#39;logging&#39;</span><span style="color:#E6EDF3">,</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#D2A8FF">  onContextChange</span><span style="color:#E6EDF3">({ </span><span style="color:#FFA657">previousContext</span><span style="color:#E6EDF3">, </span><span style="color:#FFA657">nextContext</span><span style="color:#E6EDF3"> }) {</span></span>
+<span class="line"><span style="color:#FF7B72">    const</span><span style="color:#79C0FF"> changedFields</span><span style="color:#FF7B72">:</span><span style="color:#79C0FF"> string</span><span style="color:#E6EDF3">[] </span><span style="color:#FF7B72">=</span><span style="color:#E6EDF3"> [];</span></span>
+<span class="line"><span style="color:#FF7B72">    for</span><span style="color:#E6EDF3"> (</span><span style="color:#FF7B72">const</span><span style="color:#79C0FF"> key</span><span style="color:#FF7B72"> of</span><span style="color:#E6EDF3"> Object.</span><span style="color:#D2A8FF">keys</span><span style="color:#E6EDF3">(nextContext)) {</span></span>
+<span class="line"><span style="color:#FF7B72">      const</span><span style="color:#79C0FF"> typedKey</span><span style="color:#FF7B72"> =</span><span style="color:#E6EDF3"> key </span><span style="color:#FF7B72">as</span><span style="color:#FF7B72"> keyof</span><span style="color:#FF7B72"> typeof</span><span style="color:#E6EDF3"> nextContext;</span></span>
+<span class="line"><span style="color:#FF7B72">      if</span><span style="color:#E6EDF3"> (previousContext[typedKey] </span><span style="color:#FF7B72">!==</span><span style="color:#E6EDF3"> nextContext[typedKey]) {</span></span>
+<span class="line"><span style="color:#E6EDF3">        changedFields.</span><span style="color:#D2A8FF">push</span><span style="color:#E6EDF3">(key);</span></span>
+<span class="line"><span style="color:#E6EDF3">      }</span></span>
+<span class="line"><span style="color:#E6EDF3">    }</span></span>
+<span class="line"><span style="color:#E6EDF3">    console.</span><span style="color:#D2A8FF">log</span><span style="color:#E6EDF3">(</span><span style="color:#A5D6FF">&#39;[tenderlane] Context changed:&#39;</span><span style="color:#E6EDF3">, changedFields.</span><span style="color:#D2A8FF">join</span><span style="color:#E6EDF3">(</span><span style="color:#A5D6FF">&#39;, &#39;</span><span style="color:#E6EDF3">));</span></span>
+<span class="line"><span style="color:#E6EDF3">  },</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#D2A8FF">  onRouteEvaluated</span><span style="color:#E6EDF3">({ </span><span style="color:#FFA657">context</span><span style="color:#E6EDF3">, </span><span style="color:#FFA657">route</span><span style="color:#E6EDF3"> }) {</span></span>
+<span class="line"><span style="color:#E6EDF3">    console.</span><span style="color:#D2A8FF">log</span><span style="color:#E6EDF3">(</span><span style="color:#A5D6FF">&#39;[tenderlane] Route evaluated:&#39;</span><span style="color:#E6EDF3">, {</span></span>
+<span class="line"><span style="color:#E6EDF3">      provider: route.provider,</span></span>
+<span class="line"><span style="color:#E6EDF3">      flow: route.flow,</span></span>
+<span class="line"><span style="color:#E6EDF3">      ruleId: route.ruleId </span><span style="color:#FF7B72">??</span><span style="color:#A5D6FF"> &#39;fallback&#39;</span><span style="color:#E6EDF3">,</span></span>
+<span class="line"><span style="color:#E6EDF3">      source: route.source,</span></span>
+<span class="line"><span style="color:#E6EDF3">      country: context.country,</span></span>
+<span class="line"><span style="color:#E6EDF3">      paymentMethods: route.paymentMethods,</span></span>
+<span class="line"><span style="color:#E6EDF3">    });</span></span>
+<span class="line"><span style="color:#E6EDF3">  },</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#D2A8FF">  onSessionCreated</span><span style="color:#E6EDF3">({ </span><span style="color:#FFA657">route</span><span style="color:#E6EDF3">, </span><span style="color:#FFA657">session</span><span style="color:#E6EDF3"> }) {</span></span>
+<span class="line"><span style="color:#E6EDF3">    console.</span><span style="color:#D2A8FF">log</span><span style="color:#E6EDF3">(</span><span style="color:#A5D6FF">&#39;[tenderlane] Session created:&#39;</span><span style="color:#E6EDF3">, {</span></span>
+<span class="line"><span style="color:#E6EDF3">      provider: route.provider,</span></span>
+<span class="line"><span style="color:#E6EDF3">      flow: session.flow,</span></span>
+<span class="line"><span style="color:#E6EDF3">      sessionId: session.sessionId,</span></span>
+<span class="line"><span style="color:#E6EDF3">    });</span></span>
+<span class="line"><span style="color:#E6EDF3">  },</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#D2A8FF">  onCheckoutStart</span><span style="color:#E6EDF3">({ </span><span style="color:#FFA657">route</span><span style="color:#E6EDF3">, </span><span style="color:#FFA657">input</span><span style="color:#E6EDF3"> }) {</span></span>
+<span class="line"><span style="color:#E6EDF3">    console.</span><span style="color:#D2A8FF">log</span><span style="color:#E6EDF3">(</span><span style="color:#A5D6FF">&#39;[tenderlane] Checkout started:&#39;</span><span style="color:#E6EDF3">, {</span></span>
+<span class="line"><span style="color:#E6EDF3">      provider: route.provider,</span></span>
+<span class="line"><span style="color:#E6EDF3">      itemCount: input.lineItems.</span><span style="color:#79C0FF">length</span><span style="color:#E6EDF3">,</span></span>
+<span class="line"><span style="color:#E6EDF3">      totalAmount: input.lineItems.</span><span style="color:#D2A8FF">reduce</span><span style="color:#E6EDF3">(</span></span>
+<span class="line"><span style="color:#E6EDF3">        (</span><span style="color:#FFA657">sum</span><span style="color:#E6EDF3">, </span><span style="color:#FFA657">item</span><span style="color:#E6EDF3">) </span><span style="color:#FF7B72">=&gt;</span><span style="color:#E6EDF3"> sum </span><span style="color:#FF7B72">+</span><span style="color:#E6EDF3"> item.unitAmount </span><span style="color:#FF7B72">*</span><span style="color:#E6EDF3"> item.quantity, </span><span style="color:#79C0FF">0</span></span>
+<span class="line"><span style="color:#E6EDF3">      ),</span></span>
+<span class="line"><span style="color:#E6EDF3">    });</span></span>
+<span class="line"><span style="color:#E6EDF3">  },</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#D2A8FF">  onCheckoutSuccess</span><span style="color:#E6EDF3">({ </span><span style="color:#FFA657">route</span><span style="color:#E6EDF3">, </span><span style="color:#FFA657">result</span><span style="color:#E6EDF3"> }) {</span></span>
+<span class="line"><span style="color:#E6EDF3">    console.</span><span style="color:#D2A8FF">log</span><span style="color:#E6EDF3">(</span><span style="color:#A5D6FF">&#39;[tenderlane] Checkout succeeded:&#39;</span><span style="color:#E6EDF3">, {</span></span>
+<span class="line"><span style="color:#E6EDF3">      provider: result.provider,</span></span>
+<span class="line"><span style="color:#E6EDF3">      sessionId: result.id,</span></span>
+<span class="line"><span style="color:#E6EDF3">      status: result.status,</span></span>
+<span class="line"><span style="color:#E6EDF3">    });</span></span>
+<span class="line"><span style="color:#E6EDF3">  },</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#D2A8FF">  onCheckoutError</span><span style="color:#E6EDF3">({ </span><span style="color:#FFA657">route</span><span style="color:#E6EDF3">, </span><span style="color:#FFA657">error</span><span style="color:#E6EDF3"> }) {</span></span>
+<span class="line"><span style="color:#E6EDF3">    console.</span><span style="color:#D2A8FF">error</span><span style="color:#E6EDF3">(</span><span style="color:#A5D6FF">&#39;[tenderlane] Checkout error:&#39;</span><span style="color:#E6EDF3">, {</span></span>
+<span class="line"><span style="color:#E6EDF3">      code: error.code,</span></span>
+<span class="line"><span style="color:#E6EDF3">      message: error.message,</span></span>
+<span class="line"><span style="color:#E6EDF3">      provider: error.provider </span><span style="color:#FF7B72">??</span><span style="color:#E6EDF3"> route?.provider </span><span style="color:#FF7B72">??</span><span style="color:#A5D6FF"> &#39;unknown&#39;</span><span style="color:#E6EDF3">,</span></span>
+<span class="line"><span style="color:#E6EDF3">    });</span></span>
+<span class="line"><span style="color:#E6EDF3">  },</span></span>
+<span class="line"><span style="color:#E6EDF3">};</span></span></code></pre>
+<h2 id="analytics-middleware-posthogsegment-style">Analytics middleware (PostHog/Segment style)</h2>
+<p>This middleware fires tracking events to your analytics platform. The example uses a generic <code>analytics.track()</code> interface that works with PostHog, Segment, Mixpanel, Amplitude, or any similar service.</p>
+<pre class="astro-code github-dark-default" style="background-color:#0d1117;color:#e6edf3;overflow-x:auto" tabindex="0" data-language="ts"><code><span class="line"><span style="color:#FF7B72">import</span><span style="color:#FF7B72"> type</span><span style="color:#E6EDF3"> { TenderlaneMiddleware } </span><span style="color:#FF7B72">from</span><span style="color:#A5D6FF"> &#39;@tenderlane/core&#39;</span><span style="color:#E6EDF3">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#8B949E">// Generic analytics interface (PostHog, Segment, Mixpanel, etc.)</span></span>
+<span class="line"><span style="color:#FF7B72">interface</span><span style="color:#FFA657"> AnalyticsClient</span><span style="color:#E6EDF3"> {</span></span>
+<span class="line"><span style="color:#D2A8FF">  track</span><span style="color:#E6EDF3">(</span><span style="color:#FFA657">event</span><span style="color:#FF7B72">:</span><span style="color:#79C0FF"> string</span><span style="color:#E6EDF3">, </span><span style="color:#FFA657">properties</span><span style="color:#FF7B72">:</span><span style="color:#FFA657"> Record</span><span style="color:#E6EDF3">&lt;</span><span style="color:#79C0FF">string</span><span style="color:#E6EDF3">, </span><span style="color:#79C0FF">unknown</span><span style="color:#E6EDF3">&gt;)</span><span style="color:#FF7B72">:</span><span style="color:#79C0FF"> void</span><span style="color:#E6EDF3">;</span></span>
+<span class="line"><span style="color:#E6EDF3">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#FF7B72">export</span><span style="color:#FF7B72"> function</span><span style="color:#D2A8FF"> createAnalyticsMiddleware</span><span style="color:#E6EDF3">(</span><span style="color:#FFA657">analytics</span><span style="color:#FF7B72">:</span><span style="color:#FFA657"> AnalyticsClient</span><span style="color:#E6EDF3">)</span><span style="color:#FF7B72">:</span><span style="color:#FFA657"> TenderlaneMiddleware</span><span style="color:#E6EDF3"> {</span></span>
+<span class="line"><span style="color:#FF7B72">  return</span><span style="color:#E6EDF3"> {</span></span>
+<span class="line"><span style="color:#E6EDF3">    name: </span><span style="color:#A5D6FF">&#39;analytics&#39;</span><span style="color:#E6EDF3">,</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#D2A8FF">    onRouteEvaluated</span><span style="color:#E6EDF3">({ </span><span style="color:#FFA657">context</span><span style="color:#E6EDF3">, </span><span style="color:#FFA657">route</span><span style="color:#E6EDF3"> }) {</span></span>
+<span class="line"><span style="color:#E6EDF3">      analytics.</span><span style="color:#D2A8FF">track</span><span style="color:#E6EDF3">(</span><span style="color:#A5D6FF">&#39;payment_route_selected&#39;</span><span style="color:#E6EDF3">, {</span></span>
+<span class="line"><span style="color:#E6EDF3">        provider: route.provider,</span></span>
+<span class="line"><span style="color:#E6EDF3">        flow: route.flow,</span></span>
+<span class="line"><span style="color:#E6EDF3">        ruleId: route.ruleId,</span></span>
+<span class="line"><span style="color:#E6EDF3">        source: route.source,</span></span>
+<span class="line"><span style="color:#E6EDF3">        country: context.country,</span></span>
+<span class="line"><span style="color:#E6EDF3">        currency: context.currency,</span></span>
+<span class="line"><span style="color:#E6EDF3">        amount: context.amount,</span></span>
+<span class="line"><span style="color:#E6EDF3">        paymentMethodCount: route.paymentMethods.</span><span style="color:#79C0FF">length</span><span style="color:#E6EDF3">,</span></span>
+<span class="line"><span style="color:#E6EDF3">        paymentMethods: route.paymentMethods,</span></span>
+<span class="line"><span style="color:#E6EDF3">      });</span></span>
+<span class="line"><span style="color:#E6EDF3">    },</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#D2A8FF">    onCheckoutStart</span><span style="color:#E6EDF3">({ </span><span style="color:#FFA657">context</span><span style="color:#E6EDF3">, </span><span style="color:#FFA657">route</span><span style="color:#E6EDF3">, </span><span style="color:#FFA657">input</span><span style="color:#E6EDF3"> }) {</span></span>
+<span class="line"><span style="color:#E6EDF3">      analytics.</span><span style="color:#D2A8FF">track</span><span style="color:#E6EDF3">(</span><span style="color:#A5D6FF">&#39;checkout_started&#39;</span><span style="color:#E6EDF3">, {</span></span>
+<span class="line"><span style="color:#E6EDF3">        provider: route.provider,</span></span>
+<span class="line"><span style="color:#E6EDF3">        flow: route.flow,</span></span>
+<span class="line"><span style="color:#E6EDF3">        country: context.country,</span></span>
+<span class="line"><span style="color:#E6EDF3">        currency: context.currency,</span></span>
+<span class="line"><span style="color:#E6EDF3">        itemCount: input.lineItems.</span><span style="color:#79C0FF">length</span><span style="color:#E6EDF3">,</span></span>
+<span class="line"><span style="color:#E6EDF3">        totalAmount: input.lineItems.</span><span style="color:#D2A8FF">reduce</span><span style="color:#E6EDF3">(</span></span>
+<span class="line"><span style="color:#E6EDF3">          (</span><span style="color:#FFA657">sum</span><span style="color:#E6EDF3">, </span><span style="color:#FFA657">item</span><span style="color:#E6EDF3">) </span><span style="color:#FF7B72">=&gt;</span><span style="color:#E6EDF3"> sum </span><span style="color:#FF7B72">+</span><span style="color:#E6EDF3"> item.unitAmount </span><span style="color:#FF7B72">*</span><span style="color:#E6EDF3"> item.quantity, </span><span style="color:#79C0FF">0</span></span>
+<span class="line"><span style="color:#E6EDF3">        ),</span></span>
+<span class="line"><span style="color:#E6EDF3">      });</span></span>
+<span class="line"><span style="color:#E6EDF3">    },</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#D2A8FF">    onCheckoutSuccess</span><span style="color:#E6EDF3">({ </span><span style="color:#FFA657">context</span><span style="color:#E6EDF3">, </span><span style="color:#FFA657">route</span><span style="color:#E6EDF3">, </span><span style="color:#FFA657">result</span><span style="color:#E6EDF3"> }) {</span></span>
+<span class="line"><span style="color:#E6EDF3">      analytics.</span><span style="color:#D2A8FF">track</span><span style="color:#E6EDF3">(</span><span style="color:#A5D6FF">&#39;checkout_completed&#39;</span><span style="color:#E6EDF3">, {</span></span>
+<span class="line"><span style="color:#E6EDF3">        provider: result.provider,</span></span>
+<span class="line"><span style="color:#E6EDF3">        sessionId: result.id,</span></span>
+<span class="line"><span style="color:#E6EDF3">        flow: route.flow,</span></span>
+<span class="line"><span style="color:#E6EDF3">        ruleId: route.ruleId,</span></span>
+<span class="line"><span style="color:#E6EDF3">        country: context.country,</span></span>
+<span class="line"><span style="color:#E6EDF3">        currency: context.currency,</span></span>
+<span class="line"><span style="color:#E6EDF3">        amount: context.amount,</span></span>
+<span class="line"><span style="color:#E6EDF3">      });</span></span>
+<span class="line"><span style="color:#E6EDF3">    },</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#D2A8FF">    onCheckoutError</span><span style="color:#E6EDF3">({ </span><span style="color:#FFA657">context</span><span style="color:#E6EDF3">, </span><span style="color:#FFA657">route</span><span style="color:#E6EDF3">, </span><span style="color:#FFA657">error</span><span style="color:#E6EDF3"> }) {</span></span>
+<span class="line"><span style="color:#E6EDF3">      analytics.</span><span style="color:#D2A8FF">track</span><span style="color:#E6EDF3">(</span><span style="color:#A5D6FF">&#39;checkout_error&#39;</span><span style="color:#E6EDF3">, {</span></span>
+<span class="line"><span style="color:#E6EDF3">        errorCode: error.code,</span></span>
+<span class="line"><span style="color:#E6EDF3">        errorMessage: error.message,</span></span>
+<span class="line"><span style="color:#E6EDF3">        provider: error.provider </span><span style="color:#FF7B72">??</span><span style="color:#E6EDF3"> route?.provider </span><span style="color:#FF7B72">??</span><span style="color:#A5D6FF"> &#39;unknown&#39;</span><span style="color:#E6EDF3">,</span></span>
+<span class="line"><span style="color:#E6EDF3">        flow: route?.flow,</span></span>
+<span class="line"><span style="color:#E6EDF3">        country: context.country,</span></span>
+<span class="line"><span style="color:#E6EDF3">      });</span></span>
+<span class="line"><span style="color:#E6EDF3">    },</span></span>
+<span class="line"><span style="color:#E6EDF3">  };</span></span>
+<span class="line"><span style="color:#E6EDF3">}</span></span></code></pre>
+<h3 id="usage-with-posthog">Usage with PostHog</h3>
+<pre class="astro-code github-dark-default" style="background-color:#0d1117;color:#e6edf3;overflow-x:auto" tabindex="0" data-language="ts"><code><span class="line"><span style="color:#FF7B72">import</span><span style="color:#E6EDF3"> posthog </span><span style="color:#FF7B72">from</span><span style="color:#A5D6FF"> &#39;posthog-js&#39;</span><span style="color:#E6EDF3">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#FF7B72">const</span><span style="color:#79C0FF"> analyticsMiddleware</span><span style="color:#FF7B72"> =</span><span style="color:#D2A8FF"> createAnalyticsMiddleware</span><span style="color:#E6EDF3">({</span></span>
+<span class="line"><span style="color:#D2A8FF">  track</span><span style="color:#E6EDF3">: (</span><span style="color:#FFA657">event</span><span style="color:#E6EDF3">, </span><span style="color:#FFA657">properties</span><span style="color:#E6EDF3">) </span><span style="color:#FF7B72">=&gt;</span><span style="color:#E6EDF3"> posthog.</span><span style="color:#D2A8FF">capture</span><span style="color:#E6EDF3">(event, properties),</span></span>
+<span class="line"><span style="color:#E6EDF3">});</span></span></code></pre>
+<h3 id="usage-with-segment">Usage with Segment</h3>
+<pre class="astro-code github-dark-default" style="background-color:#0d1117;color:#e6edf3;overflow-x:auto" tabindex="0" data-language="ts"><code><span class="line"><span style="color:#FF7B72">import</span><span style="color:#E6EDF3"> { AnalyticsBrowser } </span><span style="color:#FF7B72">from</span><span style="color:#A5D6FF"> &#39;@segment/analytics-next&#39;</span><span style="color:#E6EDF3">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#FF7B72">const</span><span style="color:#79C0FF"> segmentAnalytics</span><span style="color:#FF7B72"> =</span><span style="color:#E6EDF3"> AnalyticsBrowser.</span><span style="color:#D2A8FF">load</span><span style="color:#E6EDF3">({ writeKey: </span><span style="color:#A5D6FF">&#39;YOUR_WRITE_KEY&#39;</span><span style="color:#E6EDF3"> });</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#FF7B72">const</span><span style="color:#79C0FF"> analyticsMiddleware</span><span style="color:#FF7B72"> =</span><span style="color:#D2A8FF"> createAnalyticsMiddleware</span><span style="color:#E6EDF3">({</span></span>
+<span class="line"><span style="color:#D2A8FF">  track</span><span style="color:#E6EDF3">: (</span><span style="color:#FFA657">event</span><span style="color:#E6EDF3">, </span><span style="color:#FFA657">properties</span><span style="color:#E6EDF3">) </span><span style="color:#FF7B72">=&gt;</span><span style="color:#E6EDF3"> {</span></span>
+<span class="line"><span style="color:#E6EDF3">    segmentAnalytics.</span><span style="color:#D2A8FF">then</span><span style="color:#E6EDF3">((</span><span style="color:#FFA657">instance</span><span style="color:#E6EDF3">) </span><span style="color:#FF7B72">=&gt;</span><span style="color:#E6EDF3"> instance.</span><span style="color:#D2A8FF">track</span><span style="color:#E6EDF3">(event, properties));</span></span>
+<span class="line"><span style="color:#E6EDF3">  },</span></span>
+<span class="line"><span style="color:#E6EDF3">});</span></span></code></pre>
+<h2 id="error-tracking-middleware">Error tracking middleware</h2>
+<p>This middleware sends errors to your error tracking service (Sentry, Datadog, Bugsnag, etc.).</p>
+<pre class="astro-code github-dark-default" style="background-color:#0d1117;color:#e6edf3;overflow-x:auto" tabindex="0" data-language="ts"><code><span class="line"><span style="color:#FF7B72">import</span><span style="color:#FF7B72"> type</span><span style="color:#E6EDF3"> { TenderlaneMiddleware } </span><span style="color:#FF7B72">from</span><span style="color:#A5D6FF"> &#39;@tenderlane/core&#39;</span><span style="color:#E6EDF3">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#FF7B72">interface</span><span style="color:#FFA657"> ErrorTracker</span><span style="color:#E6EDF3"> {</span></span>
+<span class="line"><span style="color:#D2A8FF">  captureException</span><span style="color:#E6EDF3">(</span><span style="color:#FFA657">error</span><span style="color:#FF7B72">:</span><span style="color:#FFA657"> Error</span><span style="color:#E6EDF3">, </span><span style="color:#FFA657">context</span><span style="color:#FF7B72">?:</span><span style="color:#FFA657"> Record</span><span style="color:#E6EDF3">&lt;</span><span style="color:#79C0FF">string</span><span style="color:#E6EDF3">, </span><span style="color:#79C0FF">unknown</span><span style="color:#E6EDF3">&gt;)</span><span style="color:#FF7B72">:</span><span style="color:#79C0FF"> void</span><span style="color:#E6EDF3">;</span></span>
+<span class="line"><span style="color:#E6EDF3">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#FF7B72">export</span><span style="color:#FF7B72"> function</span><span style="color:#D2A8FF"> createErrorTrackingMiddleware</span><span style="color:#E6EDF3">(</span><span style="color:#FFA657">errorTracker</span><span style="color:#FF7B72">:</span><span style="color:#FFA657"> ErrorTracker</span><span style="color:#E6EDF3">)</span><span style="color:#FF7B72">:</span><span style="color:#FFA657"> TenderlaneMiddleware</span><span style="color:#E6EDF3"> {</span></span>
+<span class="line"><span style="color:#FF7B72">  return</span><span style="color:#E6EDF3"> {</span></span>
+<span class="line"><span style="color:#E6EDF3">    name: </span><span style="color:#A5D6FF">&#39;error-tracking&#39;</span><span style="color:#E6EDF3">,</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#D2A8FF">    onCheckoutError</span><span style="color:#E6EDF3">({ </span><span style="color:#FFA657">context</span><span style="color:#E6EDF3">, </span><span style="color:#FFA657">route</span><span style="color:#E6EDF3">, </span><span style="color:#FFA657">error</span><span style="color:#E6EDF3"> }) {</span></span>
+<span class="line"><span style="color:#E6EDF3">      errorTracker.</span><span style="color:#D2A8FF">captureException</span><span style="color:#E6EDF3">(error, {</span></span>
+<span class="line"><span style="color:#E6EDF3">        tags: {</span></span>
+<span class="line"><span style="color:#E6EDF3">          tenderlaneCode: error.code,</span></span>
+<span class="line"><span style="color:#E6EDF3">          provider: error.provider </span><span style="color:#FF7B72">??</span><span style="color:#A5D6FF"> &#39;unknown&#39;</span><span style="color:#E6EDF3">,</span></span>
+<span class="line"><span style="color:#E6EDF3">          flow: route?.flow </span><span style="color:#FF7B72">??</span><span style="color:#A5D6FF"> &#39;unknown&#39;</span><span style="color:#E6EDF3">,</span></span>
+<span class="line"><span style="color:#E6EDF3">          ruleId: route?.ruleId </span><span style="color:#FF7B72">??</span><span style="color:#A5D6FF"> &#39;none&#39;</span><span style="color:#E6EDF3">,</span></span>
+<span class="line"><span style="color:#E6EDF3">        },</span></span>
+<span class="line"><span style="color:#E6EDF3">        extra: {</span></span>
+<span class="line"><span style="color:#E6EDF3">          country: context.country,</span></span>
+<span class="line"><span style="color:#E6EDF3">          currency: context.currency,</span></span>
+<span class="line"><span style="color:#E6EDF3">          amount: context.amount,</span></span>
+<span class="line"><span style="color:#E6EDF3">          routeSource: route?.source,</span></span>
+<span class="line"><span style="color:#E6EDF3">        },</span></span>
+<span class="line"><span style="color:#E6EDF3">      });</span></span>
+<span class="line"><span style="color:#E6EDF3">    },</span></span>
+<span class="line"><span style="color:#E6EDF3">  };</span></span>
+<span class="line"><span style="color:#E6EDF3">}</span></span></code></pre>
+<h3 id="usage-with-sentry">Usage with Sentry</h3>
+<pre class="astro-code github-dark-default" style="background-color:#0d1117;color:#e6edf3;overflow-x:auto" tabindex="0" data-language="ts"><code><span class="line"><span style="color:#FF7B72">import</span><span style="color:#79C0FF"> *</span><span style="color:#FF7B72"> as</span><span style="color:#E6EDF3"> Sentry </span><span style="color:#FF7B72">from</span><span style="color:#A5D6FF"> &#39;@sentry/react&#39;</span><span style="color:#E6EDF3">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#FF7B72">const</span><span style="color:#79C0FF"> errorTrackingMiddleware</span><span style="color:#FF7B72"> =</span><span style="color:#D2A8FF"> createErrorTrackingMiddleware</span><span style="color:#E6EDF3">({</span></span>
+<span class="line"><span style="color:#D2A8FF">  captureException</span><span style="color:#E6EDF3">: (</span><span style="color:#FFA657">error</span><span style="color:#E6EDF3">, </span><span style="color:#FFA657">context</span><span style="color:#E6EDF3">) </span><span style="color:#FF7B72">=&gt;</span><span style="color:#E6EDF3"> {</span></span>
+<span class="line"><span style="color:#E6EDF3">    Sentry.</span><span style="color:#D2A8FF">withScope</span><span style="color:#E6EDF3">((</span><span style="color:#FFA657">scope</span><span style="color:#E6EDF3">) </span><span style="color:#FF7B72">=&gt;</span><span style="color:#E6EDF3"> {</span></span>
+<span class="line"><span style="color:#FF7B72">      if</span><span style="color:#E6EDF3"> (context?.tags) {</span></span>
+<span class="line"><span style="color:#FF7B72">        for</span><span style="color:#E6EDF3"> (</span><span style="color:#FF7B72">const</span><span style="color:#E6EDF3"> [</span><span style="color:#79C0FF">key</span><span style="color:#E6EDF3">, </span><span style="color:#79C0FF">value</span><span style="color:#E6EDF3">] </span><span style="color:#FF7B72">of</span><span style="color:#E6EDF3"> Object.</span><span style="color:#D2A8FF">entries</span><span style="color:#E6EDF3">(context.tags)) {</span></span>
+<span class="line"><span style="color:#E6EDF3">          scope.</span><span style="color:#D2A8FF">setTag</span><span style="color:#E6EDF3">(key, </span><span style="color:#D2A8FF">String</span><span style="color:#E6EDF3">(value));</span></span>
+<span class="line"><span style="color:#E6EDF3">        }</span></span>
+<span class="line"><span style="color:#E6EDF3">      }</span></span>
+<span class="line"><span style="color:#FF7B72">      if</span><span style="color:#E6EDF3"> (context?.extra) {</span></span>
+<span class="line"><span style="color:#E6EDF3">        scope.</span><span style="color:#D2A8FF">setExtras</span><span style="color:#E6EDF3">(context.extra </span><span style="color:#FF7B72">as</span><span style="color:#FFA657"> Record</span><span style="color:#E6EDF3">&lt;</span><span style="color:#79C0FF">string</span><span style="color:#E6EDF3">, </span><span style="color:#79C0FF">unknown</span><span style="color:#E6EDF3">&gt;);</span></span>
+<span class="line"><span style="color:#E6EDF3">      }</span></span>
+<span class="line"><span style="color:#E6EDF3">      Sentry.</span><span style="color:#D2A8FF">captureException</span><span style="color:#E6EDF3">(error);</span></span>
+<span class="line"><span style="color:#E6EDF3">    });</span></span>
+<span class="line"><span style="color:#E6EDF3">  },</span></span>
+<span class="line"><span style="color:#E6EDF3">});</span></span></code></pre>
+<h2 id="timing-middleware">Timing middleware</h2>
+<p>Track how long each stage of the checkout takes:</p>
+<pre class="astro-code github-dark-default" style="background-color:#0d1117;color:#e6edf3;overflow-x:auto" tabindex="0" data-language="ts"><code><span class="line"><span style="color:#FF7B72">import</span><span style="color:#FF7B72"> type</span><span style="color:#E6EDF3"> { TenderlaneMiddleware } </span><span style="color:#FF7B72">from</span><span style="color:#A5D6FF"> &#39;@tenderlane/core&#39;</span><span style="color:#E6EDF3">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#FF7B72">export</span><span style="color:#FF7B72"> function</span><span style="color:#D2A8FF"> createTimingMiddleware</span><span style="color:#E6EDF3">(</span></span>
+<span class="line"><span style="color:#D2A8FF">  onTiming</span><span style="color:#FF7B72">:</span><span style="color:#E6EDF3"> (</span><span style="color:#FFA657">metric</span><span style="color:#FF7B72">:</span><span style="color:#79C0FF"> string</span><span style="color:#E6EDF3">, </span><span style="color:#FFA657">durationMs</span><span style="color:#FF7B72">:</span><span style="color:#79C0FF"> number</span><span style="color:#E6EDF3">) </span><span style="color:#FF7B72">=&gt;</span><span style="color:#79C0FF"> void</span><span style="color:#E6EDF3">,</span></span>
+<span class="line"><span style="color:#E6EDF3">)</span><span style="color:#FF7B72">:</span><span style="color:#FFA657"> TenderlaneMiddleware</span><span style="color:#E6EDF3"> {</span></span>
+<span class="line"><span style="color:#FF7B72">  let</span><span style="color:#E6EDF3"> routeStartTime</span><span style="color:#FF7B72">:</span><span style="color:#79C0FF"> number</span><span style="color:#FF7B72"> |</span><span style="color:#79C0FF"> null</span><span style="color:#FF7B72"> =</span><span style="color:#79C0FF"> null</span><span style="color:#E6EDF3">;</span></span>
+<span class="line"><span style="color:#FF7B72">  let</span><span style="color:#E6EDF3"> checkoutStartTime</span><span style="color:#FF7B72">:</span><span style="color:#79C0FF"> number</span><span style="color:#FF7B72"> |</span><span style="color:#79C0FF"> null</span><span style="color:#FF7B72"> =</span><span style="color:#79C0FF"> null</span><span style="color:#E6EDF3">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#FF7B72">  return</span><span style="color:#E6EDF3"> {</span></span>
+<span class="line"><span style="color:#E6EDF3">    name: </span><span style="color:#A5D6FF">&#39;timing&#39;</span><span style="color:#E6EDF3">,</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#D2A8FF">    onContextChange</span><span style="color:#E6EDF3">() {</span></span>
+<span class="line"><span style="color:#E6EDF3">      routeStartTime </span><span style="color:#FF7B72">=</span><span style="color:#E6EDF3"> performance.</span><span style="color:#D2A8FF">now</span><span style="color:#E6EDF3">();</span></span>
+<span class="line"><span style="color:#E6EDF3">    },</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#D2A8FF">    onRouteEvaluated</span><span style="color:#E6EDF3">() {</span></span>
+<span class="line"><span style="color:#FF7B72">      if</span><span style="color:#E6EDF3"> (routeStartTime </span><span style="color:#FF7B72">!==</span><span style="color:#79C0FF"> null</span><span style="color:#E6EDF3">) {</span></span>
+<span class="line"><span style="color:#FF7B72">        const</span><span style="color:#79C0FF"> duration</span><span style="color:#FF7B72"> =</span><span style="color:#E6EDF3"> performance.</span><span style="color:#D2A8FF">now</span><span style="color:#E6EDF3">() </span><span style="color:#FF7B72">-</span><span style="color:#E6EDF3"> routeStartTime;</span></span>
+<span class="line"><span style="color:#D2A8FF">        onTiming</span><span style="color:#E6EDF3">(</span><span style="color:#A5D6FF">&#39;route_evaluation_ms&#39;</span><span style="color:#E6EDF3">, duration);</span></span>
+<span class="line"><span style="color:#E6EDF3">        routeStartTime </span><span style="color:#FF7B72">=</span><span style="color:#79C0FF"> null</span><span style="color:#E6EDF3">;</span></span>
+<span class="line"><span style="color:#E6EDF3">      }</span></span>
+<span class="line"><span style="color:#E6EDF3">    },</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#D2A8FF">    onCheckoutStart</span><span style="color:#E6EDF3">() {</span></span>
+<span class="line"><span style="color:#E6EDF3">      checkoutStartTime </span><span style="color:#FF7B72">=</span><span style="color:#E6EDF3"> performance.</span><span style="color:#D2A8FF">now</span><span style="color:#E6EDF3">();</span></span>
+<span class="line"><span style="color:#E6EDF3">    },</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#D2A8FF">    onCheckoutSuccess</span><span style="color:#E6EDF3">() {</span></span>
+<span class="line"><span style="color:#FF7B72">      if</span><span style="color:#E6EDF3"> (checkoutStartTime </span><span style="color:#FF7B72">!==</span><span style="color:#79C0FF"> null</span><span style="color:#E6EDF3">) {</span></span>
+<span class="line"><span style="color:#FF7B72">        const</span><span style="color:#79C0FF"> duration</span><span style="color:#FF7B72"> =</span><span style="color:#E6EDF3"> performance.</span><span style="color:#D2A8FF">now</span><span style="color:#E6EDF3">() </span><span style="color:#FF7B72">-</span><span style="color:#E6EDF3"> checkoutStartTime;</span></span>
+<span class="line"><span style="color:#D2A8FF">        onTiming</span><span style="color:#E6EDF3">(</span><span style="color:#A5D6FF">&#39;checkout_duration_ms&#39;</span><span style="color:#E6EDF3">, duration);</span></span>
+<span class="line"><span style="color:#E6EDF3">        checkoutStartTime </span><span style="color:#FF7B72">=</span><span style="color:#79C0FF"> null</span><span style="color:#E6EDF3">;</span></span>
+<span class="line"><span style="color:#E6EDF3">      }</span></span>
+<span class="line"><span style="color:#E6EDF3">    },</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#D2A8FF">    onCheckoutError</span><span style="color:#E6EDF3">() {</span></span>
+<span class="line"><span style="color:#FF7B72">      if</span><span style="color:#E6EDF3"> (checkoutStartTime </span><span style="color:#FF7B72">!==</span><span style="color:#79C0FF"> null</span><span style="color:#E6EDF3">) {</span></span>
+<span class="line"><span style="color:#FF7B72">        const</span><span style="color:#79C0FF"> duration</span><span style="color:#FF7B72"> =</span><span style="color:#E6EDF3"> performance.</span><span style="color:#D2A8FF">now</span><span style="color:#E6EDF3">() </span><span style="color:#FF7B72">-</span><span style="color:#E6EDF3"> checkoutStartTime;</span></span>
+<span class="line"><span style="color:#D2A8FF">        onTiming</span><span style="color:#E6EDF3">(</span><span style="color:#A5D6FF">&#39;checkout_error_duration_ms&#39;</span><span style="color:#E6EDF3">, duration);</span></span>
+<span class="line"><span style="color:#E6EDF3">        checkoutStartTime </span><span style="color:#FF7B72">=</span><span style="color:#79C0FF"> null</span><span style="color:#E6EDF3">;</span></span>
+<span class="line"><span style="color:#E6EDF3">      }</span></span>
+<span class="line"><span style="color:#E6EDF3">    },</span></span>
+<span class="line"><span style="color:#E6EDF3">  };</span></span>
+<span class="line"><span style="color:#E6EDF3">}</span></span></code></pre>
+<h2 id="composing-multiple-middleware">Composing multiple middleware</h2>
+<p>Register all your middleware in the order you want them to execute. Each middleware’s hooks are called sequentially, so put logging first (for debugging) and error tracking last (to capture any issues from other middleware).</p>
+<pre class="astro-code github-dark-default" style="background-color:#0d1117;color:#e6edf3;overflow-x:auto" tabindex="0" data-language="ts"><code><span class="line"><span style="color:#FF7B72">import</span><span style="color:#E6EDF3"> { createTenderlaneClient } </span><span style="color:#FF7B72">from</span><span style="color:#A5D6FF"> &#39;@tenderlane/client&#39;</span><span style="color:#E6EDF3">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#FF7B72">const</span><span style="color:#79C0FF"> client</span><span style="color:#FF7B72"> =</span><span style="color:#D2A8FF"> createTenderlaneClient</span><span style="color:#E6EDF3">({</span></span>
+<span class="line"><span style="color:#E6EDF3">  context: { country: </span><span style="color:#A5D6FF">&#39;US&#39;</span><span style="color:#E6EDF3">, currency: </span><span style="color:#A5D6FF">&#39;usd&#39;</span><span style="color:#E6EDF3">, amount: </span><span style="color:#79C0FF">2500</span><span style="color:#E6EDF3"> },</span></span>
+<span class="line"><span style="color:#E6EDF3">  providers: [stripe],</span></span>
+<span class="line"><span style="color:#E6EDF3">  routing: router,</span></span>
+<span class="line"><span style="color:#E6EDF3">  middleware: [</span></span>
+<span class="line"><span style="color:#E6EDF3">    loggingMiddleware,                                  </span><span style="color:#8B949E">// 1. Log everything</span></span>
+<span class="line"><span style="color:#D2A8FF">    createAnalyticsMiddleware</span><span style="color:#E6EDF3">(posthogAnalytics),         </span><span style="color:#8B949E">// 2. Track events</span></span>
+<span class="line"><span style="color:#D2A8FF">    createTimingMiddleware</span><span style="color:#E6EDF3">((</span><span style="color:#FFA657">metric</span><span style="color:#E6EDF3">, </span><span style="color:#FFA657">duration</span><span style="color:#E6EDF3">) </span><span style="color:#FF7B72">=&gt;</span><span style="color:#E6EDF3"> {       </span><span style="color:#8B949E">// 3. Track timing</span></span>
+<span class="line"><span style="color:#E6EDF3">      posthogAnalytics.</span><span style="color:#D2A8FF">track</span><span style="color:#E6EDF3">(metric, { duration });</span></span>
+<span class="line"><span style="color:#E6EDF3">    }),</span></span>
+<span class="line"><span style="color:#D2A8FF">    createErrorTrackingMiddleware</span><span style="color:#E6EDF3">(sentryErrorTracker),   </span><span style="color:#8B949E">// 4. Capture errors</span></span>
+<span class="line"><span style="color:#E6EDF3">  ],</span></span>
+<span class="line"><span style="color:#E6EDF3">});</span></span></code></pre>
+<aside class="callout" style="padding:14px 18px;border-radius:8px;margin:18px 0;background:color-mix(in oklab, var(--accent) 8%, var(--bg-1));border:1px solid color-mix(in oklab, var(--accent) 30%, transparent);color:var(--text-1);display:flex;gap:14px;align-items:flex-start;font-size:14px"><span style="color:var(--accent);font-family:var(--font-mono);font-size:10px;letter-spacing:0.06em;text-transform:uppercase;flex-shrink:0;margin-top:2px">tip</span><div><p>Middleware errors are non-fatal. If your analytics service is down, the checkout still works. Errors from individual middleware are caught and logged to <code>console.error</code> without affecting the checkout flow or subsequent middleware.</p></div></aside>
+<h2 id="event-lifecycle-summary">Event lifecycle summary</h2>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Event</th><th>When it fires</th><th>Typical analytics use</th></tr></thead><tbody><tr><td><code>onContextChange</code></td><td>User changes country, updates cart, etc.</td><td>Track funnel progression</td></tr><tr><td><code>onRouteEvaluated</code></td><td>After routing selects a provider</td><td>Track which routes are used, experiment exposure</td></tr><tr><td><code>onSessionCreated</code></td><td>After PaymentIntent/session is created</td><td>Track inline flow preparation</td></tr><tr><td><code>onCheckoutStart</code></td><td>User clicks Pay</td><td>”Begin checkout” event</td></tr><tr><td><code>onCheckoutSuccess</code></td><td>Payment completed</td><td>”Purchase” conversion event</td></tr><tr><td><code>onCheckoutError</code></td><td>Any failure</td><td>Error rate monitoring</td></tr></tbody></table>  </article> </main> <aside class="docs-toc" data-astro-cid-kb6rcyzi><div class="t-cap" style="margin-bottom:10px;color:var(--text-3)" data-astro-cid-kb6rcyzi>On this page</div><ul data-astro-cid-kb6rcyzi><li data-astro-cid-kb6rcyzi><a href="#logging-middleware" data-depth="2" data-astro-cid-kb6rcyzi>Logging middleware</a></li><li data-astro-cid-kb6rcyzi><a href="#analytics-middleware-posthogsegment-style" data-depth="2" data-astro-cid-kb6rcyzi>Analytics middleware (PostHog/Segment style)</a></li><li data-astro-cid-kb6rcyzi><a href="#usage-with-posthog" data-depth="3" data-astro-cid-kb6rcyzi>Usage with PostHog</a></li><li data-astro-cid-kb6rcyzi><a href="#usage-with-segment" data-depth="3" data-astro-cid-kb6rcyzi>Usage with Segment</a></li><li data-astro-cid-kb6rcyzi><a href="#error-tracking-middleware" data-depth="2" data-astro-cid-kb6rcyzi>Error tracking middleware</a></li><li data-astro-cid-kb6rcyzi><a href="#usage-with-sentry" data-depth="3" data-astro-cid-kb6rcyzi>Usage with Sentry</a></li><li data-astro-cid-kb6rcyzi><a href="#timing-middleware" data-depth="2" data-astro-cid-kb6rcyzi>Timing middleware</a></li><li data-astro-cid-kb6rcyzi><a href="#composing-multiple-middleware" data-depth="2" data-astro-cid-kb6rcyzi>Composing multiple middleware</a></li><li data-astro-cid-kb6rcyzi><a href="#event-lifecycle-summary" data-depth="2" data-astro-cid-kb6rcyzi>Event lifecycle summary</a></li></ul><div class="toc-foot" data-astro-cid-kb6rcyzi><a href="https://github.com/farisaziz12/tenderlane" data-astro-cid-kb6rcyzi>↗ View on GitHub</a></div></aside> </div>  </main> <footer class="footer" data-astro-cid-sz7xmlte> <div class="container footer-grid" data-astro-cid-sz7xmlte> <div data-astro-cid-sz7xmlte> <span class="logo" style="font-size:17.099999999999998px;" data-astro-cid-tvrurpns> <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true" data-astro-cid-tvrurpns> <path d="M12 2 L22 12 L12 22 L2 12 Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" data-astro-cid-tvrurpns></path> <path d="M12 2 L22 12 L12 12 Z" fill="var(--accent)" data-astro-cid-tvrurpns></path> <circle cx="12" cy="12" r="1.5" fill="var(--bg-0)" stroke="currentColor" stroke-width="1.2" data-astro-cid-tvrurpns></circle> </svg> <span class="word" data-astro-cid-tvrurpns>tenderlane</span> </span>  <p class="t-body footer-tag" data-astro-cid-sz7xmlte>
+Reactive payment orchestration for modern web apps. MIT licensed, frontend-first, provider-agnostic.
+</p> <div class="footer-badges" data-astro-cid-sz7xmlte> <span class="badge alpha" data-astro-cid-sz7xmlte><span class="dot" data-astro-cid-sz7xmlte></span>v0.4.0-alpha</span> <span class="badge" data-astro-cid-sz7xmlte><span style="color:var(--text-2)" data-astro-cid-sz7xmlte>MIT</span></span> </div> </div> <div data-astro-cid-sz7xmlte> <div class="t-cap" style="margin-bottom:16px;color:var(--text-3)" data-astro-cid-sz7xmlte>Product</div> <ul class="footer-list" data-astro-cid-sz7xmlte> <li data-astro-cid-sz7xmlte><a href="/tenderlane/pr-preview/pr-1/" data-astro-cid-sz7xmlte>Home</a></li><li data-astro-cid-sz7xmlte><a href="/tenderlane/pr-preview/pr-1/why" data-astro-cid-sz7xmlte>Why Tenderlane</a></li><li data-astro-cid-sz7xmlte><a href="/tenderlane/pr-preview/pr-1/docs" data-astro-cid-sz7xmlte>Docs</a></li><li data-astro-cid-sz7xmlte><a href="https://github.com/farisaziz12/tenderlane/releases" data-astro-cid-sz7xmlte>Changelog</a></li> </ul> </div><div data-astro-cid-sz7xmlte> <div class="t-cap" style="margin-bottom:16px;color:var(--text-3)" data-astro-cid-sz7xmlte>Docs</div> <ul class="footer-list" data-astro-cid-sz7xmlte> <li data-astro-cid-sz7xmlte><a href="/tenderlane/pr-preview/pr-1/docs/getting-started/introduction" data-astro-cid-sz7xmlte>Getting started</a></li><li data-astro-cid-sz7xmlte><a href="/tenderlane/pr-preview/pr-1/docs/concepts/routing" data-astro-cid-sz7xmlte>Routing</a></li><li data-astro-cid-sz7xmlte><a href="/tenderlane/pr-preview/pr-1/docs/concepts/providers" data-astro-cid-sz7xmlte>Providers</a></li><li data-astro-cid-sz7xmlte><a href="/tenderlane/pr-preview/pr-1/docs/concepts/catalog" data-astro-cid-sz7xmlte>Catalog</a></li><li data-astro-cid-sz7xmlte><a href="/tenderlane/pr-preview/pr-1/docs/concepts/state-machine" data-astro-cid-sz7xmlte>State machine</a></li> </ul> </div><div data-astro-cid-sz7xmlte> <div class="t-cap" style="margin-bottom:16px;color:var(--text-3)" data-astro-cid-sz7xmlte>Cookbooks</div> <ul class="footer-list" data-astro-cid-sz7xmlte> <li data-astro-cid-sz7xmlte><a href="/tenderlane/pr-preview/pr-1/docs/cookbooks/stripe-checkout-redirect" data-astro-cid-sz7xmlte>Stripe Checkout redirect</a></li><li data-astro-cid-sz7xmlte><a href="/tenderlane/pr-preview/pr-1/docs/cookbooks/country-based-routing" data-astro-cid-sz7xmlte>Country-based routing</a></li><li data-astro-cid-sz7xmlte><a href="/tenderlane/pr-preview/pr-1/docs/cookbooks/ab-testing-payment-flows" data-astro-cid-sz7xmlte>A/B test flows</a></li><li data-astro-cid-sz7xmlte><a href="/tenderlane/pr-preview/pr-1/docs/cookbooks/nextjs-app-router" data-astro-cid-sz7xmlte>Next.js App Router</a></li> </ul> </div><div data-astro-cid-sz7xmlte> <div class="t-cap" style="margin-bottom:16px;color:var(--text-3)" data-astro-cid-sz7xmlte>Community</div> <ul class="footer-list" data-astro-cid-sz7xmlte> <li data-astro-cid-sz7xmlte><a href="https://github.com/farisaziz12/tenderlane" data-astro-cid-sz7xmlte>GitHub</a></li><li data-astro-cid-sz7xmlte><a href="https://github.com/farisaziz12/tenderlane/issues" data-astro-cid-sz7xmlte>Issues</a></li><li data-astro-cid-sz7xmlte><a href="https://github.com/farisaziz12/tenderlane/blob/main/README.md" data-astro-cid-sz7xmlte>MIT License</a></li> </ul> </div> </div> <div class="container footer-bottom" data-astro-cid-sz7xmlte> <span data-astro-cid-sz7xmlte>© 2026 tenderlane contributors</span> <span data-astro-cid-sz7xmlte>Reactive payments · MIT · built with Astro</span> </div> </footer>  </body></html>   
