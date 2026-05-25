@@ -1,0 +1,50 @@
+name: Deploy PR Preview
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, closed]
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: gh-pages-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - if: github.event.action != 'closed'
+        uses: pnpm/action-setup@v4
+
+      - if: github.event.action != 'closed'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - if: github.event.action != 'closed'
+        run: pnpm install --frozen-lockfile
+
+      - if: github.event.action != 'closed'
+        name: Build packages
+        run: pnpm --filter "@tenderlane/*" build
+
+      - if: github.event.action != 'closed'
+        name: Build docs with PR base path
+        env:
+          BASE_PATH: /tenderlane/pr-preview/pr-${{ github.event.pull_request.number }}
+        run: cd docs-site && pnpm build
+
+      - name: Deploy preview
+        uses: rossjrw/pr-preview-action@v1
+        with:
+          source-dir: docs-site/dist
+          preview-branch: gh-pages
+          umbrella-dir: pr-preview
+          action: auto
