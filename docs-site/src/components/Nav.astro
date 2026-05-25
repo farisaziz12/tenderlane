@@ -1,0 +1,84 @@
+---
+import Logo from './Logo.astro';
+import Icon from './Icons.astro';
+
+interface Props {
+  active?: 'home' | 'why' | 'docs' | 'showcase' | 'philosophy' | 'changelog';
+  mode?: 'marketing' | 'docs';
+}
+const { active = 'home', mode = 'marketing' } = Astro.props;
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const link = (path: string) => `${base}${path}`;
+
+const items =
+  mode === 'docs'
+    ? [
+        { label: 'Getting started', href: link('/docs/getting-started/introduction'), key: 'getting-started' },
+        { label: 'Concepts', href: link('/docs/concepts/routing'), key: 'concepts' },
+        { label: 'Cookbooks', href: link('/docs/cookbooks/stripe-checkout-redirect'), key: 'cookbooks' },
+        { label: 'GitHub', href: 'https://github.com/farisaziz12/tenderlane', key: 'github' },
+      ]
+    : [
+        { label: 'Why', href: link('/why'), key: 'why' },
+        { label: 'Docs', href: link('/docs'), key: 'docs' },
+        { label: 'Showcase', href: link('/#showcase'), key: 'showcase' },
+        { label: 'Philosophy', href: link('/#philosophy'), key: 'philosophy' },
+        { label: 'Changelog', href: link('/#changelog'), key: 'changelog' },
+      ];
+---
+
+<nav class="nav">
+  <div class="nav-left">
+    <a href={link('/')} aria-label="Tenderlane home" style="color: var(--text-0)">
+      <Logo size={16} />
+    </a>
+    <span style="width:1px;height:18px;background:var(--line-2)"></span>
+    <div class="nav-links">
+      {items.map((it) => (
+        <a href={it.href} data-active={active === it.key ? 'true' : 'false'}>{it.label}</a>
+      ))}
+    </div>
+    {mode === 'docs' && (
+      <span class="badge" style="margin-left:4px"><span style="color:var(--text-3)">v</span>0.4.0-alpha</span>
+    )}
+  </div>
+  <div class="nav-right">
+    <div class="nav-search">
+      <Icon name="search" size={13} />
+      <span class="flex">Search docs…</span>
+      <span class="kbd">⌘</span><span class="kbd">K</span>
+    </div>
+    <a class="btn btn-link nav-icon-link" href="https://github.com/farisaziz12/tenderlane" title="GitHub" style="color:var(--text-1)">
+      <Icon name="github" size={16} />
+    </a>
+    <a class="btn btn-ghost" href={link('/docs')}>Docs</a>
+    <a class="btn btn-primary" href={link('/docs/getting-started/quick-start')}>
+      Get started <Icon name="arrow" size={12} />
+    </a>
+    <button class="nav-toggle" id="nav-toggle" aria-label="Open menu">
+      <Icon name="menu" size={16} />
+    </button>
+  </div>
+</nav>
+
+<div class="mobile-drawer" id="mobile-drawer">
+  <div class="drawer-head">
+    <Logo size={16} />
+    <button class="nav-toggle" id="nav-close" style="display:inline-flex" aria-label="Close menu">
+      <Icon name="close" size={16} />
+    </button>
+  </div>
+  <nav>
+    {items.map((it) => <a href={it.href}>{it.label}</a>)}
+    <a href={link('/docs')}>Docs</a>
+    <a href={link('/docs/getting-started/quick-start')} style="color: var(--accent)">Get started →</a>
+  </nav>
+</div>
+
+<script>
+  const toggle = document.getElementById('nav-toggle');
+  const close = document.getElementById('nav-close');
+  const drawer = document.getElementById('mobile-drawer');
+  toggle?.addEventListener('click', () => drawer?.setAttribute('data-open', 'true'));
+  close?.addEventListener('click', () => drawer?.setAttribute('data-open', 'false'));
+</script>

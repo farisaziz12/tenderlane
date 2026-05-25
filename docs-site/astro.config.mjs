@@ -1,20 +1,18 @@
 import { defineConfig } from 'astro/config';
-import starlight from '@astrojs/starlight';
+import mdx from '@astrojs/mdx';
+import remarkDirective from 'remark-directive';
+import remarkCallouts from './src/lib/remark-callouts.mjs';
 
 export default defineConfig({
   site: 'https://farisaziz12.github.io',
   base: '/tenderlane',
-  integrations: [
-    starlight({
-      title: 'Tenderlane',
-      description: 'Reactive payment orchestration for modern web apps',
-      sidebar: [
-        { label: 'Overview', slug: 'index' },
-        { label: 'Getting Started', autogenerate: { directory: 'getting-started' } },
-        { label: 'Core Concepts', autogenerate: { directory: 'concepts' } },
-        { label: 'Cookbooks', autogenerate: { directory: 'cookbooks' } },
-      ],
-      customCss: ['./src/styles/custom.css'],
-    }),
-  ],
+  trailingSlash: 'ignore',
+  integrations: [mdx()],
+  markdown: {
+    remarkPlugins: [remarkDirective, remarkCallouts],
+    shikiConfig: {
+      theme: 'github-dark-default',
+      wrap: false,
+    },
+  },
 });

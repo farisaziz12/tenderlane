@@ -1,0 +1,73 @@
+---
+import { getCollection, render } from 'astro:content';
+import DocsLayout from '../../layouts/DocsLayout.astro';
+
+export async function getStaticPaths() {
+  const entries = await getCollection('docs');
+  return entries
+    .filter((entry) => entry.id !== 'index')
+    .map((entry) => ({
+      params: { slug: entry.id },
+      props: { entry },
+    }));
+}
+
+const { entry } = Astro.props;
+const { Content, headings } = await render(entry);
+
+// Build sidebar groups from all docs
+const all = await getCollection('docs');
+
+interface Group {
+  label: string;
+  items: { label: string; slug: string }[];
+}
+
+const groupLabels: Record<string, string> = {
+  'getting-started': 'Getting started',
+  concepts: 'Core concepts',
+  cookbooks: 'Cookbooks',
+};
+
+const groups: Group[] = [];
+for (const [key, label] of Object.entries(groupLabels)) {
+  const items = all
+    .filter((d) => d.id.startsWith(`${key}/`))
+    .map((d) => ({
+      label: d.data.title,
+      slug: d.id,
+      order: d.data.sidebar?.order ?? 99,
+    }))
+    .sort((a, b) => a.order - b.order || a.label.localeCompare(b.label))
+    .map(({ label: l, slug }) => ({ label: l, slug }));
+  if (items.length > 0) groups.push({ label, items });
+}
+
+const segments = entry.id.split('/');
+const sectionKey = segments[0];
+const sectionLabel = groupLabels[sectionKey] ?? 'Docs';
+---
+
+<DocsLayout
+  title={entry.data.title}
+  description={entry.data.description}
+  slug={entry.id}
+  headings={headings}
+  groups={groups}
+  breadcrumb={{ label: entry.data.title, section: sectionLabel }}
+>
+  <h1>{entry.data.title}</h1>
+  {entry.data.description && <p class="t-body-lg" style="margin:0 0 12px;color:var(--text-1);max-width:700px">{entry.data.description}</p>}
+  <div class="docs-meta">
+    <span class="badge"><span style="width:6px;height:6px;border-radius:50%;background:var(--accent);display:inline-block"></span>{sectionLabel}</span>
+  </div>
+  <Content />
+</DocsLayout>
+
+<style>
+  .docs-meta {
+    display: flex;
+    gap: 8px;
+    margin: 0 0 40px;
+  }
+</style>

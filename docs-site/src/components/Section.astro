@@ -1,0 +1,38 @@
+---
+interface Props {
+  id?: string;
+  eyebrow?: string;
+  title?: string;
+  kicker?: string;
+  alt?: boolean;
+  maxWidth?: number;
+}
+const { id, eyebrow, title, kicker, alt = false, maxWidth = 1180 } = Astro.props;
+---
+
+<section id={id} class={`section ${alt ? 'alt' : ''}`}>
+  <div class="container" style={`max-width:${maxWidth}px`}>
+    {eyebrow && (
+      <div class="t-eyebrow" style="margin-bottom:22px">
+        <span class="dot"></span>{eyebrow}
+      </div>
+    )}
+    {title && <h2 class="t-display t-h2 section-title">{title}</h2>}
+    {kicker && <p class="t-body-lg section-kicker">{kicker}</p>}
+    <slot />
+  </div>
+</section>
+
+<style>
+  .section.alt {
+    background: var(--bg-1);
+  }
+  .section-title {
+    margin: 0 0 18px;
+    max-width: 820px;
+  }
+  .section-kicker {
+    margin: 0 0 64px;
+    max-width: 620px;
+  }
+</style>

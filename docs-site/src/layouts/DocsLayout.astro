@@ -1,0 +1,201 @@
+---
+import Layout from './Layout.astro';
+import DocsSidebar from '../components/DocsSidebar.astro';
+import DocsTOC from '../components/DocsTOC.astro';
+
+interface Heading {
+  depth: number;
+  text: string;
+  slug: string;
+}
+interface Props {
+  title: string;
+  description?: string;
+  slug: string;
+  headings: Heading[];
+  groups: { label: string; items: { label: string; slug: string }[] }[];
+  breadcrumb: { label: string; section: string };
+}
+const { title, description, slug, headings, groups, breadcrumb } = Astro.props;
+---
+
+<Layout title={`${title} · Tenderlane docs`} description={description ?? title} active="docs" mode="docs">
+  <div class="docs-page">
+    <DocsSidebar current={slug} groups={groups} />
+    <main class="docs-main">
+      <div class="docs-breadcrumb">
+        <span>Docs</span>
+        <span>/</span>
+        <span>{breadcrumb.section}</span>
+        <span>/</span>
+        <span style="color:var(--text-1)">{breadcrumb.label}</span>
+        <span style="margin-left:auto">v0.4.0-alpha</span>
+      </div>
+      <article class="docs-article">
+        <slot />
+      </article>
+    </main>
+    <DocsTOC headings={headings} />
+  </div>
+</Layout>
+
+<style>
+  .docs-page {
+    display: flex;
+    align-items: flex-start;
+  }
+  .docs-main {
+    flex: 1;
+    min-width: 0;
+    padding: 48px 64px 100px;
+    max-width: 880px;
+  }
+  .docs-breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 24px;
+    font-size: 12px;
+    color: var(--text-3);
+    font-family: var(--font-mono);
+  }
+  @media (max-width: 1000px) {
+    .docs-main {
+      padding: 32px var(--side-pad) 80px;
+    }
+  }
+</style>
+
+<style is:global>
+  .docs-article {
+    color: var(--text-1);
+    font-size: 16px;
+    line-height: 1.65;
+  }
+  .docs-article h1 {
+    font-family: var(--font-display);
+    font-size: clamp(34px, 4vw, 48px);
+    line-height: 1.04;
+    margin: 0 0 16px;
+    letter-spacing: -0.028em;
+    color: var(--text-0);
+    font-weight: 500;
+  }
+  .docs-article h2 {
+    font-family: var(--font-display);
+    font-size: 28px;
+    line-height: 1.1;
+    margin: 56px 0 18px;
+    letter-spacing: -0.018em;
+    color: var(--text-0);
+    font-weight: 500;
+    scroll-margin-top: 80px;
+  }
+  .docs-article h3 {
+    font-size: 18px;
+    font-weight: 500;
+    color: var(--text-0);
+    margin: 24px 0 8px;
+    letter-spacing: -0.008em;
+    scroll-margin-top: 80px;
+  }
+  .docs-article p,
+  .docs-article ul,
+  .docs-article ol {
+    margin: 12px 0;
+  }
+  .docs-article ul,
+  .docs-article ol {
+    padding-left: 22px;
+  }
+  .docs-article li {
+    margin: 6px 0;
+  }
+  .docs-article a {
+    color: var(--accent);
+    text-decoration: underline;
+    text-decoration-color: color-mix(in oklab, var(--accent) 40%, transparent);
+    text-underline-offset: 3px;
+  }
+  .docs-article a:hover {
+    text-decoration-color: var(--accent);
+  }
+  .docs-article strong {
+    color: var(--text-0);
+    font-weight: 600;
+  }
+  .docs-article code {
+    font-family: var(--font-mono);
+    font-size: 0.88em;
+    background: color-mix(in oklab, var(--accent) 8%, var(--bg-2));
+    color: var(--accent);
+    padding: 1px 6px;
+    border-radius: 4px;
+    border: 1px solid var(--accent-soft);
+  }
+  .docs-article pre {
+    background: var(--code-bg);
+    border: 1px solid var(--line-2);
+    border-radius: 12px;
+    padding: 16px 18px;
+    overflow-x: auto;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    line-height: 1.65;
+    color: var(--code-fg);
+    margin: 18px 0;
+  }
+  .docs-article pre code {
+    background: none;
+    color: inherit;
+    padding: 0;
+    border: none;
+    font-size: inherit;
+  }
+  .docs-article table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 18px 0;
+    font-size: 14px;
+  }
+  .docs-article th {
+    text-align: left;
+    padding: 12px 16px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-3);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    border-bottom: 1px solid var(--line-2);
+  }
+  .docs-article td {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--line-1);
+    color: var(--text-1);
+  }
+  .docs-article blockquote {
+    margin: 18px 0;
+    padding: 14px 18px;
+    border-left: 3px solid var(--accent);
+    background: color-mix(in oklab, var(--accent) 5%, var(--bg-1));
+    border-radius: 0 8px 8px 0;
+    color: var(--text-1);
+  }
+  .docs-article aside.starlight-aside {
+    margin: 18px 0;
+    padding: 14px 18px;
+    border-radius: 8px;
+    border: 1px solid var(--line-2);
+    background: var(--bg-1);
+  }
+  .docs-article hr {
+    border: 0;
+    border-top: 1px solid var(--line-1);
+    margin: 32px 0;
+  }
+  .docs-article img {
+    max-width: 100%;
+    border-radius: 8px;
+  }
+</style>

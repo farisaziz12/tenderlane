@@ -1,0 +1,136 @@
+---
+import Section from '../Section.astro';
+import Icon from '../Icons.astro';
+
+const handRolled = `<span class="tok-k">const</span> [<span class="tok-p">provider</span>, <span class="tok-f">setProvider</span>] = <span class="tok-f">useState</span>(<span class="tok-s">'stripe'</span>);
+<span class="tok-k">const</span> [<span class="tok-p">methods</span>, <span class="tok-f">setMethods</span>] = <span class="tok-f">useState</span>([<span class="tok-s">'card'</span>]);
+<span class="tok-k">const</span> [<span class="tok-p">flow</span>, <span class="tok-f">setFlow</span>] = <span class="tok-f">useState</span>(<span class="tok-s">'checkout-session'</span>);
+
+<span class="tok-del"><span class="tok-c">// re-run when country changes</span></span>
+<span class="tok-del"><span class="tok-f">useEffect</span>(() <span class="tok-pu">=&gt;</span> {</span>
+<span class="tok-del">  <span class="tok-k">if</span> (country <span class="tok-pu">===</span> <span class="tok-s">'CH'</span>) {</span>
+<span class="tok-del">    <span class="tok-f">setFlow</span>(<span class="tok-s">'payment-intent'</span>);</span>
+<span class="tok-del">    <span class="tok-f">setMethods</span>([<span class="tok-s">'card'</span>, <span class="tok-s">'twint'</span>]);</span>
+<span class="tok-del">  } <span class="tok-k">else if</span> (country <span class="tok-pu">===</span> <span class="tok-s">'NL'</span>) { /* … */ }</span>
+<span class="tok-del">}, [country]);</span>
+
+<span class="tok-del"><span class="tok-c">// re-run when currency changes</span></span>
+<span class="tok-del"><span class="tok-f">useEffect</span>(() <span class="tok-pu">=&gt;</span> { /* … */ }, [currency]);</span>
+
+<span class="tok-c">// 14 more conditionals. Untyped. Sticky.</span>`;
+
+const tenderlaneCode = `<span class="tok-k">import</span> { <span class="tok-f">createRulesRouter</span> } <span class="tok-k">from</span> <span class="tok-s">'@tenderlane/core'</span>;
+
+<span class="tok-add"><span class="tok-k">export const</span> <span class="tok-p">routing</span> = <span class="tok-f">createRulesRouter</span>({</span>
+<span class="tok-add">  <span class="tok-p">rules</span>: [</span>
+<span class="tok-add">    { <span class="tok-p">id</span>: <span class="tok-s">'ch-inline'</span>,</span>
+<span class="tok-add">      <span class="tok-p">when</span>: { <span class="tok-p">country</span>: <span class="tok-s">'CH'</span>, <span class="tok-p">currency</span>: <span class="tok-s">'chf'</span> },</span>
+<span class="tok-add">      <span class="tok-p">use</span>:  { <span class="tok-p">provider</span>: <span class="tok-s">'stripe'</span>, <span class="tok-p">flow</span>: <span class="tok-s">'payment-intent'</span>,</span>
+<span class="tok-add">              <span class="tok-p">paymentMethods</span>: [<span class="tok-s">'card'</span>, <span class="tok-s">'twint'</span>] } },</span>
+<span class="tok-add">    { <span class="tok-p">id</span>: <span class="tok-s">'nl-ideal'</span>,</span>
+<span class="tok-add">      <span class="tok-p">when</span>: { <span class="tok-p">country</span>: <span class="tok-s">'NL'</span> },</span>
+<span class="tok-add">      <span class="tok-p">use</span>:  { <span class="tok-p">paymentMethods</span>: [<span class="tok-s">'card'</span>, <span class="tok-s">'ideal'</span>, <span class="tok-s">'sepa'</span>] } },</span>
+<span class="tok-add">  ],</span>
+<span class="tok-add">  <span class="tok-p">fallback</span>: { <span class="tok-p">flow</span>: <span class="tok-s">'checkout-session'</span>,</span>
+<span class="tok-add">              <span class="tok-p">paymentMethods</span>: [<span class="tok-s">'card'</span>] },</span>
+<span class="tok-add">});</span>
+
+<span class="tok-c">// re-evaluates automatically when context changes.</span>
+<span class="tok-c">// rules are JSON: store anywhere, edit anywhere.</span>`;
+---
+
+<Section
+  eyebrow="Before → after"
+  title="What checkout routing usually looks like."
+  kicker='Same requirement — "show TWINT in Switzerland, fall back to Stripe Checkout everywhere else." Left: how teams ship it today. Right: how it reads with Tenderlane.'
+>
+  <div class="diff-grid">
+    <div>
+      <div class="diff-label">
+        <span class="t-cap" style="color:var(--err);display:inline-flex;align-items:center;gap:6px">
+          <Icon name="x" size={11} /> Hand-rolled
+        </span>
+        <span class="t-cap">checkout.tsx · brittle, untyped, growing</span>
+      </div>
+      <div class="code">
+        <div class="code-head">
+          <span style="font-family:var(--font-mono);font-size:12px;color:var(--text-2)">hand-rolled/checkout.tsx</span>
+        </div>
+        <div class="code-body">
+          <pre><code set:html={handRolled} /></pre>
+        </div>
+      </div>
+      <ul class="diff-bullets">
+        {[
+          'Untyped strings everywhere — typos surface in production',
+          'Order depends on render timing, not declaration',
+          'Races when context updates mid-fetch',
+          "Rules live in code — ops can't A/B test or hot-patch",
+        ].map((t) => (
+          <li><span style="color:var(--err);margin-top:2px"><Icon name="x" size={11} /></span>{t}</li>
+        ))}
+      </ul>
+    </div>
+    <div>
+      <div class="diff-label">
+        <span class="t-cap" style="color:var(--accent);display:inline-flex;align-items:center;gap:6px">
+          <Icon name="check" size={11} /> tenderlane
+        </span>
+        <span class="t-cap">routing.ts · declarative, typed, portable</span>
+      </div>
+      <div class="code">
+        <div class="code-head">
+          <span style="font-family:var(--font-mono);font-size:12px;color:var(--text-2)">tenderlane/routing.ts</span>
+        </div>
+        <div class="code-body">
+          <pre><code set:html={tenderlaneCode} /></pre>
+        </div>
+      </div>
+      <ul class="diff-bullets">
+        {[
+          'Literal-typed end-to-end — country, currency, method, flow',
+          'First-match-wins is the contract, not a side-effect',
+          'Re-evaluates synchronously with context — no races',
+          'Rules are JSON: A/B test them, store them, ship them from a flag',
+        ].map((t) => (
+          <li><span style="color:var(--accent);margin-top:2px"><Icon name="check" size={11} /></span>{t}</li>
+        ))}
+      </ul>
+    </div>
+  </div>
+</Section>
+
+<style>
+  .diff-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+  }
+  .diff-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+  }
+  .diff-bullets {
+    list-style: none;
+    padding: 0;
+    margin: 20px 0 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    color: var(--text-1);
+    font-size: 13px;
+  }
+  .diff-bullets li {
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+  }
+  @media (max-width: 1000px) {
+    .diff-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

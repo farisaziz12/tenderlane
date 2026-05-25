@@ -1,0 +1,147 @@
+---
+import Section from '../Section.astro';
+
+const props = [
+  {
+    n: '01',
+    title: 'Adapts the second your app does.',
+    copy: 'When the customer changes country, currency, or cart — the checkout reroutes in the same render. Right provider. Right methods. Right flow. No reload. No server round-trip.',
+  },
+  {
+    n: '02',
+    title: 'Your UI. Your stack. Any PSP.',
+    copy: 'Headless components, framework-agnostic core, swappable adapters. Start on Stripe. Add Polar for subscriptions. Drop in your local PSP. The router does not care.',
+  },
+  {
+    n: '03',
+    title: 'Routing rules are data, not code.',
+    copy: 'A JSON shape with first-match-wins semantics. Edit them in a dashboard. Store them in a DB. Ship them from a feature flag. Catch the typo in "gpb" at compile time.',
+  },
+];
+---
+
+<Section
+  eyebrow="What's different"
+  title="A checkout that knows what your app knows."
+  kicker="Every modern SDK lets you take a payment. Tenderlane decides which payment to take, in the browser, the moment context changes — with types that hold across providers, markets, and methods."
+>
+  <div class="vp-grid">
+    {props.map((p) => (
+      <div class="vp-card">
+        <div class="vp-visual" aria-hidden="true">
+          {p.n === '01' && (
+            <svg viewBox="0 0 320 240" width="100%" height="100%">
+              {['country', 'currency', 'cart', 'tier'].map((s, i) => (
+                <g transform={`translate(20 ${30 + i * 38})`}>
+                  <rect width="78" height="26" rx="5" fill="var(--bg-1)" stroke="var(--line-2)"></rect>
+                  <text x="10" y="17" font-family="var(--font-mono)" font-size="11" fill="var(--text-1)">{s}</text>
+                  <circle cx="70" cy="13" r="3" fill="var(--accent)">
+                    <animate attributeName="opacity" values="0.3;1;0.3" dur={`${1.5 + i * 0.2}s`} repeatCount="indefinite"></animate>
+                  </circle>
+                </g>
+              ))}
+              <g transform="translate(130 90)">
+                <rect width="80" height="60" rx="6" fill="color-mix(in oklab, var(--accent) 10%, var(--bg-1))" stroke="var(--accent-soft)"></rect>
+                <text x="40" y="28" text-anchor="middle" font-family="var(--font-mono)" font-size="10" fill="var(--accent)">router</text>
+                <text x="40" y="44" text-anchor="middle" font-family="var(--font-mono)" font-size="9" fill="var(--text-2)">evaluate</text>
+              </g>
+              <g transform="translate(240 30)">
+                {['provider', 'flow', 'methods', 'UI'].map((o, i) => (
+                  <g transform={`translate(0 ${i * 38})`}>
+                    <rect width="60" height="26" rx="5" fill="var(--bg-1)" stroke="var(--line-2)"></rect>
+                    <text x="30" y="17" text-anchor="middle" font-family="var(--font-mono)" font-size="10" fill="var(--text-0)">{o}</text>
+                  </g>
+                ))}
+              </g>
+              {[0, 1, 2, 3].map((i) => (
+                <g>
+                  <path d={`M98 ${43 + i * 38} L130 ${100 + (i - 1.5) * 6}`} stroke="var(--line-3)" fill="none"></path>
+                  <path d={`M210 ${100 + (i - 1.5) * 6} L240 ${43 + i * 38}`} stroke="var(--line-3)" fill="none"></path>
+                </g>
+              ))}
+            </svg>
+          )}
+          {p.n === '02' && (
+            <svg viewBox="0 0 320 240" width="100%" height="100%">
+              {[
+                { l: '@tenderlane/react', dim: false, accent: false },
+                { l: '@tenderlane/client', dim: false, accent: false },
+                { l: '@tenderlane/core', dim: false, accent: true },
+                { l: '@tenderlane/stripe', dim: false, accent: false },
+                { l: '@tenderlane/polar', dim: false, accent: false },
+              ].map((L, i) => (
+                <g transform={`translate(${30 + i * 6} ${20 + i * 32})`}>
+                  <rect
+                    width="240"
+                    height="40"
+                    rx="6"
+                    fill={L.accent ? 'color-mix(in oklab, var(--accent) 12%, var(--bg-1))' : 'var(--bg-1)'}
+                    stroke={L.accent ? 'var(--accent-soft)' : 'var(--line-2)'}
+                  ></rect>
+                  <text x="14" y="25" font-family="var(--font-mono)" font-size="11" fill={L.accent ? 'var(--accent)' : 'var(--text-1)'}>{L.l}</text>
+                </g>
+              ))}
+            </svg>
+          )}
+          {p.n === '03' && (
+            <svg viewBox="0 0 320 240" width="100%" height="100%">
+              <g font-family="var(--font-mono)" font-size="10">
+                <rect x="20" y="20" width="280" height="200" rx="6" fill="var(--code-bg)" stroke="var(--line-2)"></rect>
+                <text x="34" y="40" fill="var(--text-3)">[</text>
+                <g transform="translate(40 50)">
+                  <text fill="var(--text-2)"><tspan>id: </tspan><tspan fill="var(--code-string)">'us-card'</tspan>,</text>
+                  <text y="14" fill="var(--text-2)"><tspan>when: country = </tspan><tspan fill="var(--code-string)">'US'</tspan></text>
+                  <text y="28" fill="var(--text-2)"><tspan>use: flow = </tspan><tspan fill="var(--code-string)">'redirect'</tspan></text>
+                </g>
+                <g transform="translate(40 100)">
+                  <rect x="-6" y="-12" width="260" height="46" rx="4" fill="color-mix(in oklab, var(--accent) 10%, transparent)" stroke="var(--accent-soft)"></rect>
+                  <text fill="var(--text-2)"><tspan>id: </tspan><tspan fill="var(--code-string)">'ch-inline'</tspan>,</text>
+                  <text y="14" fill="var(--text-2)"><tspan>when: country = </tspan><tspan fill="var(--code-string)">'CH'</tspan></text>
+                  <text y="28" fill="var(--text-2)"><tspan>use: methods = </tspan><tspan fill="var(--code-string)">[card, twint]</tspan></text>
+                </g>
+                <text x="34" y="190" fill="var(--text-3)">]</text>
+              </g>
+              <g transform="translate(180 196)" font-family="var(--font-mono)" font-size="9" fill="var(--text-2)">
+                <rect x="-6" y="-12" width="106" height="20" rx="10" fill="var(--bg-2)" stroke="var(--line-2)"></rect>
+                <circle cx="4" cy="-2" r="3" fill="var(--ok)"></circle>
+                <text x="14" y="1" fill="var(--text-1)">JSON · DB-storable</text>
+              </g>
+            </svg>
+          )}
+        </div>
+        <div class="t-cap" style="color:var(--accent);margin-bottom:12px">{p.n}</div>
+        <h3 class="t-display t-h4" style="margin:0 0 12px">{p.title}</h3>
+        <p class="t-body" style="margin:0;font-size:14px">{p.copy}</p>
+      </div>
+    ))}
+  </div>
+</Section>
+
+<style>
+  .vp-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+  }
+  .vp-card {
+    padding: 28px;
+    border-radius: 14px;
+    background: var(--bg-1);
+    border: 1px solid var(--line-2);
+    display: flex;
+    flex-direction: column;
+  }
+  .vp-visual {
+    aspect-ratio: 4 / 3;
+    border-radius: 8px;
+    background: var(--bg-2);
+    border: 1px solid var(--line-1);
+    overflow: hidden;
+    margin-bottom: 24px;
+  }
+  @media (max-width: 900px) {
+    .vp-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
