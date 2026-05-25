@@ -1,0 +1,31 @@
+---
+interface Props {
+  size?: number;
+  withWord?: boolean;
+}
+const { size = 18, withWord = true } = Astro.props;
+const wordSize = size * 0.95;
+---
+
+<span class="logo" style={`font-size:${wordSize}px;`}>
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <path d="M12 2 L22 12 L12 22 L2 12 Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"></path>
+    <path d="M12 2 L22 12 L12 12 Z" fill="var(--accent)"></path>
+    <circle cx="12" cy="12" r="1.5" fill="var(--bg-0)" stroke="currentColor" stroke-width="1.2"></circle>
+  </svg>
+  {withWord && <span class="word">tenderlane</span>}
+</span>
+
+<style>
+  .logo {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-0);
+  }
+  .word {
+    font-family: var(--font-sans);
+    font-weight: 600;
+    letter-spacing: -0.025em;
+  }
+</style>

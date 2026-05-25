@@ -1,0 +1,416 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Section from '../components/Section.astro';
+import Icon from '../components/Icons.astro';
+import CTA from '../components/home/CTA.astro';
+
+// Quadrant data — x: backend(-1) ... frontend(+1); y: SaaS(-1) ... OSS(+1)
+const competitors = [
+  { id: 'tenderlane', label: 'Tenderlane', x: 0.78, y: 0.82, accent: true, note: undefined },
+  { id: 'stripe', label: 'Stripe SDK', x: -0.5, y: -0.18, note: 'single PSP' },
+  { id: 'adyen', label: 'Adyen Drop-in', x: -0.1, y: -0.55, note: 'proprietary UI' },
+  { id: 'braintree', label: 'Braintree', x: -0.62, y: -0.4, note: undefined },
+  { id: 'hyperswitch', label: 'Hyperswitch', x: -0.65, y: 0.7, note: 'Rust, server-side' },
+  { id: 'primer', label: 'Primer.io', x: 0.1, y: -0.78, note: undefined },
+  { id: 'gr4vy', label: 'Gr4vy', x: 0.05, y: -0.62, note: undefined },
+  { id: 'spreedly', label: 'Spreedly', x: -0.4, y: -0.3, note: undefined },
+];
+const W = 720,
+  H = 560,
+  pad = 60;
+const xMap = (x: number) => pad + ((x + 1) / 2) * (W - pad * 2);
+const yMap = (y: number) => H - pad - ((y + 1) / 2) * (H - pad * 2);
+
+const matrixCols = [
+  { id: 'tl', label: 'Tenderlane', accent: true },
+  { id: 'sd', label: 'Stripe SDK', accent: false },
+  { id: 'hs', label: 'Hyperswitch', accent: false },
+  { id: 'pr', label: 'Primer / Gr4vy', accent: false },
+  { id: 'sp', label: 'Spreedly', accent: false },
+  { id: 'in', label: 'In-house', accent: false },
+];
+const matrixRows = [
+  { l: 'Multi-PSP routing', v: ['yes', 'no', 'yes', 'yes', 'yes', 'maybe'] },
+  { l: 'Frontend-reactive (browser state)', v: ['yes', 'no', 'no', 'partial', 'no', 'maybe'] },
+  { l: 'Typed end-to-end (TypeScript)', v: ['yes', 'partial', 'no', 'partial', 'no', 'maybe'] },
+  { l: 'Serializable rules (JSON, DB-able)', v: ['yes', 'no', 'no', 'yes', 'no', 'no'] },
+  { l: 'Open source · MIT', v: ['yes', 'partial', 'yes', 'no', 'no', '—'] },
+  { l: 'No per-tx fee / never in payment path', v: ['yes', '—', 'yes', 'no', 'no', '—'] },
+  { l: 'Bring-your-own UI (headless)', v: ['yes', 'partial', 'no', 'no', 'no', 'maybe'] },
+  { l: 'Zero-runtime-deps core', v: ['yes', 'no', 'no', 'no', 'no', '—'] },
+  { l: 'Lazy-loaded provider SDKs', v: ['yes', 'no', 'no', 'no', 'no', 'no'] },
+  { l: 'Time to add a new PSP', v: ['days', '—', 'weeks', 'vendor', 'vendor', 'months'] },
+];
+
+const stats = [
+  { k: '5–15%', l: 'acceptance rate variance', sub: 'across PSPs in the same market — real money on the table.' },
+  { k: '20–40%', l: 'lift on local methods', sub: 'iDEAL, Pix, UPI, Twint vs card-only checkouts.' },
+  { k: '1–2 quarters', l: 'to hand-roll this', sub: 'and it grows brittle the moment the next market lands.' },
+  { k: '0¢', l: 'per-transaction cut', sub: 'Tenderlane is a library, not a service. Never in the payment path.' },
+];
+
+const whenNot = [
+  { l: 'You have one PSP and you will never need another.', copy: 'Use Stripe Elements directly. Routing layers are overhead until they aren\'t.' },
+  { l: "You want a hosted checkout you don't maintain.", copy: 'Pay Stripe Checkout, Paddle, or LemonSqueezy. They\'re great at that.' },
+  { l: 'You need PCI scope reduction via a hosted vault.', copy: 'Spreedly or Basis Theory. Tenderlane is not a vault.' },
+  { l: 'You run an enterprise procurement on a 9-month cycle.', copy: 'OSS without a vendor backstop won\'t pass your security review. Primer or Gr4vy will.' },
+];
+---
+
+<Layout title="Why Tenderlane?" active="why" description="Why the empty quadrant matters: OSS, frontend-reactive, typed payment orchestration.">
+  <section class="why-hero">
+    <div class="container" style="max-width:1100px">
+      <div class="t-eyebrow" style="margin-bottom:22px"><span class="dot"></span>Why Tenderlane</div>
+      <h1 class="t-display why-headline">
+        Every team that ships in more than one country
+        <span style="color:var(--text-2)"> ends up writing </span>
+        <span style="color:var(--accent)">this layer themselves.</span>
+      </h1>
+      <p class="t-body-lg" style="margin:0;max-width:720px">
+        The single-PSP integration was easy. Then Switzerland needed Twint, the Netherlands needed iDEAL, Brazil needed Pix, and the conditional logic spilled into every screen of the checkout. Tenderlane is what we wished existed the second time we wrote this.
+      </p>
+    </div>
+  </section>
+
+  <Section
+    eyebrow="The landscape"
+    title="There's a gap in OSS payments. Tenderlane fills it."
+    kicker='Plot every meaningful payment SDK on two axes — open vs closed, backend-orchestration vs frontend-reactive — and the top-right quadrant is empty. Was empty.'
+  >
+    <div class="quadrant-grid">
+      <div class="quadrant-box">
+        <svg viewBox={`0 0 ${W} ${H}`} width="100%">
+          <rect x={xMap(0)} y={pad} width={xMap(1) - xMap(0)} height={yMap(0) - pad} fill="color-mix(in oklab, var(--accent) 6%, transparent)"></rect>
+          <line x1={pad} y1={yMap(0)} x2={W - pad} y2={yMap(0)} stroke="var(--line-2)" stroke-dasharray="3 3"></line>
+          <line x1={xMap(0)} y1={pad} x2={xMap(0)} y2={H - pad} stroke="var(--line-2)" stroke-dasharray="3 3"></line>
+          <rect x={pad} y={pad} width={W - pad * 2} height={H - pad * 2} fill="none" stroke="var(--line-2)"></rect>
+          <g font-family="var(--font-mono)" font-size="11" fill="var(--text-2)" letter-spacing="0.06em">
+            <text x={pad} y={pad - 18}>↑ OSS</text>
+            <text x={pad} y={H - pad + 30}>↓ CLOSED SAAS</text>
+            <text x={W - pad} y={H - 20} text-anchor="end">frontend-reactive →</text>
+            <text x={pad} y={H - 20}>← backend orchestration</text>
+          </g>
+          <g font-family="var(--font-mono)" font-size="10" fill="var(--text-3)">
+            <text x={xMap(-0.95)} y={yMap(0.95)}>OSS · backend</text>
+            <text x={xMap(0.05)} y={yMap(0.95)} fill="var(--accent)">OSS · frontend-reactive</text>
+            <text x={xMap(-0.95)} y={yMap(-0.92)}>SaaS · backend</text>
+            <text x={xMap(0.05)} y={yMap(-0.92)}>SaaS · frontend</text>
+          </g>
+          {competitors.map((c) => {
+            const cx = xMap(c.x);
+            const cy = yMap(c.y);
+            return (
+              <g>
+                {c.accent && (
+                  <circle cx={cx} cy={cy} r="20" fill="var(--accent-glow)" opacity="0.4">
+                    <animate attributeName="r" values="14;28;14" dur="3s" repeatCount="indefinite"></animate>
+                    <animate attributeName="opacity" values="0.4;0;0.4" dur="3s" repeatCount="indefinite"></animate>
+                  </circle>
+                )}
+                <circle cx={cx} cy={cy} r={c.accent ? 7 : 4.5} fill={c.accent ? 'var(--accent)' : 'var(--text-2)'} stroke={c.accent ? 'var(--accent)' : 'transparent'} stroke-width="2"></circle>
+                <text x={cx + 12} y={cy + 4} font-family="var(--font-mono)" font-size={c.accent ? 13 : 11} font-weight={c.accent ? 600 : 400} fill={c.accent ? 'var(--accent)' : 'var(--text-1)'}>{c.label}</text>
+                {c.note && (
+                  <text x={cx + 12} y={cy + 18} font-family="var(--font-mono)" font-size="9" fill="var(--text-3)">{c.note}</text>
+                )}
+              </g>
+            );
+          })}
+        </svg>
+      </div>
+      <div class="quadrant-aside">
+        <div class="t-cap" style="margin-bottom:14px;color:var(--text-3)">The empty quadrant</div>
+        <h3 class="t-display t-h3" style="margin:0 0 16px">OSS, frontend-reactive, typed.</h3>
+        <p class="t-body" style="margin:0 0 24px;font-size:14px">
+          Hyperswitch is OSS — but server-side Rust. Primer is reactive — but closed SaaS that sits in your payment path. We needed both halves in one library.
+        </p>
+        <div class="our-take">
+          <div class="t-cap" style="color:var(--accent);margin-bottom:8px">OUR TAKE</div>
+          <p style="margin:0;font-size:13px;color:var(--text-1);line-height:1.5">
+            The right place for routing decisions is the browser, not a third party's API. If you're going to own your checkout, own the orchestration too.
+          </p>
+        </div>
+      </div>
+    </div>
+  </Section>
+
+  <Section
+    alt={true}
+    eyebrow="The matrix"
+    title="What each tool actually does."
+    kicker="No 'enterprise' / 'pro' / 'contact us' columns. The cells are functional, not commercial."
+  >
+    <div class="matrix-wrap">
+      <table class="matrix">
+        <thead>
+          <tr>
+            <th class="th-label">capability</th>
+            {matrixCols.map((c) => (
+              <th data-accent={c.accent ? 'true' : 'false'}>{c.label}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {matrixRows.map((r, ri) => (
+            <tr data-zebra={ri % 2}>
+              <td class="td-label">{r.l}</td>
+              {r.v.map((val, vi) => (
+                <td data-accent={matrixCols[vi].accent ? 'true' : 'false'}>
+                  {val === 'yes' && <span style="color:var(--accent);display:inline-flex"><Icon name="check" size={12} /></span>}
+                  {val === 'no' && <span style="color:var(--text-3)"><Icon name="x" size={11} /></span>}
+                  {val === 'partial' && <span style="color:var(--warn)"><Icon name="minus" size={11} /></span>}
+                  {val === 'maybe' && <span style="color:var(--text-3);font-family:var(--font-mono);font-size:11px">?</span>}
+                  {val === '—' && <span style="color:var(--text-3)">—</span>}
+                  {!['yes', 'no', 'partial', 'maybe', '—'].includes(val) && (
+                    <span style="font-family:var(--font-mono);font-size:11px;color:var(--text-1)">{val}</span>
+                  )}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </Section>
+
+  <Section
+    eyebrow="The business case"
+    title="Routing is not a refactor. It's revenue."
+    kicker="The cost of a single-PSP checkout in a multi-region business isn't engineering time — it's authorizations that don't happen because the customer didn't see the local method they wanted."
+  >
+    <div class="stats">
+      {stats.map((i) => (
+        <div class="stat-card">
+          <div class="stat-k">{i.k}</div>
+          <div class="stat-l">{i.l}</div>
+          <div class="stat-sub">{i.sub}</div>
+        </div>
+      ))}
+    </div>
+    <div class="build-vs-buy">
+      <div>
+        <div class="t-cap" style="margin-bottom:16px;color:var(--text-3)">BUILD VS BUY · THE THIRD OPTION</div>
+        <h3 class="t-display t-h3" style="margin:0 0 16px">
+          Don't build it. <span style="color:var(--text-2)">Don't buy it.</span><br />
+          <span style="color:var(--accent)">Import it.</span>
+        </h3>
+        <p class="t-body" style="margin:0;font-size:15px">
+          Building this in-house costs 1–2 engineer-quarters and a perpetual maintenance tax. Buying it from Primer or Gr4vy costs a per-transaction cut and a migration off in 3 years. Tenderlane is an OSS library — `pnpm add`, MIT, your code, your repo.
+        </p>
+      </div>
+      <div class="tco">
+        <div style="color:var(--text-3);margin-bottom:8px">// total cost of ownership · year 1</div>
+        {[
+          ['Build in-house', '$240k eng · ongoing maint.', 'var(--err)'],
+          ['Primer / Gr4vy', '0.4–0.8% per transaction', 'var(--warn)'],
+          ['Tenderlane', '0¢ · 1 npm install', 'var(--accent)'],
+        ].map(([l, v, c]) => (
+          <div class="tco-row">
+            <span style="color:var(--text-1)">{l}</span>
+            <span style={`color:${c}`}>{v}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  </Section>
+
+  <Section eyebrow="Honest limits" title="When Tenderlane is the wrong call." kicker="If one of these is you, ship something else. We'd rather you pick the right tool than pick us.">
+    <div class="when-grid">
+      {whenNot.map((c) => (
+        <div class="when-card">
+          <div class="when-label">
+            <span style="color:var(--text-3)"><Icon name="x" size={11} /></span>
+            <span class="t-cap">don't use tenderlane if</span>
+          </div>
+          <div class="when-title">{c.l}</div>
+          <p class="t-body" style="margin:0;font-size:14px">{c.copy}</p>
+        </div>
+      ))}
+    </div>
+  </Section>
+
+  <CTA />
+</Layout>
+
+<style>
+  .why-hero {
+    padding: 80px var(--side-pad) 60px;
+  }
+  .why-headline {
+    font-size: clamp(40px, 6vw, 76px);
+    line-height: 0.98;
+    margin: 0 0 28px;
+    letter-spacing: -0.032em;
+    max-width: 920px;
+  }
+  .quadrant-grid {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 56px;
+    align-items: start;
+  }
+  .quadrant-box {
+    background: var(--bg-1);
+    border: 1px solid var(--line-2);
+    border-radius: 14px;
+    padding: 32px;
+  }
+  .quadrant-aside {
+    position: sticky;
+    top: 100px;
+  }
+  .our-take {
+    padding: 14px 16px;
+    border-radius: 10px;
+    background: color-mix(in oklab, var(--accent) 8%, var(--bg-1));
+    border: 1px solid var(--accent-soft);
+  }
+  .matrix-wrap {
+    border-radius: 14px;
+    background: var(--bg-0);
+    border: 1px solid var(--line-2);
+    overflow: auto;
+  }
+  .matrix {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    min-width: 720px;
+  }
+  .matrix thead th {
+    padding: 18px 16px;
+    text-align: center;
+    border-bottom: 1px solid var(--line-2);
+    font-weight: 500;
+    color: var(--text-1);
+    font-family: var(--font-mono);
+  }
+  .matrix .th-label {
+    text-align: left;
+    color: var(--text-3);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 18px 24px;
+  }
+  .matrix th[data-accent='true'] {
+    color: var(--accent);
+    font-weight: 600;
+    background: color-mix(in oklab, var(--accent) 6%, transparent);
+    border-left: 1px solid var(--accent-soft);
+    border-right: 1px solid var(--accent-soft);
+  }
+  .matrix td {
+    padding: 14px 16px;
+    text-align: center;
+    color: var(--text-1);
+    border-bottom: 1px solid var(--line-1);
+  }
+  .matrix .td-label {
+    text-align: left;
+    color: var(--text-0);
+    padding: 14px 24px;
+  }
+  .matrix td[data-accent='true'] {
+    color: var(--accent);
+    background: color-mix(in oklab, var(--accent) 6%, transparent);
+    border-left: 1px solid var(--accent-soft);
+    border-right: 1px solid var(--accent-soft);
+  }
+  .matrix tr[data-zebra='1'] {
+    background: var(--bg-1);
+  }
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 24px;
+  }
+  .stat-card {
+    padding: 28px;
+    border-radius: 14px;
+    background: var(--bg-1);
+    border: 1px solid var(--line-2);
+  }
+  .stat-k {
+    font-size: 52px;
+    font-family: var(--font-display);
+    font-weight: 500;
+    letter-spacing: -0.03em;
+    line-height: 1;
+    color: var(--accent);
+    margin-bottom: 12px;
+  }
+  .stat-l {
+    font-size: 14px;
+    color: var(--text-0);
+    margin-bottom: 6px;
+    font-weight: 500;
+  }
+  .stat-sub {
+    font-size: 13px;
+    color: var(--text-2);
+  }
+  .build-vs-buy {
+    margin-top: 64px;
+    padding: 40px;
+    border-radius: 14px;
+    background: var(--bg-1);
+    border: 1px solid var(--line-2);
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 48px;
+  }
+  .tco {
+    background: var(--code-bg);
+    border-radius: 10px;
+    padding: 20px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--code-fg);
+  }
+  .tco-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-top: 1px solid var(--line-1);
+  }
+  .when-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+  }
+  .when-card {
+    padding: 28px;
+    border-radius: 14px;
+    background: var(--bg-1);
+    border: 1px dashed var(--line-3);
+  }
+  .when-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .when-title {
+    font-size: 18px;
+    font-weight: 500;
+    color: var(--text-0);
+    margin-bottom: 10px;
+    letter-spacing: -0.01em;
+  }
+  @media (max-width: 1000px) {
+    .quadrant-grid {
+      grid-template-columns: 1fr;
+    }
+    .build-vs-buy {
+      grid-template-columns: 1fr;
+      gap: 24px;
+      padding: 24px;
+    }
+    .stats {
+      grid-template-columns: repeat(2, 1fr);
+    }
+    .when-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

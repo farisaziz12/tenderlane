@@ -1,0 +1,86 @@
+---
+import Icon from '../Icons.astro';
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+---
+
+<section class="cta-section">
+  <div class="cta-glow"></div>
+  <div class="cta-inner">
+    <h2 class="t-display t-h2" style="margin:0 0 24px">
+      Don't request a demo.<br />
+      Just <span style="color:var(--accent)">read the code</span>.
+    </h2>
+    <p class="t-body-lg" style="margin:0 auto 36px;max-width:560px">
+      MIT. On npm. On GitHub. No sales call. No "talk to us." If you have an hour and a Stripe account, you can have a multi-region routed checkout running this afternoon.
+    </p>
+    <div class="cta-buttons">
+      <a href={`${base}/docs/getting-started/quick-start`} class="btn btn-primary">
+        Start the quickstart <Icon name="arrow" size={12} />
+      </a>
+      <a href="https://github.com/farisaziz12/tenderlane" class="btn btn-ghost">
+        <Icon name="github" size={16} /> GitHub
+      </a>
+    </div>
+    <div class="install-bar">
+      <span style="color:var(--text-3)">$</span>
+      <span><span style="color:var(--accent)">pnpm</span> add @tenderlane/core @tenderlane/react @tenderlane/stripe</span>
+      <span style="width:1px;height:14px;background:var(--line-2)"></span>
+      <button class="btn btn-link" style="padding:0;color:var(--text-2)" aria-label="Copy install command">
+        <Icon name="copy" size={13} />
+      </button>
+    </div>
+  </div>
+</section>
+
+<style>
+  .cta-section {
+    padding: 140px var(--side-pad);
+    border-top: 1px solid var(--line-1);
+    background: var(--bg-0);
+    position: relative;
+    overflow: hidden;
+  }
+  .cta-glow {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(
+      ellipse 60% 50% at 50% 100%,
+      color-mix(in oklab, var(--accent) 18%, transparent),
+      transparent 70%
+    );
+    pointer-events: none;
+  }
+  .cta-inner {
+    max-width: 760px;
+    margin: 0 auto;
+    text-align: center;
+    position: relative;
+  }
+  .cta-buttons {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 32px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .install-bar {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 18px;
+    background: var(--bg-1);
+    border: 1px solid var(--line-2);
+    border-radius: 8px;
+    font: 500 14px var(--font-mono);
+    color: var(--text-1);
+    flex-wrap: wrap;
+    max-width: 100%;
+    overflow-x: auto;
+  }
+  @media (max-width: 900px) {
+    .cta-section {
+      padding: 96px var(--side-pad);
+    }
+  }
+</style>

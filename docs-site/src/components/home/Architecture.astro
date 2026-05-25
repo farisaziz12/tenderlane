@@ -1,0 +1,194 @@
+---
+import Section from '../Section.astro';
+
+const layers = [
+  { l: 'core', desc: 'Types, rules router, auto router, middleware, errors, catalog, server handler. Zero runtime deps.', file: '@tenderlane/core' },
+  { l: 'client', desc: 'Framework-agnostic headless state machine. idle → ready → submitting → success.', file: '@tenderlane/client' },
+  { l: 'bindings', desc: 'React provider + hooks via useSyncExternalStore. Vue/Svelte planned.', file: '@tenderlane/react' },
+  { l: 'adapters', desc: 'Per-PSP. Stripe and Polar today. Browser SDK lazy-loaded only when the active route needs it.', file: '@tenderlane/stripe · @tenderlane/polar' },
+];
+---
+
+<Section
+  alt={true}
+  eyebrow="Architecture"
+  title="Four layers. Each one swappable. Each one MIT."
+  kicker="A core that knows nothing about your framework, a headless state machine on top, framework bindings, and provider adapters. TanStack-inspired — and the browser bundle pays only for what each route uses."
+>
+  <div class="arch-diagram">
+    <svg viewBox="0 0 1080 360" width="100%" style="display:block">
+      <defs>
+        <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+          <path d="M0 0 L10 5 L0 10 z" fill="var(--line-4)"></path>
+        </marker>
+        <marker id="arrA" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+          <path d="M0 0 L10 5 L0 10 z" fill="var(--accent)"></path>
+        </marker>
+      </defs>
+
+      <g transform="translate(40 30)" font-family="var(--font-mono)" font-size="11">
+        <text x="0" y="0" fill="var(--text-3)" letter-spacing="0.08em">YOUR APP STATE</text>
+        {['country', 'currency', 'cart.amount', 'user.tier', 'ab.variant'].map((k, i) => (
+          <g transform={`translate(0 ${14 + i * 28})`}>
+            <rect width="140" height="22" rx="4" fill="var(--bg-2)" stroke="var(--line-2)"></rect>
+            <text x="10" y="15" fill="var(--text-1)">{k}</text>
+            <circle cx="130" cy="11" r="2.5" fill="var(--accent)">
+              <animate attributeName="opacity" values="0.3;1;0.3" dur={`${1.4 + i * 0.15}s`} repeatCount="indefinite"></animate>
+            </circle>
+          </g>
+        ))}
+      </g>
+
+      <g transform="translate(240 30)" font-family="var(--font-mono)" font-size="11">
+        <text x="0" y="0" fill="var(--text-3)" letter-spacing="0.08em">L1 · CORE</text>
+        {[
+          { t: '@tenderlane/core', sub: 'types · errors', accent: true },
+          { t: 'rulesRouter', sub: 'first-match-wins' },
+          { t: 'autoRouter', sub: 'remote delegate' },
+          { t: 'middleware', sub: 'onEvaluated · onSuccess' },
+        ].map((b, i) => (
+          <g transform={`translate(0 ${14 + i * 50})`}>
+            <rect
+              width="180"
+              height="40"
+              rx="6"
+              fill={b.accent ? 'color-mix(in oklab, var(--accent) 12%, var(--bg-1))' : 'var(--bg-1)'}
+              stroke={b.accent ? 'var(--accent-soft)' : 'var(--line-2)'}
+            ></rect>
+            <text x="14" y="17" fill={b.accent ? 'var(--accent)' : 'var(--text-0)'}>{b.t}</text>
+            <text x="14" y="32" fill="var(--text-2)" font-size="9.5">{b.sub}</text>
+          </g>
+        ))}
+      </g>
+
+      <g transform="translate(470 30)" font-family="var(--font-mono)" font-size="11">
+        <text x="0" y="0" fill="var(--text-3)" letter-spacing="0.08em">L2 · CLIENT</text>
+        <g transform="translate(0 14)">
+          <rect width="200" height="220" rx="8" fill="var(--bg-1)" stroke="var(--line-2)"></rect>
+          <text x="14" y="20" fill="var(--text-0)">client (state machine)</text>
+          <text x="14" y="36" fill="var(--text-2)" font-size="9.5">framework-agnostic</text>
+          <g transform="translate(14 56)" font-size="10">
+            {['idle', 'evaluating', 'ready', 'preparing', 'prepared', 'submitting', 'success / error'].map((s, i) => (
+              <g transform={`translate(0 ${i * 22})`}>
+                <rect x="-2" y="-10" width="170" height="18" rx="3"
+                  fill={i === 2 ? 'color-mix(in oklab, var(--accent) 14%, transparent)' : 'transparent'}
+                  stroke={i === 2 ? 'var(--accent-soft)' : 'transparent'}
+                ></rect>
+                <circle cx="6" cy="-2" r="3" fill={i === 2 ? 'var(--accent)' : 'var(--line-3)'}></circle>
+                <text x="18" y="2" fill={i === 2 ? 'var(--accent)' : 'var(--text-1)'}>{s}</text>
+              </g>
+            ))}
+          </g>
+        </g>
+      </g>
+
+      <g transform="translate(700 30)" font-family="var(--font-mono)" font-size="11">
+        <text x="0" y="0" fill="var(--text-3)" letter-spacing="0.08em">L3 · BINDINGS</text>
+        {[
+          { t: 'react', sub: 'TenderlaneProvider' },
+          { t: 'vue', sub: 'planned', dim: true },
+          { t: 'svelte', sub: 'planned', dim: true },
+          { t: 'vanilla', sub: 'use client directly' },
+        ].map((b, i) => (
+          <g transform={`translate(0 ${14 + i * 50})`}>
+            <rect width="160" height="40" rx="6" fill="var(--bg-1)"
+              stroke={b.dim ? 'var(--line-1)' : 'var(--line-2)'}
+              stroke-dasharray={b.dim ? '4 4' : ''}
+            ></rect>
+            <text x="14" y="17" fill={b.dim ? 'var(--text-3)' : 'var(--text-0)'}>{b.t}</text>
+            <text x="14" y="32" fill="var(--text-2)" font-size="9.5">{b.sub}</text>
+          </g>
+        ))}
+      </g>
+
+      <g transform="translate(900 30)" font-family="var(--font-mono)" font-size="11">
+        <text x="0" y="0" fill="var(--text-3)" letter-spacing="0.08em">L4 · ADAPTERS</text>
+        {[
+          { t: 'stripe', sub: 'shipped · v0.4' },
+          { t: 'polar', sub: 'shipped · v0.4' },
+          { t: 'adyen', sub: 'planned', dim: true },
+          { t: 'paypal', sub: 'planned', dim: true },
+          { t: 'your-psp', sub: 'write the adapter', dim: true },
+        ].map((b, i) => (
+          <g transform={`translate(0 ${14 + i * 36})`}>
+            <rect width="140" height="28" rx="5" fill="var(--bg-1)"
+              stroke={b.dim ? 'var(--line-1)' : 'var(--line-2)'}
+              stroke-dasharray={b.dim ? '4 4' : ''}
+            ></rect>
+            <text x="12" y="12" fill={b.dim ? 'var(--text-3)' : 'var(--text-0)'}>{b.t}</text>
+            <text x="12" y="23" fill="var(--text-2)" font-size="9">{b.sub}</text>
+          </g>
+        ))}
+      </g>
+
+      <g stroke="var(--line-3)" fill="none" stroke-width="1">
+        <path d="M180 90 H 240" marker-end="url(#arr)"></path>
+        <path d="M420 90 H 470" marker-end="url(#arrA)" stroke="var(--accent)"></path>
+        <path d="M670 100 H 700" marker-end="url(#arr)"></path>
+        <path d="M860 100 H 900" marker-end="url(#arr)"></path>
+      </g>
+
+      <g transform="translate(40 290)">
+        <text x="0" y="0" font-family="var(--font-mono)" font-size="11" fill="var(--text-3)" letter-spacing="0.08em">
+          SERVER · isomorphic Web Request/Response handler
+        </text>
+        <g transform="translate(0 14)">
+          <rect width="1000" height="56" rx="8" fill="var(--bg-2)" stroke="var(--line-2)"></rect>
+          <text x="20" y="22" font-family="var(--font-mono)" font-size="12" fill="var(--text-0)">@tenderlane/core/server</text>
+          <text x="20" y="40" font-family="var(--font-mono)" font-size="10" fill="var(--text-2)">accepts {`{ provider, action, payload }`} — runs anywhere Web APIs run</text>
+          <g transform="translate(360 14)" font-family="var(--font-mono)" font-size="10">
+            {['Next.js', 'Bun', 'Deno', 'CF Workers', 'Vercel', 'SvelteKit'].map((p, i) => (
+              <g transform={`translate(${i * 105} 0)`}>
+                <rect width="98" height="26" rx="4" fill="var(--bg-1)" stroke="var(--line-2)"></rect>
+                <text x="49" y="17" text-anchor="middle" fill="var(--text-1)">{p}</text>
+              </g>
+            ))}
+          </g>
+        </g>
+      </g>
+    </svg>
+  </div>
+
+  <div class="layer-grid">
+    {layers.map((c, i) => (
+      <div class="layer">
+        <div class="t-cap" style="color:var(--accent);margin-bottom:10px">L{i + 1} · {c.l}</div>
+        <div style="font-family:var(--font-mono);font-size:13px;margin-bottom:12px">{c.file}</div>
+        <p class="t-body" style="margin:0;font-size:13px">{c.desc}</p>
+      </div>
+    ))}
+  </div>
+  <p class="arch-foot">* The browser bundle only loads provider SDKs after the active route resolves to that provider — pure redirect flows can ship without any PSP JS at all.</p>
+</Section>
+
+<style>
+  .arch-diagram {
+    padding: 32px;
+    border-radius: 14px;
+    background: var(--bg-0);
+    border: 1px solid var(--line-2);
+    position: relative;
+    overflow-x: auto;
+  }
+  .layer-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 24px;
+    margin-top: 56px;
+  }
+  .layer {
+    border-top: 1px solid var(--line-2);
+    padding-top: 20px;
+  }
+  .arch-foot {
+    font-size: 12px;
+    color: var(--text-3);
+    margin-top: 24px;
+    font-family: var(--font-mono);
+  }
+  @media (max-width: 900px) {
+    .layer-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+</style>

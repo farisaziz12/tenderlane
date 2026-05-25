@@ -1,0 +1,597 @@
+---
+import Icon from '../Icons.astro';
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+
+const tagline =
+  'Reactive payment orchestration for modern web apps. The right provider, the right methods, the right flow — picked in the browser, the moment your app knows enough to decide. Headless, typed, MIT.';
+---
+
+<section class="hero glow-bg">
+  <div class="container hero-grid">
+    <div class="hero-copy">
+      <div class="hero-badges">
+        <span class="badge alpha"><span class="dot"></span>v0.4.0 · pre-1.0 alpha</span>
+        <span class="badge"><span style="color:var(--text-2)">MIT</span></span>
+        <a href="https://github.com/farisaziz12/tenderlane" class="badge link-badge">
+          frontend-first orchestration <Icon name="arrowExt" size={11} />
+        </a>
+      </div>
+      <h1 class="t-display t-h1 hero-headline">
+        One checkout.<br />
+        <span style="color:var(--accent)">Every market.</span><br />
+        Zero vendor lock.
+      </h1>
+      <p class="t-body-lg hero-tag">{tagline}</p>
+      <div class="hero-cta">
+        <a href={`${base}/docs/getting-started/quick-start`} class="btn btn-primary">
+          Read the 5-minute quickstart <Icon name="arrow" size={12} />
+        </a>
+        <a href={`${base}/why`} class="btn btn-ghost">Why Tenderlane</a>
+      </div>
+      <div class="install-pill">
+        <span style="color:var(--text-3)">$</span>
+        <span><span style="color:var(--accent)">pnpm</span> add @tenderlane/core @tenderlane/react @tenderlane/stripe</span>
+        <span style="width:1px;height:14px;background:var(--line-2)"></span>
+        <button class="btn btn-link" style="padding:0;color:var(--text-2)" aria-label="Copy install command">
+          <Icon name="copy" size={13} />
+        </button>
+      </div>
+    </div>
+    <div class="hero-demo-wrap">
+      <div class="hero-demo-glow"></div>
+      <div class="hero-demo" id="hero-demo">
+        {/* Left: rules */}
+        <div class="rules-pane">
+          <div class="rules-head">
+            <span style="color:var(--text-2);font-size:11px">routing.ts</span>
+            <span class="live-dot">re-evaluating</span>
+          </div>
+          <div class="rules-comment">// context</div>
+          <div class="rules-ctx">
+            <span class="tok-pu">{'{ '}</span><span class="tok-p">country</span><span class="tok-pu">:</span>
+            <span class="country-token">
+              <span>'</span>
+              <select id="country-select" aria-label="Choose country">
+                <option value="US">US</option>
+                <option value="CH" selected>CH</option>
+                <option value="NL">NL</option>
+                <option value="DE">DE</option>
+                <option value="BR">BR</option>
+                <option value="JP">JP</option>
+              </select>
+              <span>'</span>
+            </span>
+            <span class="tok-pu">, </span>
+            <span class="tok-p">currency</span><span class="tok-pu">:</span>
+            <span class="tok-s">'<span id="currency-out">chf</span>'</span>
+            <span class="tok-pu">, </span>
+            <span class="tok-p">amount</span><span class="tok-pu">:</span>
+            <span class="tok-n">2900</span>
+            <span class="tok-pu">{' }'}</span>
+          </div>
+          <div class="rules-comment">// rules · first-match-wins</div>
+          <div class="rules-list" id="rules-list"></div>
+          <div class="rules-comment">// fallback</div>
+          <div class="rules-fallback" id="rules-fallback">
+            <span class="tok-pu">{'{ '}</span><span class="tok-p">flow</span><span class="tok-pu">:</span>
+            <span class="tok-s">'checkout-session'</span><span class="tok-pu">, </span>
+            <span class="tok-p">methods</span><span class="tok-pu">:</span> <span class="tok-pu">[</span>
+            <span class="tok-s">'card'</span><span class="tok-pu">]</span><span class="tok-pu">{' }'}</span>
+          </div>
+        </div>
+        {/* Right: live UI */}
+        <div class="ui-pane">
+          <div class="ui-pane-head">
+            <div>
+              <div class="ui-pane-eyebrow">Total · <span id="cur-label">CHF</span></div>
+              <div class="ui-amount" id="ui-amount">CHF 29.00</div>
+            </div>
+            <span class="route-badge">
+              <span class="dot"></span>ROUTE · <span id="route-id">ch-inline</span>
+            </span>
+          </div>
+          <div class="methods" id="methods"></div>
+          <div class="ui-foot">
+            <div class="ui-grid">
+              <div>
+                <div class="ui-grid-label">Flow</div>
+                <div class="ui-grid-value" id="flow-out">payment-intent</div>
+              </div>
+              <div>
+                <div class="ui-grid-label">Provider</div>
+                <div class="ui-grid-value">stripe</div>
+              </div>
+            </div>
+            <button class="pay-btn" id="pay-btn">Pay CHF 29.00</button>
+          </div>
+        </div>
+      </div>
+      <div class="try-hint">
+        <span class="hint-dot"></span>
+        Try it · change country
+      </div>
+    </div>
+  </div>
+  <div class="container trusted">
+    <span class="t-cap">Currently shipping with</span>
+    <div class="logos">
+      {['Stripe', 'Polar', 'React', 'Next.js', 'Bun', 'Deno', 'Vite'].map((p) => (
+        <span class="logo-name">{p}</span>
+      ))}
+    </div>
+    <a href={`${base}/docs`} class="roadmap-link">docs →</a>
+  </div>
+</section>
+
+<script>
+  type Currency = 'usd' | 'chf' | 'eur' | 'brl' | 'jpy';
+  type Country = 'US' | 'CH' | 'NL' | 'DE' | 'BR' | 'JP';
+
+  interface Rule {
+    id: string;
+    country: Country;
+    currency: Currency;
+    methods: string[];
+    flow: string;
+  }
+
+  const rules: Rule[] = [
+    { id: 'ch-inline', country: 'CH', currency: 'chf', flow: 'payment-intent', methods: ['card', 'twint'] },
+    { id: 'nl-ideal', country: 'NL', currency: 'eur', flow: 'payment-intent', methods: ['card', 'ideal', 'sepa'] },
+    { id: 'br-pix', country: 'BR', currency: 'brl', flow: 'payment-intent', methods: ['card', 'pix'] },
+    { id: 'eu-inline', country: 'DE', currency: 'eur', flow: 'payment-intent', methods: ['card', 'sepa', 'klarna'] },
+  ];
+
+  const countryToCurrency: Record<Country, Currency> = {
+    US: 'usd',
+    CH: 'chf',
+    NL: 'eur',
+    DE: 'eur',
+    BR: 'brl',
+    JP: 'jpy',
+  };
+
+  const methodMeta: Record<string, { label: string; sub: string; color: string; letter: string; dark?: boolean }> = {
+    card: { label: 'Card', sub: 'Visa · Mastercard · Amex', color: '#3b3f49', letter: 'C', dark: false },
+    twint: { label: 'TWINT', sub: 'Pay with your phone (CH)', color: '#ED1C24', letter: 'T' },
+    ideal: { label: 'iDEAL', sub: 'Dutch bank transfer', color: '#CC0066', letter: 'i' },
+    sepa: { label: 'SEPA Direct', sub: 'Bank debit (EU)', color: '#0033A0', letter: 'S' },
+    klarna: { label: 'Klarna', sub: 'Pay later or in 3', color: '#FFB3C7', letter: 'K', dark: true },
+    pix: { label: 'Pix', sub: 'Instant transfer (BR)', color: '#32BCAD', letter: 'P' },
+  };
+
+  const formatTotal = (currency: Currency): string => {
+    switch (currency) {
+      case 'chf':
+        return 'CHF 29.00';
+      case 'eur':
+        return '€29.00';
+      case 'brl':
+        return 'R$ 145.00';
+      case 'jpy':
+        return '¥3,200';
+      default:
+        return '$29.00';
+    }
+  };
+
+  const escape = (s: string) => s.replace(/[<>&]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c] ?? c));
+
+  const renderRules = (active: string) => {
+    const list = document.getElementById('rules-list');
+    if (!list) return;
+    list.innerHTML = rules
+      .map((rule) => {
+        const isActive = rule.id === active;
+        const methodsList = rule.methods
+          .map(
+            (method, index) =>
+              `${index > 0 ? '<span class="tok-pu">, </span>' : ''}<span class="tok-s">'${method}'</span>`,
+          )
+          .join('');
+        return `
+          <div class="rule${isActive ? ' rule-active' : ''}">
+            <div><span class="tok-pu">{ </span><span class="tok-p">id</span><span class="tok-pu">:</span> <span class="tok-s">'${rule.id}'</span><span class="tok-pu">,</span></div>
+            <div style="padding-left:16px"><span class="tok-p">when</span><span class="tok-pu">:</span> <span class="tok-pu">{ </span><span class="tok-p">country</span><span class="tok-pu">:</span> <span class="tok-s">'${rule.country}'</span><span class="tok-pu">, </span><span class="tok-p">currency</span><span class="tok-pu">:</span> <span class="tok-s">'${rule.currency}'</span><span class="tok-pu"> },</span></div>
+            <div style="padding-left:16px"><span class="tok-p">use</span><span class="tok-pu">:</span> <span class="tok-pu">{ </span><span class="tok-p">flow</span><span class="tok-pu">:</span> <span class="tok-s">'${rule.flow}'</span><span class="tok-pu">, </span><span class="tok-p">methods</span><span class="tok-pu">:</span> <span class="tok-pu">[</span>${methodsList}<span class="tok-pu">] } },</span></div>
+          </div>`;
+      })
+      .join('');
+  };
+
+  const renderMethods = (methods: string[]) => {
+    const node = document.getElementById('methods');
+    if (!node) return;
+    node.innerHTML = methods
+      .map((method, index) => {
+        const meta = methodMeta[method] ?? {
+          label: method,
+          sub: '',
+          color: '#888',
+          letter: method[0]?.toUpperCase() ?? '?',
+        };
+        const selected = index === 0;
+        return `
+          <label class="method${selected ? ' method-selected' : ''}">
+            <span class="radio">${selected ? '<span></span>' : ''}</span>
+            <span class="glyph" style="background:${meta.color};color:${meta.dark ? '#000' : '#fff'}">${meta.letter}</span>
+            <span class="method-text">
+              <span class="method-label">${escape(meta.label)}</span>
+              <span class="method-sub">${escape(meta.sub)}</span>
+            </span>
+          </label>`;
+      })
+      .join('');
+  };
+
+  const update = () => {
+    const select = document.getElementById('country-select') as HTMLSelectElement | null;
+    if (!select) return;
+    const country = select.value as Country;
+    const currency = countryToCurrency[country];
+    const match = rules.find((rule) => rule.country === country && rule.currency === currency);
+    const route = match ?? {
+      id: 'fallback',
+      flow: 'checkout-session',
+      methods: ['card'],
+    };
+
+    const currencyOut = document.getElementById('currency-out');
+    const curLabel = document.getElementById('cur-label');
+    const uiAmount = document.getElementById('ui-amount');
+    const routeId = document.getElementById('route-id');
+    const flowOut = document.getElementById('flow-out');
+    const fallback = document.getElementById('rules-fallback');
+    const payBtn = document.getElementById('pay-btn');
+
+    if (currencyOut) currencyOut.textContent = currency;
+    if (curLabel) curLabel.textContent = currency.toUpperCase();
+    const total = formatTotal(currency);
+    if (uiAmount) uiAmount.textContent = total;
+    if (payBtn) payBtn.textContent = `Pay ${total}`;
+    if (routeId) routeId.textContent = route.id;
+    if (flowOut) flowOut.textContent = route.flow;
+    if (fallback) fallback.style.opacity = match ? '0.55' : '1';
+
+    renderRules(route.id);
+    renderMethods(route.methods);
+  };
+
+  const select = document.getElementById('country-select');
+  select?.addEventListener('change', update);
+  update();
+</script>
+
+<style>
+  .hero {
+    padding: 64px var(--side-pad) 100px;
+    position: relative;
+  }
+  .hero-grid {
+    display: grid;
+    grid-template-columns: 1.1fr 1fr;
+    gap: 64px;
+    align-items: center;
+  }
+  .hero-badges {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 28px;
+    flex-wrap: wrap;
+  }
+  .link-badge {
+    text-decoration: none;
+    color: var(--text-1);
+  }
+  .hero-headline {
+    margin: 0 0 24px;
+  }
+  .hero-tag {
+    margin: 0 0 36px;
+    max-width: 540px;
+  }
+  .hero-cta {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 28px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .install-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    background: var(--bg-1);
+    border: 1px solid var(--line-2);
+    border-radius: 8px;
+    font: 500 13px var(--font-mono);
+    color: var(--text-1);
+    max-width: 100%;
+    overflow-x: auto;
+  }
+  .hero-demo-wrap {
+    position: relative;
+  }
+  .hero-demo-glow {
+    position: absolute;
+    inset: -16px;
+    background: radial-gradient(circle at 70% 30%, color-mix(in oklab, var(--accent) 18%, transparent), transparent 60%);
+    filter: blur(40px);
+    pointer-events: none;
+  }
+  .hero-demo {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    border-radius: 14px;
+    padding: 12px;
+    background: var(--bg-1);
+    border: 1px solid var(--line-2);
+    position: relative;
+  }
+  .rules-pane {
+    background: var(--code-bg);
+    border-radius: 8px;
+    padding: 16px 16px 18px;
+    border: 1px solid var(--line-1);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    line-height: 1.7;
+    color: var(--code-fg);
+    min-height: 360px;
+  }
+  .rules-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--line-1);
+  }
+  .rules-comment {
+    color: var(--text-2);
+    font-size: 11px;
+    margin: 14px 0 8px;
+  }
+  .rules-ctx :global(.country-token) {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 0 2px;
+    background: color-mix(in oklab, var(--accent) 18%, transparent);
+    border: 1px solid var(--accent-soft);
+    border-radius: 4px;
+    color: var(--accent);
+  }
+  .rules-ctx :global(.country-token select) {
+    background: transparent;
+    border: none;
+    color: var(--accent);
+    font: inherit;
+    cursor: pointer;
+    appearance: none;
+    padding: 0 2px;
+  }
+  :global(.rule) {
+    padding: 6px 8px;
+    margin: 0 -8px;
+    border-radius: 6px;
+    transition: background 0.3s;
+    border-left: 2px solid transparent;
+    padding-left: 10px;
+  }
+  :global(.rule-active) {
+    background: color-mix(in oklab, var(--accent) 12%, transparent);
+    border-left-color: var(--accent);
+    padding-left: 8px;
+  }
+  .rules-fallback {
+    padding-left: 6px;
+    opacity: 0.55;
+  }
+  .ui-pane {
+    border-radius: 8px;
+    padding: 20px 22px;
+    background: var(--bg-2);
+    border: 1px solid var(--line-1);
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .ui-pane-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+  .ui-pane-eyebrow {
+    font-size: 11px;
+    color: var(--text-3);
+    font-family: var(--font-mono);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .ui-amount {
+    font-size: 36px;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    margin-top: 4px;
+  }
+  .route-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font: 500 11px/1 var(--font-mono);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    background: color-mix(in oklab, var(--accent) 12%, var(--bg-1));
+    color: var(--accent);
+    border: 1px solid var(--accent-soft);
+  }
+  .route-badge .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 8px var(--accent-glow);
+  }
+  :global(.methods) {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  :global(.method) {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--line-1);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  :global(.method-selected) {
+    background: var(--bg-1);
+    border-color: var(--line-3);
+  }
+  :global(.method .radio) {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border: 1px solid var(--line-3);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  :global(.method-selected .radio) {
+    border-color: var(--accent);
+  }
+  :global(.method-selected .radio span) {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+  :global(.method .glyph) {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 700;
+  }
+  :global(.method-text) {
+    display: flex;
+    flex-direction: column;
+  }
+  :global(.method-label) {
+    font-size: 13px;
+    font-weight: 500;
+  }
+  :global(.method-sub) {
+    font-size: 11px;
+    color: var(--text-2);
+  }
+  .ui-foot {
+    margin-top: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .ui-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    padding: 12px;
+    border-radius: 8px;
+    background: var(--bg-1);
+    border: 1px solid var(--line-1);
+  }
+  .ui-grid-label {
+    font-size: 10px;
+    color: var(--text-3);
+    font-family: var(--font-mono);
+    text-transform: uppercase;
+  }
+  .ui-grid-value {
+    font-size: 13px;
+    font-family: var(--font-mono);
+    color: var(--text-0);
+    margin-top: 2px;
+  }
+  .pay-btn {
+    padding: 12px 16px;
+    border-radius: 8px;
+    background: var(--accent);
+    color: var(--accent-ink);
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 14px;
+    letter-spacing: -0.01em;
+  }
+  .try-hint {
+    position: absolute;
+    top: -10px;
+    right: 16px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: var(--bg-0);
+    border: 1px solid var(--accent-soft);
+    border-radius: 6px;
+    font: 500 11px var(--font-mono);
+    color: var(--accent);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .hint-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 8px var(--accent-glow);
+  }
+  .trusted {
+    margin-top: 72px;
+    padding-top: 28px;
+    border-top: 1px solid var(--line-1);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: var(--text-3);
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .logos {
+    display: flex;
+    gap: 32px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .logo-name {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--text-2);
+  }
+  .roadmap-link {
+    color: var(--text-2);
+    font-size: 12px;
+    font-family: var(--font-mono);
+  }
+  @media (max-width: 1000px) {
+    .hero-grid {
+      grid-template-columns: 1fr;
+      gap: 48px;
+    }
+    .hero-demo {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

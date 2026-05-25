@@ -1,0 +1,135 @@
+---
+import Section from '../Section.astro';
+import Icon from '../Icons.astro';
+
+const cols = [
+  {
+    l: 'shipped',
+    color: 'var(--accent)',
+    items: [
+      'Core types + rulesRouter + autoRouter',
+      'React bindings via useSyncExternalStore',
+      'Stripe adapter — Checkout + PaymentIntent',
+      'Polar adapter — redirect flow',
+      'Server handler — Web Request/Response',
+      'Catalog primitive (inline · remote · PSP-sourced)',
+      'Phantom-type provider metadata',
+    ],
+  },
+  {
+    l: 'in design',
+    color: 'var(--warn)',
+    items: [
+      'Polar iframe embedded flow',
+      'Cross-PSP webhook verification helpers',
+      'Subscriptions, refunds',
+      'Catalog response caching',
+      'lookup_key support for Stripe catalogs',
+    ],
+  },
+  {
+    l: 'not yet',
+    color: 'var(--text-3)',
+    items: [
+      'Stripe Elements (field-level)',
+      'Vue / Solid / Svelte bindings',
+      'Adyen, Paddle, LemonSqueezy, Revolut adapters',
+      'Failover · ML routing · devtools',
+      'First v1.0 stable promise',
+    ],
+  },
+];
+---
+
+<Section
+  eyebrow="What's not done yet"
+  title="Honest scope. Pre-1.0."
+  kicker="We'd rather you know what's missing than discover it on launch day. This list reflects the alpha. The roadmap moves in public."
+>
+  <div class="alpha-grid">
+    {cols.map((g) => (
+      <div class="alpha-card">
+        <div class="t-cap" style={`color:${g.color};margin-bottom:16px`}>
+          <span class="alpha-dot" style={`background:${g.color}`}></span>{g.l}
+        </div>
+        <ul class="alpha-list">
+          {g.items.map((i) => (
+            <li>
+              <span class="alpha-bullet" style={`background:${g.color}`}></span>{i}
+            </li>
+          ))}
+        </ul>
+      </div>
+    ))}
+  </div>
+  <div class="rfc-bar">
+    <div>
+      <div class="t-cap" style="color:var(--accent);margin-bottom:6px">CONTRIBUTING</div>
+      <div style="font-size:16px">If you need an adapter or binding that isn't here, open an issue. The provider contract is four methods.</div>
+    </div>
+    <a class="btn btn-ghost" href="https://github.com/farisaziz12/tenderlane/issues">
+      Open issues <Icon name="arrowExt" size={11} />
+    </a>
+  </div>
+</Section>
+
+<style>
+  .alpha-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+  }
+  .alpha-card {
+    padding: 28px;
+    border-radius: 14px;
+    background: var(--bg-1);
+    border: 1px solid var(--line-2);
+  }
+  .alpha-dot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    margin-right: 8px;
+  }
+  .alpha-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .alpha-list li {
+    font-size: 14px;
+    color: var(--text-1);
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+  }
+  .alpha-bullet {
+    width: 4px;
+    height: 4px;
+    margin-top: 8px;
+    border-radius: 50%;
+    opacity: 0.7;
+    flex-shrink: 0;
+  }
+  .rfc-bar {
+    margin-top: 56px;
+    padding: 28px 32px;
+    border-radius: 12px;
+    background: var(--bg-1);
+    border: 1px dashed var(--line-3);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+  @media (max-width: 900px) {
+    .alpha-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

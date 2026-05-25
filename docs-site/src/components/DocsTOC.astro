@@ -1,0 +1,84 @@
+---
+interface Heading {
+  depth: number;
+  text: string;
+  slug: string;
+}
+interface Props {
+  headings: Heading[];
+}
+const { headings } = Astro.props;
+const filtered = headings.filter((h) => h.depth === 2 || h.depth === 3);
+---
+
+{filtered.length > 0 && (
+  <aside class="docs-toc">
+    <div class="t-cap" style="margin-bottom:10px;color:var(--text-3)">On this page</div>
+    <ul>
+      {filtered.map((h) => (
+        <li>
+          <a href={`#${h.slug}`} data-depth={h.depth}>{h.text}</a>
+        </li>
+      ))}
+    </ul>
+    <div class="toc-foot">
+      <a href="https://github.com/farisaziz12/tenderlane">↗ View on GitHub</a>
+    </div>
+  </aside>
+)}
+
+<style>
+  .docs-toc {
+    width: 220px;
+    flex-shrink: 0;
+    padding: 32px 24px;
+    position: sticky;
+    top: 60px;
+    align-self: flex-start;
+    max-height: calc(100vh - 60px);
+    overflow-y: auto;
+  }
+  .docs-toc ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    border-left: 1px solid var(--line-1);
+  }
+  .docs-toc a {
+    display: block;
+    padding: 2px 12px;
+    color: var(--text-2);
+    font-size: 13px;
+    border-left: 2px solid transparent;
+    margin-left: -1px;
+  }
+  .docs-toc a[data-depth='3'] {
+    padding-left: 24px;
+    font-size: 12px;
+  }
+  .docs-toc a:hover {
+    color: var(--text-0);
+  }
+  .toc-foot {
+    margin-top: 32px;
+    padding-top: 16px;
+    border-top: 1px solid var(--line-1);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-3);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .toc-foot a {
+    color: var(--text-2);
+  }
+  @media (max-width: 1200px) {
+    .docs-toc {
+      display: none;
+    }
+  }
+</style>

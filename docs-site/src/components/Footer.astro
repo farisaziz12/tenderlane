@@ -1,0 +1,131 @@
+---
+import Logo from './Logo.astro';
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const link = (p: string) => `${base}${p}`;
+
+const cols = [
+  {
+    title: 'Product',
+    items: [
+      { l: 'Home', h: link('/') },
+      { l: 'Why Tenderlane', h: link('/why') },
+      { l: 'Docs', h: link('/docs') },
+      { l: 'Changelog', h: 'https://github.com/farisaziz12/tenderlane/releases' },
+    ],
+  },
+  {
+    title: 'Docs',
+    items: [
+      { l: 'Getting started', h: link('/docs/getting-started/introduction') },
+      { l: 'Routing', h: link('/docs/concepts/routing') },
+      { l: 'Providers', h: link('/docs/concepts/providers') },
+      { l: 'Catalog', h: link('/docs/concepts/catalog') },
+      { l: 'State machine', h: link('/docs/concepts/state-machine') },
+    ],
+  },
+  {
+    title: 'Cookbooks',
+    items: [
+      { l: 'Stripe Checkout redirect', h: link('/docs/cookbooks/stripe-checkout-redirect') },
+      { l: 'Country-based routing', h: link('/docs/cookbooks/country-based-routing') },
+      { l: 'A/B test flows', h: link('/docs/cookbooks/ab-testing-payment-flows') },
+      { l: 'Next.js App Router', h: link('/docs/cookbooks/nextjs-app-router') },
+    ],
+  },
+  {
+    title: 'Community',
+    items: [
+      { l: 'GitHub', h: 'https://github.com/farisaziz12/tenderlane' },
+      { l: 'Issues', h: 'https://github.com/farisaziz12/tenderlane/issues' },
+      { l: 'MIT License', h: 'https://github.com/farisaziz12/tenderlane/blob/main/README.md' },
+    ],
+  },
+];
+---
+
+<footer class="footer">
+  <div class="container footer-grid">
+    <div>
+      <Logo size={18} />
+      <p class="t-body footer-tag">
+        Reactive payment orchestration for modern web apps. MIT licensed, frontend-first, provider-agnostic.
+      </p>
+      <div class="footer-badges">
+        <span class="badge alpha"><span class="dot"></span>v0.4.0-alpha</span>
+        <span class="badge"><span style="color:var(--text-2)">MIT</span></span>
+      </div>
+    </div>
+    {cols.map((c) => (
+      <div>
+        <div class="t-cap" style="margin-bottom:16px;color:var(--text-3)">{c.title}</div>
+        <ul class="footer-list">
+          {c.items.map((i) => (
+            <li><a href={i.h}>{i.l}</a></li>
+          ))}
+        </ul>
+      </div>
+    ))}
+  </div>
+  <div class="container footer-bottom">
+    <span>© 2026 tenderlane contributors</span>
+    <span>Reactive payments · MIT · built with Astro</span>
+  </div>
+</footer>
+
+<style>
+  .footer {
+    border-top: 1px solid var(--line-1);
+    padding: 64px var(--side-pad) 40px;
+    background: var(--bg-0);
+  }
+  .footer-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
+    gap: 48px;
+  }
+  .footer-tag {
+    margin-top: 18px;
+    max-width: 280px;
+    font-size: 14px;
+  }
+  .footer-badges {
+    display: flex;
+    gap: 8px;
+    margin-top: 20px;
+  }
+  .footer-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .footer-list a {
+    color: var(--text-1);
+    font-size: 14px;
+  }
+  .footer-list a:hover {
+    color: var(--text-0);
+  }
+  .footer-bottom {
+    margin-top: 48px;
+    padding-top: 28px;
+    border-top: 1px solid var(--line-1);
+    display: flex;
+    justify-content: space-between;
+    color: var(--text-3);
+    font-size: 12px;
+    font-family: var(--font-mono);
+  }
+  @media (max-width: 900px) {
+    .footer-grid {
+      grid-template-columns: 1fr 1fr;
+      gap: 32px;
+    }
+    .footer-bottom {
+      flex-direction: column;
+      gap: 8px;
+    }
+  }
+</style>

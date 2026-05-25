@@ -1,0 +1,118 @@
+---
+import Section from '../Section.astro';
+
+const steps = [
+  { n: 1, t: 'Install', s: 'Three packages. Zero peer-dep hell.' },
+  { n: 2, t: 'Declare your context', s: 'The browser state your rules read.' },
+  { n: 3, t: 'Write rules — or import them', s: 'JSON in code, in a DB, in a feature flag. Same shape.' },
+  { n: 4, t: 'Mount the provider', s: 'A React tree subscribes; UI updates when context does.' },
+  { n: 5, t: 'Render headless checkout', s: 'You own the button. We own the state machine.' },
+];
+
+const code = `<span class="tok-k">import</span> { <span class="tok-f">TenderlaneProvider</span>, <span class="tok-f">useTenderlaneCheckout</span> } <span class="tok-k">from</span> <span class="tok-s">'@tenderlane/react'</span>;
+<span class="tok-k">import</span> { <span class="tok-f">createRulesRouter</span> } <span class="tok-k">from</span> <span class="tok-s">'@tenderlane/core'</span>;
+<span class="tok-k">import</span> { <span class="tok-f">stripeProvider</span> } <span class="tok-k">from</span> <span class="tok-s">'@tenderlane/stripe'</span>;
+
+<span class="tok-k">const</span> <span class="tok-p">stripe</span> = <span class="tok-f">stripeProvider</span>({ <span class="tok-p">publishableKey</span>: <span class="tok-s">'pk_…'</span>, <span class="tok-p">serverEndpoint</span>: <span class="tok-s">'/api/pay'</span> });
+
+<span class="tok-k">const</span> <span class="tok-p">routing</span> = <span class="tok-f">createRulesRouter</span>({
+  <span class="tok-p">rules</span>: [
+    { <span class="tok-p">id</span>: <span class="tok-s">'ch-inline'</span>,
+      <span class="tok-p">when</span>: { <span class="tok-p">country</span>: <span class="tok-s">'CH'</span>, <span class="tok-p">currency</span>: <span class="tok-s">'chf'</span> },
+      <span class="tok-p">use</span>: { <span class="tok-p">provider</span>: <span class="tok-s">'stripe'</span>,
+              <span class="tok-p">flow</span>: <span class="tok-s">'payment-intent'</span>,
+              <span class="tok-p">paymentMethods</span>: [<span class="tok-s">'card'</span>, <span class="tok-s">'twint'</span>] } },
+  ],
+  <span class="tok-p">fallback</span>: { <span class="tok-p">provider</span>: <span class="tok-s">'stripe'</span>,
+              <span class="tok-p">flow</span>: <span class="tok-s">'checkout-session'</span>,
+              <span class="tok-p">paymentMethods</span>: [<span class="tok-s">'card'</span>] },
+});
+
+<span class="tok-k">function</span> <span class="tok-f">Checkout</span>() {
+  <span class="tok-k">const</span> <span class="tok-p">checkout</span> = <span class="tok-f">useTenderlaneCheckout</span>();
+  <span class="tok-k">return</span> &lt;<span class="tok-tag">button</span> <span class="tok-attr">disabled</span>={!<span class="tok-p">checkout</span>.<span class="tok-p">canSubmit</span>} <span class="tok-attr">onClick</span>={<span class="tok-p">checkout</span>.<span class="tok-p">submit</span>}&gt;Pay&lt;/<span class="tok-tag">button</span>&gt;;
+}
+
+&lt;<span class="tok-tag">TenderlaneProvider</span> <span class="tok-attr">config</span>={{ <span class="tok-p">context</span>, <span class="tok-p">providers</span>: [<span class="tok-p">stripe</span>], <span class="tok-p">routing</span> }}&gt;
+  &lt;<span class="tok-tag">Checkout</span> /&gt;
+&lt;/<span class="tok-tag">TenderlaneProvider</span>&gt;`;
+---
+
+<Section
+  eyebrow="From npm to charge"
+  title="The whole integration, on screen."
+  kicker="One file. One provider. One rule. Render a button — get a charge. Everything else (A/B tests, custom adapters, server-side rules) composes on top of this exact shape."
+>
+  <div class="walk-grid">
+    <div>
+      {steps.map((s, i) => (
+        <div class="step" style={i === 0 ? 'border-top: 1px solid var(--line-2)' : ''}>
+          <div class={`step-num ${i === 0 ? 'step-active' : ''}`}>{String(s.n).padStart(2, '0')}</div>
+          <div>
+            <div class="step-title">{s.t}</div>
+            <div class="step-sub">{s.s}</div>
+          </div>
+        </div>
+      ))}
+    </div>
+    <div>
+      <div class="code">
+        <div class="code-head">
+          <span style="font-family:var(--font-mono);font-size:12px;color:var(--text-2)">src/checkout.tsx · the whole thing</span>
+        </div>
+        <div class="code-body">
+          <pre><code set:html={code} /></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+</Section>
+
+<style>
+  .walk-grid {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    gap: 48px;
+  }
+  .step {
+    display: flex;
+    gap: 16px;
+    padding: 20px 0;
+    border-bottom: 1px solid var(--line-2);
+  }
+  .step-num {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    background: var(--bg-2);
+    color: var(--text-1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-mono);
+    font-weight: 600;
+    font-size: 13px;
+    border: 1px solid var(--line-2);
+  }
+  .step-active {
+    background: var(--accent);
+    color: var(--accent-ink);
+    border-color: var(--accent);
+  }
+  .step-title {
+    font-weight: 500;
+    font-size: 16px;
+    color: var(--text-0);
+  }
+  .step-sub {
+    color: var(--text-2);
+    font-size: 13px;
+    margin-top: 4px;
+  }
+  @media (max-width: 1000px) {
+    .walk-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
