@@ -4,55 +4,66 @@
   justify-content: center;
   min-height: 100vh;
   padding: 24px;
+  background: var(--bg-0);
 }
 
 .card {
   max-width: 480px;
   width: 100%;
   text-align: center;
-  background: var(--glass-bg);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-lg);
+  background: var(--bg-1);
+  border: 1px solid var(--line-2);
+  border-radius: 14px;
   padding: 48px 40px;
-  animation: fadeIn 0.5s ease-out;
 }
 
 .icon {
-  font-size: 64px;
-  color: var(--error);
-  margin-bottom: 16px;
+  width: 56px;
+  height: 56px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: color-mix(in oklab, var(--err) 10%, var(--bg-2));
+  border: 1px solid color-mix(in oklab, var(--err) 30%, transparent);
+  color: var(--err);
+  font-size: 28px;
+  font-weight: 600;
+  margin-bottom: 18px;
   line-height: 1;
 }
 
 .heading {
+  font-family: var(--font-display);
   font-size: 28px;
-  font-weight: 700;
-  color: var(--text-primary);
+  letter-spacing: -0.02em;
+  font-weight: 500;
+  color: var(--text-0);
   margin-bottom: 8px;
 }
 
 .message {
-  color: var(--text-secondary);
+  color: var(--text-2);
   font-size: 14px;
   margin-bottom: 24px;
   line-height: 1.6;
 }
 
 .button {
-  display: inline-block;
-  padding: 14px 32px;
-  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-light) 100%);
-  color: white;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 22px;
+  background: var(--accent);
+  color: var(--accent-ink);
   text-decoration: none;
-  border-radius: var(--radius-md);
-  font-size: 15px;
+  border-radius: 10px;
+  font-size: 14px;
   font-weight: 600;
-  transition: var(--transition);
+  transition: background 0.15s;
 }
 
 .button:hover {
-  box-shadow: 0 0 30px var(--accent-glow);
-  transform: translateY(-1px);
+  background: color-mix(in oklab, var(--accent) 88%, white);
 }

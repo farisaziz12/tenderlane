@@ -48,11 +48,22 @@
 
   --content-max: 1280px;
   --side-pad: 80px;
+
+  /* Breakpoints (reference — CSS can't interpolate vars in @media):
+     --bp-lg: 1024px  collapse 3-col docs, hide TOC sidebar
+     --bp-md:  768px  multi-col grids -> single column
+     --bp-sm:  480px  tighten paddings, shrink line-number gutter */
 }
 
 @media (max-width: 900px) {
   :root {
     --side-pad: 24px;
+  }
+}
+
+@media (max-width: 480px) {
+  :root {
+    --side-pad: 16px;
   }
 }
 
@@ -155,6 +166,8 @@ a {
   align-items: center;
   justify-content: space-between;
   padding: 18px var(--side-pad);
+  padding-left: max(var(--side-pad), env(safe-area-inset-left));
+  padding-right: max(var(--side-pad), env(safe-area-inset-right));
   border-bottom: 1px solid var(--line-1);
   background: color-mix(in oklab, var(--bg-0) 80%, transparent);
   backdrop-filter: blur(10px);
@@ -198,7 +211,6 @@ a {
   border-radius: 8px;
   font-size: 13px;
   color: var(--text-2);
-  min-width: 220px;
 }
 .nav-search span.flex {
   flex: 1;
@@ -451,14 +463,26 @@ a {
 }
 .section {
   padding: 120px var(--side-pad);
+  padding-left: max(var(--side-pad), env(safe-area-inset-left));
+  padding-right: max(var(--side-pad), env(safe-area-inset-right));
 }
 .section-tight {
   padding: 80px var(--side-pad);
+  padding-left: max(var(--side-pad), env(safe-area-inset-left));
+  padding-right: max(var(--side-pad), env(safe-area-inset-right));
 }
 @media (max-width: 900px) {
   .section,
   .section-tight {
-    padding: 64px var(--side-pad);
+    padding-top: 64px;
+    padding-bottom: 64px;
+  }
+}
+@media (max-width: 480px) {
+  .section,
+  .section-tight {
+    padding-top: 48px;
+    padding-bottom: 48px;
   }
 }
 
@@ -470,6 +494,11 @@ a {
   background: color-mix(in oklab, var(--bg-0) 96%, transparent);
   backdrop-filter: blur(14px);
   padding: 24px;
+  padding-top: max(24px, env(safe-area-inset-top));
+  padding-left: max(24px, env(safe-area-inset-left));
+  padding-right: max(24px, env(safe-area-inset-right));
+  padding-bottom: max(24px, env(safe-area-inset-bottom));
+  overflow-y: auto;
   display: none;
   flex-direction: column;
   gap: 16px;
@@ -489,4 +518,20 @@ a {
   border-bottom: 1px solid var(--line-1);
   color: var(--text-0);
   font-size: 18px;
+}
+
+/* Side-drawer pattern (used for docs sidebar + TOC) */
+.side-drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background: color-mix(in oklab, var(--bg-0) 60%, transparent);
+  backdrop-filter: blur(6px);
+  z-index: 99;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.18s ease;
+}
+.side-drawer-backdrop[data-open='true'] {
+  opacity: 1;
+  pointer-events: auto;
 }

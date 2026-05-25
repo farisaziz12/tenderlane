@@ -1,43 +1,55 @@
 :root {
-  --glass-bg: rgba(255, 255, 255, 0.08);
-  --glass-border: rgba(255, 255, 255, 0.15);
-  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
-  --glass-blur: blur(16px);
-  --surface-bg: rgba(255, 255, 255, 0.04);
-  --text-primary: #f0f0f0;
-  --text-secondary: rgba(255, 255, 255, 0.65);
-  --text-muted: rgba(255, 255, 255, 0.4);
-  --accent: #6c5ce7;
-  --accent-light: #a29bfe;
-  --accent-glow: rgba(108, 92, 231, 0.35);
-  --success: #00b894;
-  --error: #ff6b6b;
-  --warning: #fdcb6e;
-  --radius-sm: 8px;
-  --radius-md: 16px;
-  --radius-lg: 24px;
-  --transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  --font-sans: 'Geist', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  --font-display: var(--font-sans);
+
+  --accent: #b6ff4a;
+  --accent-ink: #0a0c00;
+  --accent-soft: color-mix(in oklab, var(--accent) 18%, transparent);
+  --accent-glow: color-mix(in oklab, var(--accent) 60%, transparent);
+
+  --bg-0: #07080a;
+  --bg-1: #0c0e12;
+  --bg-2: #11141a;
+  --bg-3: #181c24;
+  --bg-4: #1f242d;
+  --line-1: rgba(255, 255, 255, 0.06);
+  --line-2: rgba(255, 255, 255, 0.1);
+  --line-3: rgba(255, 255, 255, 0.18);
+  --line-4: rgba(255, 255, 255, 0.28);
+  --text-0: #f4f5f7;
+  --text-1: rgba(244, 245, 247, 0.74);
+  --text-2: rgba(244, 245, 247, 0.52);
+  --text-3: rgba(244, 245, 247, 0.34);
+  --text-4: rgba(244, 245, 247, 0.22);
+
+  --ok: #6be39a;
+  --warn: #ffc36a;
+  --err: #ff7a6b;
+  --info: #7cc4ff;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
+html,
 body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
-  background: linear-gradient(135deg, #0c0c1d 0%, #1a1a3e 40%, #2d1b69 70%, #1a1a3e 100%);
-  background-attachment: fixed;
+  margin: 0;
+  padding: 0;
+  background: var(--bg-0);
+  color: var(--text-0);
   min-height: 100vh;
-  color: var(--text-primary);
+}
+
+body {
+  font-family: var(--font-sans);
+  font-feature-settings: 'ss01', 'cv11';
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(16px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
+a {
+  color: inherit;
+  text-decoration: none;
 }
 
 @keyframes pulse {

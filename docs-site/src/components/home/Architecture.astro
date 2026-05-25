@@ -169,6 +169,11 @@ const layers = [
     border: 1px solid var(--line-2);
     position: relative;
     overflow-x: auto;
+    min-width: 0;
+    max-width: 100%;
+  }
+  .arch-diagram svg {
+    min-width: 720px;
   }
   .layer-grid {
     display: grid;
@@ -189,6 +194,15 @@ const layers = [
   @media (max-width: 900px) {
     .layer-grid {
       grid-template-columns: repeat(2, 1fr);
+    }
+  }
+  @media (max-width: 640px) {
+    .layer-grid {
+      grid-template-columns: 1fr;
+      gap: 18px;
+    }
+    .arch-diagram {
+      padding: 16px;
     }
   }
 </style>

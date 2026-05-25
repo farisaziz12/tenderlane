@@ -1,0 +1,1638 @@
+---
+import '../styles/tokens.css';
+import Logo from '../components/Logo.astro';
+import Icon from '../components/Icons.astro';
+
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+
+const PLANS = [
+  { id: 'starter', name: 'Starter', copy: 'For solo builders', features: ['1 project', '5GB storage', 'Community support'] },
+  { id: 'pro', name: 'Pro', copy: 'For small teams', features: ['Unlimited projects', '50GB storage', 'Priority support', 'Webhooks'] },
+  { id: 'team', name: 'Team', copy: 'For growing studios', features: ['Everything in Pro', 'SSO', 'SOC2 reports', 'Audit logs'] },
+];
+
+const RULES = [
+  { id: 'ch-inline', when: { country: 'CH', currency: 'chf' }, use: { provider: 'stripe', flow: 'payment-intent', paymentMethods: ['card', 'twint'] } },
+  { id: 'nl-ideal', when: { country: 'NL', currency: 'eur' }, use: { provider: 'stripe', flow: 'payment-intent', paymentMethods: ['card', 'ideal', 'sepa'] } },
+  { id: 'de-klarna', when: { country: 'DE', currency: 'eur' }, use: { provider: 'stripe', flow: 'payment-intent', paymentMethods: ['card', 'sepa', 'klarna'] } },
+  { id: 'br-pix', when: { country: 'BR', currency: 'brl' }, use: { provider: 'stripe', flow: 'payment-intent', paymentMethods: ['card', 'pix'] } },
+  { id: 'gb-card', when: { country: 'GB', currency: 'gbp' }, use: { provider: 'stripe', flow: 'payment-intent', paymentMethods: ['card'] } },
+];
+const FALLBACK = { provider: 'stripe', flow: 'checkout-session', paymentMethods: ['card'] };
+
+const COUNTRIES = [
+  { code: 'US', flag: '🇺🇸', cur: 'usd' },
+  { code: 'CH', flag: '🇨🇭', cur: 'chf' },
+  { code: 'NL', flag: '🇳🇱', cur: 'eur' },
+  { code: 'DE', flag: '🇩🇪', cur: 'eur' },
+  { code: 'BR', flag: '🇧🇷', cur: 'brl' },
+  { code: 'GB', flag: '🇬🇧', cur: 'gbp' },
+  { code: 'JP', flag: '🇯🇵', cur: 'jpy' },
+];
+
+const DATA_JSON = JSON.stringify({ PLANS, RULES, FALLBACK, COUNTRIES });
+
+const SOURCE_CODE = `import { TenderlaneProvider,
+         TenderlaneCheckoutForm } from 'tenderlane/react';
+import { createRulesRouter }       from 'tenderlane';
+import { stripeProvider }          from 'tenderlane/stripe';
+import { StripePaymentElement }    from 'tenderlane/stripe/react';
+
+import { rules, fallback } from './routing';
+import { useAppContext }   from './context';
+
+const stripe = stripeProvider({
+  publishableKey: env.STRIPE_PK,
+  serverEndpoint: '/api/pay',
+});
+
+export function Checkout({ plan }) {
+  const ctx = useAppContext();   // country, currency, tier, flags
+
+  return (
+    <TenderlaneProvider config={{
+      context: ctx,
+      providers: [stripe],
+      routing: createRulesRouter({ rules, fallback }),
+    }}>
+      <OrderSummary plan={plan} />
+      <TenderlaneCheckoutForm
+        input={{ amount: plan.amount[ctx.currency], currency: ctx.currency }}
+        elements={{ stripe: StripePaymentElement }}
+      >
+        {({ canSubmit, submit, status }) => (
+          <button disabled={!canSubmit} onClick={submit}>
+            {status === 'submitting' ? 'Processing…' : 'Pay'}
+          </button>
+        )}
+      </TenderlaneCheckoutForm>
+    </TenderlaneProvider>
+  );
+}`;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Playground · Tenderlane</title>
+    <meta name="description" content="Try Tenderlane in your browser — change context, watch routing decide." />
+    <link rel="icon" href={`${base}/favicon.svg`} type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body class="pg-body">
+    <div class="pg-shell">
+      <!-- Top bar -->
+      <header class="pg-top">
+        <div class="pg-top-left">
+          <a href={base + '/'} class="pg-logo" aria-label="Tenderlane home">
+            <Logo size={15} />
+          </a>
+          <span class="pg-divider"></span>
+          <span class="t-cap pg-eyebrow">PLAYGROUND</span>
+          <span class="pg-status">
+            <span class="pg-status-dot"></span>
+            connected · test-mode
+          </span>
+        </div>
+        <div class="pg-top-right">
+          <div class="pg-scenario" role="tablist" aria-label="Scenario">
+            <button data-scenario="subscription" data-active="true" class="pg-scenario-btn">Subscription</button>
+            <button data-scenario="cart" class="pg-scenario-btn">Marketplace cart</button>
+            <button data-scenario="donation" class="pg-scenario-btn">Donation</button>
+          </div>
+          <span class="pg-divider"></span>
+          <a class="btn btn-ghost pg-fork" href="https://github.com/farisaziz12/tenderlane" target="_blank" rel="noopener">
+            <Icon name="arrowExt" size={11} /> Fork on GitHub
+          </a>
+          <button class="btn btn-primary pg-install" id="pg-install" aria-label="Copy install command">
+            <span class="t-mono">npx create-tenderlane-app</span>
+            <Icon name="copy" size={12} />
+          </button>
+        </div>
+      </header>
+
+      <!-- Workspace -->
+      <div class="pg-grid">
+        <!-- LEFT: storefront preview -->
+        <section class="pg-preview">
+          <div class="pg-preview-head">
+            <div class="pg-preview-meta">
+              <span class="t-cap" style="color:var(--text-3)">PREVIEW</span>
+              <span class="badge pg-pill"><span class="dot"></span>route · <span id="pg-route-id">ch-inline</span></span>
+              <span class="badge pg-pill">flow · <span id="pg-route-flow">payment-intent</span></span>
+            </div>
+            <div class="pg-device" role="group" aria-label="Viewport size">
+              <button data-device="desktop" data-active="true" class="pg-device-btn" aria-label="Desktop">
+                <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><rect x="2" y="3" width="12" height="9" rx="1" stroke="currentColor" stroke-width="1.3"/><path d="M5 13h6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+              </button>
+              <button data-device="tablet" class="pg-device-btn" aria-label="Tablet">
+                <svg width="11" height="13" viewBox="0 0 14 16" fill="none"><rect x="2" y="2" width="10" height="12" rx="1.2" stroke="currentColor" stroke-width="1.3"/></svg>
+              </button>
+              <button data-device="mobile" class="pg-device-btn" aria-label="Mobile">
+                <svg width="9" height="13" viewBox="0 0 12 16" fill="none"><rect x="2" y="2" width="8" height="12" rx="1.2" stroke="currentColor" stroke-width="1.3"/></svg>
+              </button>
+            </div>
+          </div>
+          <div class="pg-frame" id="pg-frame">
+            <!-- Storefront -->
+            <div class="sf-root">
+              <div class="sf-nav">
+                <span class="sf-brand">
+                  <span class="sf-glyph">S</span>
+                  <span class="sf-wordmark">stitch</span>
+                  <span class="sf-tag">example app</span>
+                </span>
+                <div class="sf-nav-links">
+                  <a href="#">Product</a>
+                  <a href="#">Docs</a>
+                  <a href="#" class="sf-active">Pricing</a>
+                  <button class="sf-signin">Sign in</button>
+                </div>
+              </div>
+              <div class="sf-checkout">
+                <div class="sf-summary">
+                  <div class="sf-back">← Back to plans</div>
+                  <div class="t-eyebrow sf-eyebrow">UPGRADING TO</div>
+                  <h1 class="sf-plan-name">
+                    <span id="sf-plan-name">Pro</span> <span style="color:var(--text-3)">plan</span>
+                  </h1>
+                  <p class="sf-plan-copy" id="sf-plan-copy">For small teams</p>
+                  <div class="sf-order">
+                    <div class="sf-order-head">
+                      <div>
+                        <div class="sf-order-row-name"><span id="sf-order-name">Pro</span> · monthly</div>
+                        <div class="sf-order-row-sub">Renews monthly · cancel anytime</div>
+                      </div>
+                      <div class="sf-order-row-amt t-mono" id="sf-price-top">CHF 27.00</div>
+                    </div>
+                    <div class="sf-order-line">
+                      <span>Subtotal</span><span class="t-mono" id="sf-subtotal">CHF 27.00</span>
+                    </div>
+                    <div class="sf-order-line">
+                      <span>VAT / Tax</span><span class="t-mono" style="color:var(--text-3)">calculated at confirmation</span>
+                    </div>
+                    <div class="sf-order-total">
+                      <span>Total today</span>
+                      <span class="t-mono sf-total-amt" id="sf-total">CHF 27.00</span>
+                    </div>
+                  </div>
+                  <ul class="sf-features" id="sf-features"></ul>
+                </div>
+                <div class="sf-pay">
+                  <div class="sf-route-badge">
+                    <span class="dot"></span>
+                    route · <span id="sf-route-id">ch-inline</span>
+                  </div>
+                  <h2 class="sf-pay-title">How would you like to pay?</h2>
+                  <div class="sf-field">
+                    <label>email</label>
+                    <div class="sf-input">you@stitch.example</div>
+                  </div>
+                  <div class="sf-field">
+                    <label>payment method</label>
+                    <div class="sf-methods" id="sf-methods"></div>
+                  </div>
+                  <div class="sf-card-form" id="sf-card-form">
+                    <div class="sf-input sf-card-num t-mono">
+                      <span>4242 4242 4242 4242</span>
+                      <span class="sf-card-glyphs">
+                        <span class="sf-card-glyph" style="background:#1a1f71">V</span>
+                        <span class="sf-card-glyph" style="background:#eb001b">M</span>
+                      </span>
+                    </div>
+                    <div class="sf-card-row">
+                      <div class="sf-input t-mono" style="color:var(--text-3)">MM / YY</div>
+                      <div class="sf-input t-mono" style="color:var(--text-3)">CVC</div>
+                    </div>
+                  </div>
+                  <button class="sf-pay-btn">
+                    Pay <span id="sf-pay-amt">CHF 27.00</span>
+                    <Icon name="arrow" size={12} />
+                  </button>
+                  <p class="sf-foot t-mono">Powered by <span id="sf-provider">stripe</span> via tenderlane · By paying, you agree to the Terms.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- RIGHT: tabbed panel -->
+        <section class="pg-side">
+          <div class="pg-tabs" role="tablist">
+            <button data-tab="rules" data-active="true" class="pg-tab">
+              <span>Rules</span><span class="pg-tab-n">{RULES.length}</span><span class="kbd">R</span>
+            </button>
+            <button data-tab="context" class="pg-tab">
+              <span>Context</span><span class="pg-tab-n">5</span><span class="kbd">C</span>
+            </button>
+            <button data-tab="events" class="pg-tab">
+              <span>Events</span><span class="pg-tab-n" id="pg-events-n">12</span><span class="kbd">E</span>
+            </button>
+            <button data-tab="code" class="pg-tab">
+              <span>Code</span><span class="kbd">V</span>
+            </button>
+          </div>
+
+          <div class="pg-tab-body">
+            <!-- Rules panel -->
+            <div class="pg-panel" data-panel="rules" data-active="true">
+              <div class="pg-panel-head">
+                <div>
+                  <div class="t-cap" style="color:var(--text-3);margin-bottom:6px">RULES · routing.ts</div>
+                  <div class="t-mono pg-panel-sub">first-match-wins · {RULES.length} rules · 1 fallback</div>
+                </div>
+                <div class="pg-panel-actions">
+                  <button class="btn btn-ghost pg-mini-btn">+ Add rule</button>
+                  <button class="btn btn-ghost pg-mini-btn">↗ Export</button>
+                </div>
+              </div>
+              <div class="pg-rules">
+                {RULES.map((rule, i) => (
+                  <div class="pg-rule" data-rule-id={rule.id}>
+                    <div class="pg-rule-head">
+                      <div class="pg-rule-id">
+                        <span class="t-mono pg-rule-idx">#{i + 1}</span>
+                        <span class="t-mono pg-rule-name">{rule.id}</span>
+                        <span class="pg-rule-match live-dot">matched</span>
+                      </div>
+                      <div class="pg-rule-actions">
+                        <button class="pg-rule-btn" aria-label="Activate">
+                          <svg width="11" height="11" viewBox="0 0 16 16" fill="none"><path d="M5 10l3 3 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        </button>
+                        <button class="pg-rule-btn" aria-label="More">
+                          <svg width="11" height="11" viewBox="0 0 16 16" fill="none"><circle cx="3" cy="8" r="1" fill="currentColor"/><circle cx="8" cy="8" r="1" fill="currentColor"/><circle cx="13" cy="8" r="1" fill="currentColor"/></svg>
+                        </button>
+                      </div>
+                    </div>
+                    <div class="pg-rule-body">
+                      <span class="pg-rule-k">when</span>
+                      <span class="t-mono pg-rule-v">{JSON.stringify(rule.when).split('"').join("'")}</span>
+                      <span class="pg-rule-k">use</span>
+                      <span class="t-mono pg-rule-v">{JSON.stringify(rule.use).split('"').join("'")}</span>
+                    </div>
+                  </div>
+                ))}
+                <div class="pg-rule pg-rule-fallback" data-rule-id="fallback">
+                  <div class="pg-rule-head">
+                    <span class="t-mono pg-rule-name" style="color:var(--text-2)">fallback</span>
+                    <span class="pg-rule-match live-dot">matched</span>
+                  </div>
+                  <div class="t-mono" style="font-size:11px;color:var(--text-1)">{JSON.stringify(FALLBACK).split('"').join("'")}</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Context panel -->
+            <div class="pg-panel" data-panel="context">
+              <div class="t-cap" style="color:var(--text-3);margin-bottom:16px">CONTEXT · the inputs your rules read</div>
+
+              <div class="pg-field">
+                <div class="pg-field-label">country</div>
+                <div class="pg-country-grid" id="pg-country-grid">
+                  {COUNTRIES.map((c) => (
+                    <button data-country={c.code} data-cur={c.cur} class="pg-country-btn">
+                      <span class="pg-country-flag">{c.flag}</span>
+                      <span class="pg-country-code">{c.code}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div class="pg-field">
+                <div class="pg-field-label">currency</div>
+                <div class="pg-chip-row" id="pg-currency-row">
+                  {['usd', 'eur', 'chf', 'brl', 'jpy', 'gbp'].map((c) => (
+                    <button data-currency={c} class="pg-chip">{c.toUpperCase()}</button>
+                  ))}
+                </div>
+              </div>
+
+              <div class="pg-field">
+                <div class="pg-field-label">plan</div>
+                <div class="pg-chip-row pg-chip-row-stretch" id="pg-plan-row">
+                  {PLANS.map((plan) => (
+                    <button data-plan={plan.id} class="pg-chip pg-chip-stretch">{plan.name}</button>
+                  ))}
+                </div>
+              </div>
+
+              <div class="pg-field">
+                <div class="pg-field-label">user.tier</div>
+                <div class="pg-chip-row pg-chip-row-stretch" id="pg-tier-row">
+                  {['free', 'starter', 'pro', 'team'].map((t) => (
+                    <button data-tier={t} class="pg-chip pg-chip-stretch">{t}</button>
+                  ))}
+                </div>
+              </div>
+
+              <div class="pg-field">
+                <div class="pg-field-label">flags</div>
+                <div class="pg-flags">
+                  {[
+                    { k: 'flag_inline', l: 'inline-checkout · ramp 64%', def: true },
+                    { k: 'flag_threeds', l: '3ds-always · ramp 100%', def: true },
+                    { k: 'flag_localized', l: 'localized-receipts · ramp 12%', def: false },
+                  ].map((f) => (
+                    <div class="pg-flag-row">
+                      <span class="t-mono pg-flag-label">{f.l}</span>
+                      <button data-flag={f.k} class="pg-toggle" data-active={f.def ? 'true' : 'false'}>
+                        <span class="pg-toggle-knob"></span>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div class="pg-resolved">
+                <div class="pg-resolved-head">
+                  <span class="t-cap" style="color:var(--text-3)">RESOLVED CONTEXT</span>
+                  <button class="pg-rule-btn" aria-label="Copy">
+                    <Icon name="copy" size={11} />
+                  </button>
+                </div>
+                <pre class="t-mono" id="pg-ctx-json"></pre>
+              </div>
+            </div>
+
+            <!-- Events panel -->
+            <div class="pg-panel" data-panel="events">
+              <div class="pg-panel-head">
+                <div>
+                  <div class="t-cap" style="color:var(--text-3);margin-bottom:6px">EVENT STREAM</div>
+                  <div class="t-mono pg-panel-sub">onRouteEvaluated · onStateChange</div>
+                </div>
+                <div class="pg-panel-actions">
+                  <button class="btn btn-ghost pg-mini-btn">⏸ Pause</button>
+                  <button class="btn btn-ghost pg-mini-btn">Clear</button>
+                </div>
+              </div>
+              <div class="pg-events" id="pg-events"></div>
+              <div class="pg-events-legend t-mono">
+                <span><span class="pg-leg pg-leg-ctx"></span>context</span>
+                <span><span class="pg-leg pg-leg-route"></span>routing</span>
+                <span><span class="pg-leg pg-leg-state"></span>state</span>
+                <span><span class="pg-leg pg-leg-adapter"></span>adapter</span>
+              </div>
+            </div>
+
+            <!-- Code panel -->
+            <div class="pg-panel" data-panel="code">
+              <div class="t-cap" style="color:var(--text-3);margin-bottom:16px">SOURCE · the code that wires this playground</div>
+              <div class="pg-code">
+                <div class="pg-code-tabs">
+                  <button data-active="true">Checkout.tsx</button>
+                  <button>routing.ts</button>
+                  <button>context.ts</button>
+                </div>
+                <pre class="pg-code-body t-mono">{SOURCE_CODE}</pre>
+              </div>
+              <div class="pg-code-cta">
+                <a class="btn btn-ghost pg-mini-btn" href="https://github.com/farisaziz12/tenderlane" target="_blank" rel="noopener">
+                  <Icon name="github" size={12} /> View on GitHub
+                </a>
+                <a class="btn btn-ghost pg-mini-btn" href="#" aria-disabled="true">↗ Open in StackBlitz</a>
+                <a class="btn btn-ghost pg-mini-btn" href="#" aria-disabled="true">↗ Open in CodeSandbox</a>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <script is:inline set:html={`
+      window.__PG = ${DATA_JSON};
+    `}></script>
+    <script is:inline>
+      // ───────── state ─────────
+      const { PLANS, RULES, FALLBACK, COUNTRIES } = window.__PG;
+      const state = {
+        ctx: { country: 'CH', currency: 'chf', plan: 'pro', tier: 'free', flag_inline: true, flag_threeds: true, flag_localized: false },
+        tab: 'rules',
+        device: 'desktop',
+        scenario: 'subscription',
+      };
+
+      const PRICE_BY_CURRENCY = {
+        starter: { usd: 12, eur: 11, chf: 11, brl: 59, jpy: 1800, gbp: 9 },
+        pro:     { usd: 29, eur: 27, chf: 27, brl: 145, jpy: 4400, gbp: 23 },
+        team:    { usd: 79, eur: 73, chf: 75, brl: 395, jpy: 11900, gbp: 62 },
+      };
+      const CUR_SYM = { usd: '$', eur: '€', chf: 'CHF', brl: 'R$', jpy: '¥', gbp: '£' };
+
+      function priceFmt(amount, cur) {
+        if (amount == null) return `${CUR_SYM[cur] || ''} —`;
+        if (cur === 'jpy') return `¥${amount.toLocaleString()}`;
+        if (cur === 'chf') return `CHF ${amount}.00`;
+        if (cur === 'brl') return `R$ ${amount}.00`;
+        return `${CUR_SYM[cur] || ''}${amount}.00`;
+      }
+
+      function matchRoute(ctx) {
+        const rule = RULES.find((r) => Object.entries(r.when).every(([k, v]) => ctx[k] === v));
+        return rule ? { id: rule.id, ...rule.use } : { id: 'fallback', ...FALLBACK };
+      }
+
+      const METHOD_META = {
+        card:   { label: 'Card', sub: 'Visa · Mastercard · Amex',   color: '#3b3f49', letter: 'C', dark: false },
+        twint:  { label: 'TWINT', sub: 'Pay with your phone (CH)',  color: '#ED1C24', letter: 'T' },
+        ideal:  { label: 'iDEAL', sub: 'Dutch bank transfer',        color: '#CC0066', letter: 'i' },
+        sepa:   { label: 'SEPA Direct', sub: 'Bank debit (EU)',      color: '#0033A0', letter: 'S' },
+        klarna: { label: 'Klarna', sub: 'Pay later or in 3',         color: '#FFB3C7', letter: 'K', dark: true },
+        pix:    { label: 'Pix', sub: 'Instant transfer (BR)',        color: '#32BCAD', letter: 'P' },
+      };
+
+      // ───────── renderers ─────────
+      function renderStorefront() {
+        const { ctx } = state;
+        const plan = PLANS.find((p) => p.id === ctx.plan) || PLANS[1];
+        const route = matchRoute(ctx);
+        const amount = PRICE_BY_CURRENCY[plan.id][ctx.currency];
+        const price = priceFmt(amount, ctx.currency);
+
+        document.getElementById('sf-plan-name').textContent = plan.name;
+        document.getElementById('sf-plan-copy').textContent = plan.copy;
+        document.getElementById('sf-order-name').textContent = plan.name;
+        document.getElementById('sf-price-top').textContent = price;
+        document.getElementById('sf-subtotal').textContent = price;
+        document.getElementById('sf-total').textContent = price;
+        document.getElementById('sf-pay-amt').textContent = price;
+        document.getElementById('sf-route-id').textContent = route.id;
+        document.getElementById('sf-provider').textContent = route.provider;
+
+        const featuresList = document.getElementById('sf-features');
+        featuresList.innerHTML = plan.features
+          .map((f) => `<li><span class="sf-check">✓</span>${f}</li>`)
+          .join('');
+
+        const methodsList = document.getElementById('sf-methods');
+        methodsList.innerHTML = route.paymentMethods
+          .map((method, index) => {
+            const meta = METHOD_META[method] || { label: method, sub: '', color: '#888', letter: (method[0] || '?').toUpperCase() };
+            const selected = index === 0;
+            return `
+              <label class="sf-method${selected ? ' sf-method-selected' : ''}">
+                <span class="sf-radio">${selected ? '<span></span>' : ''}</span>
+                <span class="sf-method-glyph" style="background:${meta.color};color:${meta.dark ? '#000' : '#fff'}">${meta.letter}</span>
+                <span class="sf-method-text">
+                  <span class="sf-method-label">${meta.label}</span>
+                  <span class="sf-method-sub">${meta.sub}</span>
+                </span>
+              </label>`;
+          })
+          .join('');
+
+        const showCard = route.paymentMethods[0] === 'card';
+        document.getElementById('sf-card-form').style.display = showCard ? '' : 'none';
+
+        // preview head
+        document.getElementById('pg-route-id').textContent = route.id;
+        document.getElementById('pg-route-flow').textContent = route.flow;
+      }
+
+      function renderRulesHighlight() {
+        const { ctx } = state;
+        const matched = matchRoute(ctx).id;
+        document.querySelectorAll('.pg-rule').forEach((node) => {
+          const isMatch = node.getAttribute('data-rule-id') === matched;
+          node.setAttribute('data-matched', isMatch ? 'true' : 'false');
+        });
+      }
+
+      function renderContextPanel() {
+        const { ctx } = state;
+        document.querySelectorAll('[data-country]').forEach((b) => {
+          b.setAttribute('data-active', b.getAttribute('data-country') === ctx.country ? 'true' : 'false');
+        });
+        document.querySelectorAll('[data-currency]').forEach((b) => {
+          b.setAttribute('data-active', b.getAttribute('data-currency') === ctx.currency ? 'true' : 'false');
+        });
+        document.querySelectorAll('[data-plan]').forEach((b) => {
+          b.setAttribute('data-active', b.getAttribute('data-plan') === ctx.plan ? 'true' : 'false');
+        });
+        document.querySelectorAll('[data-tier]').forEach((b) => {
+          b.setAttribute('data-active', b.getAttribute('data-tier') === ctx.tier ? 'true' : 'false');
+        });
+        document.querySelectorAll('[data-flag]').forEach((b) => {
+          const key = b.getAttribute('data-flag');
+          b.setAttribute('data-active', ctx[key] ? 'true' : 'false');
+        });
+        document.getElementById('pg-ctx-json').textContent = JSON.stringify(state.ctx, null, 2);
+      }
+
+      function renderEvents() {
+        const { ctx } = state;
+        const route = matchRoute(ctx);
+        const events = [
+          { t: 0, kind: 'context:set', detail: `country = ${ctx.country}, currency = ${ctx.currency}`, cls: 'ev-ctx' },
+          { t: 12, kind: 'route:eval', detail: `${RULES.length} rules tested → matched '${route.id}'`, cls: 'ev-route' },
+          { t: 14, kind: 'route:resolved', detail: `provider: ${route.provider} · flow: ${route.flow} · methods: [${route.paymentMethods.join(', ')}]`, cls: 'ev-default' },
+          { t: 18, kind: 'adapter:load', detail: `lazy: tenderlane/${route.provider} (5.8kb)`, cls: 'ev-adapter' },
+          { t: 280, kind: 'state:idle→ready', detail: 'PaymentElement mounted', cls: 'ev-adapter' },
+          { t: 1840, kind: 'plan:change', detail: `plan = ${ctx.plan}`, cls: 'ev-ctx' },
+          { t: 1848, kind: 'route:eval', detail: 'context unchanged in routable keys · no re-route', cls: 'ev-muted' },
+          { t: 3120, kind: 'context:set', detail: 'preview re-render', cls: 'ev-ctx' },
+          { t: 3128, kind: 'route:eval', detail: `→ '${route.id}'`, cls: 'ev-route' },
+          { t: 3140, kind: 'adapter:reuse', detail: `cached: tenderlane/${route.provider}`, cls: 'ev-adapter' },
+          { t: 3160, kind: 'ui:swap', detail: `methods rendered: [${route.paymentMethods.join(', ')}]`, cls: 'ev-route' },
+          { t: 3210, kind: 'state:ready', detail: 'ready in 50ms', cls: 'ev-state' },
+        ];
+        document.getElementById('pg-events').innerHTML = events
+          .map(
+            (e) => `
+            <div class="pg-event">
+              <span class="pg-event-t">+${e.t}ms</span>
+              <span class="pg-event-k ${e.cls}">${e.kind}</span>
+              <span class="pg-event-d">${e.detail}</span>
+            </div>`,
+          )
+          .join('');
+        document.getElementById('pg-events-n').textContent = String(events.length);
+      }
+
+      function renderAll() {
+        renderStorefront();
+        renderRulesHighlight();
+        renderContextPanel();
+        renderEvents();
+      }
+
+      // ───────── wire interactions ─────────
+      document.querySelectorAll('[data-country]').forEach((b) => {
+        b.addEventListener('click', () => {
+          state.ctx.country = b.getAttribute('data-country');
+          state.ctx.currency = b.getAttribute('data-cur');
+          renderAll();
+        });
+      });
+      document.querySelectorAll('[data-currency]').forEach((b) => {
+        b.addEventListener('click', () => {
+          state.ctx.currency = b.getAttribute('data-currency');
+          renderAll();
+        });
+      });
+      document.querySelectorAll('[data-plan]').forEach((b) => {
+        b.addEventListener('click', () => {
+          state.ctx.plan = b.getAttribute('data-plan');
+          renderAll();
+        });
+      });
+      document.querySelectorAll('[data-tier]').forEach((b) => {
+        b.addEventListener('click', () => {
+          state.ctx.tier = b.getAttribute('data-tier');
+          renderAll();
+        });
+      });
+      document.querySelectorAll('[data-flag]').forEach((b) => {
+        b.addEventListener('click', () => {
+          const key = b.getAttribute('data-flag');
+          state.ctx[key] = !state.ctx[key];
+          renderAll();
+        });
+      });
+
+      document.querySelectorAll('.pg-tab').forEach((tab) => {
+        tab.addEventListener('click', () => {
+          state.tab = tab.getAttribute('data-tab');
+          document.querySelectorAll('.pg-tab').forEach((t) => {
+            t.setAttribute('data-active', t === tab ? 'true' : 'false');
+          });
+          document.querySelectorAll('.pg-panel').forEach((p) => {
+            p.setAttribute('data-active', p.getAttribute('data-panel') === state.tab ? 'true' : 'false');
+          });
+        });
+      });
+
+      document.querySelectorAll('[data-scenario]').forEach((b) => {
+        b.addEventListener('click', () => {
+          state.scenario = b.getAttribute('data-scenario');
+          document.querySelectorAll('[data-scenario]').forEach((s) => {
+            s.setAttribute('data-active', s === b ? 'true' : 'false');
+          });
+        });
+      });
+
+      document.querySelectorAll('[data-device]').forEach((b) => {
+        b.addEventListener('click', () => {
+          state.device = b.getAttribute('data-device');
+          document.querySelectorAll('[data-device]').forEach((d) => {
+            d.setAttribute('data-active', d === b ? 'true' : 'false');
+          });
+          document.getElementById('pg-frame').setAttribute('data-device', state.device);
+        });
+      });
+
+      // keyboard shortcuts
+      document.addEventListener('keydown', (event) => {
+        if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) return;
+        const k = event.key.toLowerCase();
+        const map = { r: 'rules', c: 'context', e: 'events', v: 'code' };
+        if (map[k]) {
+          const target = document.querySelector(`.pg-tab[data-tab="${map[k]}"]`);
+          target?.click();
+        }
+      });
+
+      // install copy
+      document.getElementById('pg-install')?.addEventListener('click', () => {
+        navigator.clipboard?.writeText('npx create-tenderlane-app').catch(() => {});
+      });
+
+      renderAll();
+    </script>
+
+    <style is:global>
+      body.pg-body {
+        font-family: var(--font-sans);
+        background: var(--bg-0);
+        color: var(--text-0);
+        font-feature-settings: 'ss01', 'cv11';
+        -webkit-font-smoothing: antialiased;
+        text-rendering: optimizeLegibility;
+        margin: 0;
+        min-height: 100dvh;
+      }
+      .pg-shell {
+        display: flex;
+        flex-direction: column;
+        min-height: 100dvh;
+      }
+      .pg-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 24px;
+        padding-left: max(24px, env(safe-area-inset-left));
+        padding-right: max(24px, env(safe-area-inset-right));
+        background: var(--bg-1);
+        border-bottom: 1px solid var(--line-2);
+        position: sticky;
+        top: 0;
+        z-index: 30;
+        backdrop-filter: blur(10px);
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+      .pg-top-left,
+      .pg-top-right {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        min-width: 0;
+        flex-wrap: wrap;
+      }
+      .pg-divider {
+        width: 1px;
+        height: 18px;
+        background: var(--line-2);
+      }
+      .pg-eyebrow {
+        color: var(--text-2);
+      }
+      .pg-status {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 10px;
+        border-radius: 6px;
+        background: var(--bg-2);
+        border: 1px solid var(--line-2);
+        font: 500 11px var(--font-mono);
+        color: var(--text-1);
+      }
+      .pg-status-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--ok);
+      }
+      .pg-scenario {
+        display: inline-flex;
+        gap: 2px;
+        padding: 3px;
+        background: var(--bg-2);
+        border: 1px solid var(--line-2);
+        border-radius: 7px;
+      }
+      .pg-scenario-btn {
+        padding: 5px 10px;
+        border-radius: 5px;
+        background: transparent;
+        color: var(--text-2);
+        border: none;
+        cursor: pointer;
+        font: 500 11px var(--font-mono);
+      }
+      .pg-scenario-btn[data-active='true'] {
+        background: var(--bg-0);
+        color: var(--text-0);
+      }
+      .pg-fork,
+      .pg-install {
+        padding: 6px 12px;
+        font-size: 12px;
+        gap: 6px;
+      }
+      .pg-install {
+        font-family: var(--font-mono);
+      }
+
+      /* Workspace grid */
+      .pg-grid {
+        flex: 1;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 520px;
+        min-height: 0;
+      }
+      .pg-preview {
+        padding: 20px 24px;
+        background: var(--bg-0);
+        border-right: 1px solid var(--line-2);
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        min-width: 0;
+      }
+      .pg-preview-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .pg-preview-meta {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .pg-pill {
+        padding: 3px 8px;
+        font-size: 10px;
+      }
+      .pg-pill .dot {
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+        background: var(--accent);
+      }
+      .pg-device {
+        display: inline-flex;
+        gap: 4px;
+      }
+      .pg-device-btn {
+        width: 28px;
+        height: 28px;
+        border-radius: 6px;
+        border: 1px solid var(--line-2);
+        background: transparent;
+        color: var(--text-3);
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .pg-device-btn[data-active='true'] {
+        background: var(--bg-2);
+        color: var(--text-0);
+      }
+      .pg-frame {
+        flex: 1;
+        min-height: 720px;
+        border: 1px solid var(--line-2);
+        border-radius: 12px;
+        overflow: hidden;
+        background: var(--bg-0);
+        position: relative;
+        transition: max-width 0.2s ease;
+        margin: 0 auto;
+        width: 100%;
+      }
+      .pg-frame[data-device='tablet'] {
+        max-width: 820px;
+      }
+      .pg-frame[data-device='mobile'] {
+        max-width: 414px;
+      }
+
+      /* Storefront */
+      .sf-root {
+        background: var(--bg-0);
+        color: var(--text-0);
+        font-family: var(--font-sans);
+        min-height: 100%;
+        display: flex;
+        flex-direction: column;
+      }
+      .sf-nav {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 14px 24px;
+        border-bottom: 1px solid var(--line-1);
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+      .sf-brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .sf-glyph {
+        width: 22px;
+        height: 22px;
+        border-radius: 6px;
+        background: var(--accent);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--accent-ink);
+        font-weight: 700;
+        font-size: 13px;
+        font-family: var(--font-mono);
+      }
+      .sf-wordmark {
+        font-weight: 600;
+        letter-spacing: -0.018em;
+        font-size: 15px;
+      }
+      .sf-tag {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        color: var(--text-3);
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        margin-left: 6px;
+      }
+      .sf-nav-links {
+        display: flex;
+        gap: 18px;
+        align-items: center;
+        font-size: 13px;
+        color: var(--text-2);
+      }
+      .sf-nav-links a {
+        color: inherit;
+        text-decoration: none;
+      }
+      .sf-nav-links a.sf-active {
+        color: var(--text-0);
+      }
+      .sf-signin {
+        padding: 7px 14px;
+        border-radius: 7px;
+        border: 1px solid var(--line-2);
+        background: transparent;
+        color: var(--text-0);
+        font-size: 13px;
+        cursor: pointer;
+      }
+      .sf-checkout {
+        flex: 1;
+        display: grid;
+        grid-template-columns: 1fr 1.05fr;
+        gap: 0;
+      }
+      .sf-summary {
+        padding: 32px;
+        border-right: 1px solid var(--line-1);
+        background: var(--bg-1);
+      }
+      .sf-back {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-family: var(--font-mono);
+        font-size: 11px;
+        color: var(--text-3);
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        margin-bottom: 24px;
+      }
+      .sf-eyebrow {
+        margin-bottom: 14px;
+        color: var(--text-3);
+      }
+      .sf-plan-name {
+        font-family: var(--font-display);
+        font-size: 32px;
+        line-height: 1;
+        margin: 0 0 6px;
+        letter-spacing: -0.025em;
+        font-weight: 500;
+      }
+      .sf-plan-copy {
+        margin: 0 0 32px;
+        font-size: 14px;
+        color: var(--text-2);
+      }
+      .sf-order {
+        padding: 20px 22px;
+        background: var(--bg-2);
+        border: 1px solid var(--line-1);
+        border-radius: 12px;
+        margin-bottom: 24px;
+      }
+      .sf-order-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        margin-bottom: 16px;
+        padding-bottom: 16px;
+        border-bottom: 1px solid var(--line-1);
+      }
+      .sf-order-row-name {
+        font-size: 14px;
+        font-weight: 500;
+      }
+      .sf-order-row-sub {
+        font-size: 12px;
+        color: var(--text-2);
+        margin-top: 4px;
+      }
+      .sf-order-row-amt {
+        font-size: 16px;
+        font-weight: 500;
+      }
+      .sf-order-line {
+        display: flex;
+        justify-content: space-between;
+        font-size: 12px;
+        color: var(--text-2);
+        margin-bottom: 6px;
+      }
+      .sf-order-total {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        padding-top: 12px;
+        border-top: 1px solid var(--line-1);
+        margin-top: 6px;
+      }
+      .sf-order-total > span:first-child {
+        font-size: 13px;
+        font-weight: 500;
+      }
+      .sf-total-amt {
+        font-size: 24px;
+        font-weight: 500;
+        letter-spacing: -0.018em;
+      }
+      .sf-features {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .sf-features li {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        font-size: 13px;
+        color: var(--text-1);
+      }
+      .sf-check {
+        color: var(--accent);
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 14px;
+      }
+      .sf-pay {
+        padding: 32px;
+      }
+      .sf-route-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 4px 10px;
+        background: color-mix(in oklab, var(--accent) 8%, var(--bg-1));
+        border: 1px solid var(--accent-soft);
+        border-radius: 6px;
+        font-family: var(--font-mono);
+        font-size: 11px;
+        color: var(--accent);
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        margin-bottom: 24px;
+      }
+      .sf-route-badge .dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--accent);
+        box-shadow: 0 0 8px var(--accent-glow);
+      }
+      .sf-pay-title {
+        font-family: var(--font-display);
+        font-size: 24px;
+        line-height: 1.1;
+        margin: 0 0 24px;
+        letter-spacing: -0.018em;
+        font-weight: 500;
+      }
+      .sf-field {
+        margin-bottom: 20px;
+      }
+      .sf-field > label {
+        display: block;
+        font-size: 11px;
+        color: var(--text-3);
+        font-family: var(--font-mono);
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        margin-bottom: 8px;
+      }
+      .sf-input {
+        padding: 12px 14px;
+        border-radius: 8px;
+        background: var(--bg-1);
+        border: 1px solid var(--line-2);
+        font-size: 14px;
+        color: var(--text-1);
+      }
+      .sf-methods {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .sf-method {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 12px;
+        border-radius: 8px;
+        border: 1px solid var(--line-1);
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      .sf-method-selected {
+        background: var(--bg-1);
+        border-color: var(--line-3);
+      }
+      .sf-radio {
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        border: 1px solid var(--line-3);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .sf-method-selected .sf-radio {
+        border-color: var(--accent);
+      }
+      .sf-method-selected .sf-radio span {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--accent);
+      }
+      .sf-method-glyph {
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-family: var(--font-mono);
+        font-size: 11px;
+        font-weight: 700;
+      }
+      .sf-method-text {
+        display: flex;
+        flex-direction: column;
+      }
+      .sf-method-label {
+        font-size: 13px;
+        font-weight: 500;
+      }
+      .sf-method-sub {
+        font-size: 11px;
+        color: var(--text-2);
+      }
+      .sf-card-form {
+        margin-bottom: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .sf-card-num {
+        display: flex;
+        justify-content: space-between;
+        color: var(--text-3);
+      }
+      .sf-card-glyphs {
+        display: flex;
+        gap: 4px;
+      }
+      .sf-card-glyph {
+        width: 22px;
+        height: 14px;
+        border-radius: 3px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-family: var(--font-mono);
+        font-size: 9px;
+        font-weight: 700;
+        color: white;
+      }
+      .sf-card-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+      .sf-pay-btn {
+        width: 100%;
+        padding: 14px 18px;
+        border-radius: 10px;
+        background: var(--accent);
+        color: var(--accent-ink);
+        border: none;
+        cursor: pointer;
+        font-size: 15px;
+        font-weight: 600;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+      }
+      .sf-foot {
+        margin-top: 16px;
+        font-size: 11px;
+        color: var(--text-3);
+        text-align: center;
+        line-height: 1.5;
+      }
+
+      /* Side panel */
+      .pg-side {
+        display: flex;
+        flex-direction: column;
+        background: var(--bg-1);
+        min-width: 0;
+      }
+      .pg-tabs {
+        display: flex;
+        padding: 0 20px;
+        border-bottom: 1px solid var(--line-2);
+        overflow-x: auto;
+      }
+      .pg-tab {
+        padding: 14px 16px;
+        background: transparent;
+        border: none;
+        border-bottom: 2px solid transparent;
+        color: var(--text-2);
+        cursor: pointer;
+        font-family: var(--font-sans);
+        font-size: 13px;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: -1px;
+        white-space: nowrap;
+      }
+      .pg-tab[data-active='true'] {
+        color: var(--text-0);
+        font-weight: 500;
+        border-bottom-color: var(--accent);
+      }
+      .pg-tab-n {
+        padding: 1px 6px;
+        border-radius: 4px;
+        background: var(--bg-2);
+        font-family: var(--font-mono);
+        font-size: 10px;
+        color: var(--text-3);
+      }
+      .pg-tab .kbd {
+        margin-left: 2px;
+        font-size: 9px;
+      }
+      .pg-tab-body {
+        flex: 1;
+        overflow-y: auto;
+      }
+      .pg-panel {
+        display: none;
+        padding: 20px;
+      }
+      .pg-panel[data-active='true'] {
+        display: block;
+      }
+      .pg-panel-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 16px;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .pg-panel-sub {
+        font-size: 11px;
+        color: var(--text-2);
+      }
+      .pg-panel-actions {
+        display: flex;
+        gap: 6px;
+      }
+      .pg-mini-btn {
+        padding: 5px 10px;
+        font-size: 11px;
+      }
+
+      .pg-rules {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .pg-rule {
+        padding: 14px;
+        border-radius: 10px;
+        background: var(--bg-2);
+        border: 1px solid var(--line-2);
+        position: relative;
+      }
+      .pg-rule[data-matched='true'] {
+        background: color-mix(in oklab, var(--accent) 10%, var(--bg-2));
+        border-color: var(--accent-soft);
+      }
+      .pg-rule-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+      }
+      .pg-rule-id {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .pg-rule-idx {
+        font-size: 10px;
+        color: var(--text-3);
+      }
+      .pg-rule-name {
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--text-0);
+      }
+      .pg-rule[data-matched='true'] .pg-rule-name {
+        color: var(--accent);
+      }
+      .pg-rule-match {
+        display: none;
+        font-size: 9px;
+      }
+      .pg-rule[data-matched='true'] .pg-rule-match {
+        display: inline-flex;
+      }
+      .pg-rule-actions {
+        display: flex;
+        gap: 4px;
+      }
+      .pg-rule-btn {
+        width: 22px;
+        height: 22px;
+        border-radius: 5px;
+        background: transparent;
+        border: 1px solid var(--line-2);
+        color: var(--text-3);
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .pg-rule-body {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 4px 12px;
+        font-family: var(--font-mono);
+        font-size: 11px;
+        line-height: 1.5;
+      }
+      .pg-rule-k {
+        color: var(--text-3);
+      }
+      .pg-rule-v {
+        color: var(--text-1);
+        word-break: break-all;
+      }
+      .pg-rule-fallback {
+        border-style: dashed;
+        border-color: var(--line-3);
+        opacity: 0.7;
+      }
+      .pg-rule-fallback[data-matched='true'] {
+        opacity: 1;
+        background: color-mix(in oklab, var(--accent) 10%, var(--bg-2));
+        border-color: var(--accent-soft);
+      }
+
+      .pg-field {
+        margin-bottom: 18px;
+      }
+      .pg-field-label {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        color: var(--text-3);
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        margin-bottom: 8px;
+      }
+      .pg-country-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 4px;
+      }
+      .pg-country-btn {
+        padding: 8px 0;
+        border-radius: 6px;
+        background: var(--bg-2);
+        border: 1px solid var(--line-2);
+        color: var(--text-1);
+        font-family: var(--font-mono);
+        font-size: 11px;
+        cursor: pointer;
+        text-align: center;
+        line-height: 1.2;
+      }
+      .pg-country-btn[data-active='true'] {
+        background: color-mix(in oklab, var(--accent) 12%, var(--bg-2));
+        border-color: var(--accent-soft);
+        color: var(--accent);
+      }
+      .pg-country-flag {
+        display: block;
+        font-size: 14px;
+        margin-bottom: 2px;
+      }
+      .pg-country-code {
+        display: block;
+      }
+      .pg-chip-row {
+        display: flex;
+        gap: 4px;
+        flex-wrap: wrap;
+      }
+      .pg-chip-row-stretch {
+        flex-wrap: nowrap;
+      }
+      .pg-chip {
+        padding: 6px 12px;
+        border-radius: 6px;
+        background: var(--bg-2);
+        border: 1px solid var(--line-2);
+        color: var(--text-1);
+        font-family: var(--font-mono);
+        font-size: 11px;
+        cursor: pointer;
+        text-transform: uppercase;
+      }
+      .pg-chip-stretch {
+        flex: 1;
+        text-transform: none;
+        padding: 8px 10px;
+      }
+      .pg-chip[data-active='true'] {
+        background: color-mix(in oklab, var(--accent) 12%, var(--bg-2));
+        border-color: var(--accent-soft);
+        color: var(--accent);
+      }
+      .pg-flags {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .pg-flag-row {
+        padding: 10px 12px;
+        border-radius: 6px;
+        background: var(--bg-2);
+        border: 1px solid var(--line-2);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .pg-flag-label {
+        font-size: 11px;
+        color: var(--text-1);
+      }
+      .pg-toggle {
+        width: 32px;
+        height: 18px;
+        border-radius: 9px;
+        border: none;
+        cursor: pointer;
+        background: var(--bg-4);
+        position: relative;
+        padding: 0;
+        transition: background 0.15s;
+      }
+      .pg-toggle[data-active='true'] {
+        background: var(--accent);
+      }
+      .pg-toggle-knob {
+        position: absolute;
+        top: 2px;
+        left: 2px;
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: var(--text-1);
+        transition: left 0.12s, background 0.12s;
+      }
+      .pg-toggle[data-active='true'] .pg-toggle-knob {
+        left: 16px;
+        background: var(--accent-ink);
+      }
+      .pg-resolved {
+        margin-top: 8px;
+        padding: 14px;
+        background: var(--code-bg);
+        border-radius: 8px;
+        border: 1px solid var(--line-2);
+      }
+      .pg-resolved-head {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 8px;
+      }
+      .pg-resolved pre {
+        margin: 0;
+        font-size: 11px;
+        color: var(--code-fg);
+        line-height: 1.5;
+      }
+
+      .pg-events {
+        background: var(--code-bg);
+        border: 1px solid var(--line-2);
+        border-radius: 8px;
+        overflow: hidden;
+      }
+      .pg-event {
+        display: grid;
+        grid-template-columns: 60px 140px 1fr;
+        gap: 12px;
+        padding: 8px 14px;
+        border-bottom: 1px solid var(--line-1);
+        font-family: var(--font-mono);
+        font-size: 11px;
+        align-items: baseline;
+      }
+      .pg-event:last-child {
+        border-bottom: none;
+      }
+      .pg-event-t {
+        color: var(--text-3);
+      }
+      .pg-event-d {
+        color: var(--text-1);
+        word-break: break-word;
+      }
+      .ev-ctx { color: var(--info); }
+      .ev-route { color: var(--accent); }
+      .ev-state { color: var(--ok); }
+      .ev-adapter { color: var(--text-2); }
+      .ev-default { color: var(--text-1); }
+      .ev-muted { color: var(--text-3); }
+      .pg-events-legend {
+        margin-top: 14px;
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        font-size: 10px;
+        color: var(--text-3);
+      }
+      .pg-leg {
+        display: inline-block;
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        margin-right: 4px;
+        vertical-align: 1px;
+      }
+      .pg-leg-ctx { background: var(--info); }
+      .pg-leg-route { background: var(--accent); }
+      .pg-leg-state { background: var(--ok); }
+      .pg-leg-adapter { background: var(--text-2); }
+
+      .pg-code {
+        background: var(--code-bg);
+        border: 1px solid var(--line-2);
+        border-radius: 8px;
+        overflow: hidden;
+      }
+      .pg-code-tabs {
+        display: flex;
+        border-bottom: 1px solid var(--line-1);
+        padding: 0 10px;
+      }
+      .pg-code-tabs button {
+        padding: 10px 12px;
+        background: transparent;
+        border: none;
+        color: var(--text-3);
+        font-family: var(--font-mono);
+        font-size: 11px;
+        border-bottom: 2px solid transparent;
+        margin-bottom: -1px;
+        cursor: pointer;
+      }
+      .pg-code-tabs button[data-active='true'] {
+        color: var(--text-0);
+        border-bottom-color: var(--accent);
+        font-weight: 500;
+      }
+      .pg-code-body {
+        margin: 0;
+        padding: 14px;
+        font-size: 11.5px;
+        line-height: 1.7;
+        color: var(--code-fg);
+        overflow-x: auto;
+        white-space: pre;
+      }
+      .pg-code-cta {
+        margin-top: 14px;
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      /* Responsive */
+      @media (max-width: 1100px) {
+        .pg-grid {
+          grid-template-columns: minmax(0, 1fr) 460px;
+        }
+      }
+      @media (max-width: 960px) {
+        .pg-grid {
+          grid-template-columns: 1fr;
+        }
+        .pg-preview {
+          border-right: none;
+          border-bottom: 1px solid var(--line-2);
+        }
+        .pg-side {
+          min-height: 600px;
+        }
+        .pg-top-right .pg-fork {
+          display: none;
+        }
+      }
+      @media (max-width: 720px) {
+        .sf-checkout {
+          grid-template-columns: 1fr;
+        }
+        .sf-summary {
+          border-right: none;
+          border-bottom: 1px solid var(--line-1);
+          padding: 24px;
+        }
+        .sf-pay {
+          padding: 24px;
+        }
+        .pg-country-grid {
+          grid-template-columns: repeat(4, 1fr);
+        }
+        .pg-top {
+          padding: 10px 16px;
+        }
+        .pg-install .t-mono {
+          display: none;
+        }
+      }
+      @media (max-width: 480px) {
+        .pg-scenario {
+          width: 100%;
+          overflow-x: auto;
+        }
+        .pg-preview {
+          padding: 12px;
+        }
+        .pg-panel {
+          padding: 16px;
+        }
+        .pg-event {
+          grid-template-columns: 48px 1fr;
+        }
+        .pg-event-k {
+          grid-column: 1 / -1;
+          padding-left: 60px;
+        }
+      }
+    </style>
+  </body>
+</html>

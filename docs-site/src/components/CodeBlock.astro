@@ -43,4 +43,16 @@ const { filename, lang = 'tsx', lineNumbers = true, copy = true } = Astro.props;
   pre[data-line-numbers='true'] {
     counter-reset: codeline;
   }
+  @media (max-width: 480px) {
+    pre[data-line-numbers='true'] .code-line::before {
+      display: none;
+    }
+    .code-body {
+      padding: 14px 12px 14px;
+      font-size: 12px;
+    }
+    .code-head {
+      padding: 8px 12px;
+    }
+  }
 </style>

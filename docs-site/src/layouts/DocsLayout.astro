@@ -2,6 +2,7 @@
 import Layout from './Layout.astro';
 import DocsSidebar from '../components/DocsSidebar.astro';
 import DocsTOC from '../components/DocsTOC.astro';
+import Icon from '../components/Icons.astro';
 
 interface Heading {
   depth: number;
@@ -17,9 +18,26 @@ interface Props {
   breadcrumb: { label: string; section: string };
 }
 const { title, description, slug, headings, groups, breadcrumb } = Astro.props;
+const hasToc = headings.some((h) => h.depth === 2 || h.depth === 3);
 ---
 
 <Layout title={`${title} · Tenderlane docs`} description={description ?? title} active="docs" mode="docs">
+  <div class="docs-mobile-bar">
+    <button class="docs-mobile-btn" id="docs-open-sidebar" aria-label="Open docs navigation">
+      <Icon name="menu" size={14} />
+      <span>Menu</span>
+    </button>
+    <div class="docs-mobile-crumb">
+      <span>{breadcrumb.section}</span>
+      <span style="color:var(--text-3)">/</span>
+      <span style="color:var(--text-0)">{breadcrumb.label}</span>
+    </div>
+    {hasToc && (
+      <button class="docs-mobile-btn" id="docs-open-toc" aria-label="Open on-this-page">
+        <span>On this page</span>
+      </button>
+    )}
+  </div>
   <div class="docs-page">
     <DocsSidebar current={slug} groups={groups} />
     <main class="docs-main">
@@ -59,9 +77,66 @@ const { title, description, slug, headings, groups, breadcrumb } = Astro.props;
     color: var(--text-3);
     font-family: var(--font-mono);
   }
-  @media (max-width: 1000px) {
+
+  /* Mobile sub-header: shown ≤1024px. */
+  .docs-mobile-bar {
+    display: none;
+    position: sticky;
+    top: 60px;
+    z-index: 40;
+    padding: 10px var(--side-pad);
+    padding-left: max(var(--side-pad), env(safe-area-inset-left));
+    padding-right: max(var(--side-pad), env(safe-area-inset-right));
+    align-items: center;
+    gap: 10px;
+    background: color-mix(in oklab, var(--bg-0) 88%, transparent);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--line-1);
+  }
+  .docs-mobile-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    border: 1px solid var(--line-2);
+    border-radius: 8px;
+    background: var(--bg-1);
+    color: var(--text-1);
+    font: 500 12px var(--font-mono);
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .docs-mobile-crumb {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font: 500 11px var(--font-mono);
+    color: var(--text-2);
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .docs-mobile-crumb > span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  @media (max-width: 1024px) {
+    .docs-mobile-bar {
+      display: flex;
+    }
     .docs-main {
       padding: 32px var(--side-pad) 80px;
+    }
+    .docs-breadcrumb {
+      display: none;
+    }
+  }
+  @media (max-width: 480px) {
+    .docs-main {
+      padding: 24px var(--side-pad) 64px;
     }
   }
 </style>
@@ -74,7 +149,7 @@ const { title, description, slug, headings, groups, breadcrumb } = Astro.props;
   }
   .docs-article h1 {
     font-family: var(--font-display);
-    font-size: clamp(34px, 4vw, 48px);
+    font-size: clamp(28px, 4vw, 48px);
     line-height: 1.04;
     margin: 0 0 16px;
     letter-spacing: -0.028em;
@@ -89,7 +164,7 @@ const { title, description, slug, headings, groups, breadcrumb } = Astro.props;
     letter-spacing: -0.018em;
     color: var(--text-0);
     font-weight: 500;
-    scroll-margin-top: 80px;
+    scroll-margin-top: 120px;
   }
   .docs-article h3 {
     font-size: 18px;
@@ -97,7 +172,7 @@ const { title, description, slug, headings, groups, breadcrumb } = Astro.props;
     color: var(--text-0);
     margin: 24px 0 8px;
     letter-spacing: -0.008em;
-    scroll-margin-top: 80px;
+    scroll-margin-top: 120px;
   }
   .docs-article p,
   .docs-article ul,
@@ -132,6 +207,7 @@ const { title, description, slug, headings, groups, breadcrumb } = Astro.props;
     padding: 1px 6px;
     border-radius: 4px;
     border: 1px solid var(--accent-soft);
+    overflow-wrap: anywhere;
   }
   .docs-article pre {
     background: var(--code-bg);
@@ -153,7 +229,10 @@ const { title, description, slug, headings, groups, breadcrumb } = Astro.props;
     font-size: inherit;
   }
   .docs-article table {
+    display: block;
     width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
     border-collapse: collapse;
     margin: 18px 0;
     font-size: 14px;
@@ -168,6 +247,7 @@ const { title, description, slug, headings, groups, breadcrumb } = Astro.props;
     text-transform: uppercase;
     letter-spacing: 0.06em;
     border-bottom: 1px solid var(--line-2);
+    white-space: nowrap;
   }
   .docs-article td {
     padding: 12px 16px;
@@ -196,6 +276,16 @@ const { title, description, slug, headings, groups, breadcrumb } = Astro.props;
   }
   .docs-article img {
     max-width: 100%;
+    height: auto;
     border-radius: 8px;
   }
 </style>
+
+<script>
+  document.getElementById('docs-open-sidebar')?.addEventListener('click', () => {
+    (window as any).__tenderlaneOpenSidebar?.();
+  });
+  document.getElementById('docs-open-toc')?.addEventListener('click', () => {
+    (window as any).__tenderlaneOpenToc?.();
+  });
+</script>

@@ -27,71 +27,133 @@ const polar = polarProvider({
   serverEndpoint: '/api/payments',
 });
 
-function RouteDebug({
-  resolvedItems,
-}: {
-  resolvedItems: readonly ResolvedCatalogItem[] | null;
-}) {
+const PLAN = {
+  name: 'Premium',
+  copy: 'Monthly access to every feature',
+  features: [
+    'Unlimited projects',
+    'Priority support',
+    'Webhooks + API access',
+    'Cancel any time',
+  ],
+};
+
+const METHOD_META: Record<
+  string,
+  { label: string; sub: string; color: string; letter: string; dark?: boolean }
+> = {
+  card:   { label: 'Card',        sub: 'Visa · Mastercard · Amex',   color: '#3b3f49', letter: 'C' },
+  twint:  { label: 'TWINT',       sub: 'Pay with your phone (CH)',   color: '#ED1C24', letter: 'T' },
+  ideal:  { label: 'iDEAL',       sub: 'Dutch bank transfer',         color: '#CC0066', letter: 'i' },
+  sepa:   { label: 'SEPA Direct', sub: 'Bank debit (EU)',             color: '#0033A0', letter: 'S' },
+  klarna: { label: 'Klarna',      sub: 'Pay later or in 3',           color: '#FFB3C7', letter: 'K', dark: true },
+  pix:    { label: 'Pix',         sub: 'Instant transfer (BR)',       color: '#32BCAD', letter: 'P' },
+};
+
+function methodSubLabel(method: string): { label: string; sub: string } {
+  const meta = METHOD_META[method];
+  return meta ? { label: meta.label, sub: meta.sub } : { label: method, sub: '' };
+}
+
+function StatusDot() {
   const checkout = useTenderlaneCheckout();
-
-  const statusDotClass = {
-    idle: styles.statusDotEvaluating,
-    evaluating: styles.statusDotEvaluating,
-    ready: styles.statusDotReady,
-    preparing: styles.statusDotPreparing,
-    prepared: styles.statusDotPrepared,
-    submitting: styles.statusDotSubmitting,
-    success: styles.statusDotReady,
-    error: styles.statusDotError,
-  }[checkout.status];
-
-  const previewTotal = resolvedItems
-    ? resolvedItems.reduce(
-        (total, item) => total + item.unitAmount * item.quantity,
-        0,
-      )
-    : null;
-  const previewCurrency = resolvedItems?.[0]?.currency ?? 'usd';
-
+  const statusClass =
+    {
+      idle: styles.statusDotEvaluating,
+      evaluating: styles.statusDotEvaluating,
+      ready: styles.statusDotReady,
+      preparing: styles.statusDotPreparing,
+      prepared: styles.statusDotPrepared,
+      submitting: styles.statusDotSubmitting,
+      success: styles.statusDotReady,
+      error: styles.statusDotError,
+    }[checkout.status] ?? styles.statusDot;
   return (
-    <div className={styles.debugCard}>
-      <div className={styles.debugGrid}>
-        <div className={styles.debugItem}>
-          <span className={styles.debugLabel}>Provider</span>
-          <span className={styles.debugValue}>
-            {checkout.selectedProvider ?? 'Selecting...'}
-          </span>
-        </div>
-        <div className={styles.debugItem}>
-          <span className={styles.debugLabel}>Status</span>
-          <span className={`${styles.debugValue} ${styles.statusBadge}`}>
-            <span className={`${styles.statusDot} ${statusDotClass}`} />
-            {checkout.status}
-          </span>
-        </div>
-        <div className={styles.debugItem}>
-          <span className={styles.debugLabel}>Route</span>
-          <span className={styles.debugValue}>
-            {checkout.selectedRoute?.ruleId ??
-              checkout.selectedRoute?.source ??
-              '...'}
-          </span>
-        </div>
-        <div className={styles.debugItem}>
-          <span className={styles.debugLabel}>Flow</span>
-          <span className={styles.debugValue}>
-            {checkout.selectedRoute?.flow ?? '...'}
-          </span>
-        </div>
-        <div className={styles.debugItem}>
-          <span className={styles.debugLabel}>Catalog preview</span>
-          <span className={styles.debugValue}>
-            {previewTotal !== null
-              ? formatAmount(previewTotal, previewCurrency)
-              : '...'}
-          </span>
-        </div>
-      </div>
+    <span className={styles.demoDebug}>
+      <span className={`${styles.statusDot} ${statusClass}`} />
+      {checkout.selectedProvider ?? 'routing'} · {checkout.status}
+    </span>
+  );
+}
+
+function RouteBadge() {
+  const checkout = useTenderlaneCheckout();
+  const routeId =
+    checkout.selectedRoute?.ruleId ??
+    checkout.selectedRoute?.source ??
+    'resolving';
+  return <div className={styles.sfRouteBadge}>route · {routeId}</div>;
+}
+
+function PaymentMethodList() {
+  const checkout = useTenderlaneCheckout();
+  const methods = checkout.selectedRoute?.paymentMethods ?? ['card'];
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      {methods.map((method, index) => {
+        const { label, sub } = methodSubLabel(method);
+        const meta = METHOD_META[method];
+        const selected = index === 0;
+        return (
+          <label
+            key={`${method}-${index}`}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 12,
+              padding: '10px 12px',
+              borderRadius: 8,
+              border: '1px solid ' + (selected ? 'var(--line-3)' : 'var(--line-1)'),
+              background: selected ? 'var(--bg-1)' : 'transparent',
+              cursor: 'default',
+            }}
+          >
+            <span
+              style={{
+                width: 14,
+                height: 14,
+                borderRadius: '50%',
+                border: '1px solid ' + (selected ? 'var(--accent)' : 'var(--line-3)'),
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              {selected && (
+                <span
+                  style={{
+                    width: 7,
+                    height: 7,
+                    borderRadius: '50%',
+                    background: 'var(--accent)',
+                  }}
+                />
+              )}
+            </span>
+            <span
+              style={{
+                width: 22,
+                height: 22,
+                borderRadius: '50%',
+                background: meta?.color ?? '#888',
+                color: meta?.dark ? '#000' : '#fff',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontFamily: 'var(--font-mono)',
+                fontSize: 11,
+                fontWeight: 700,
+              }}
+            >
+              {meta?.letter ?? method.charAt(0).toUpperCase()}
+            </span>
+            <span style={{ display: 'flex', flexDirection: 'column' }}>
+              <span style={{ fontSize: 13, fontWeight: 500 }}>{label}</span>
+              {sub && <span style={{ fontSize: 11, color: 'var(--text-2)' }}>{sub}</span>}
+            </span>
+          </label>
+        );
+      })}
     </div>
   );
 }
@@ -104,8 +166,6 @@ export function CheckoutPage() {
   >('stripe-first');
 
   // Client-side catalog preview — display only, never trusted server-side.
-  // The server re-resolves the same catalog at submit time and decides the
-  // canonical amount; this state is purely for showing a running total.
   const [resolvedItems, setResolvedItems] = useState<
     readonly ResolvedCatalogItem[] | null
   >(null);
@@ -152,67 +212,32 @@ export function CheckoutPage() {
           {
             id: 'polar-preferred',
             description: 'Variant: customer routed to Polar hosted checkout',
-            when: {
-              experiment: { providerPreference: 'polar-first' },
-            },
-            use: {
-              provider: 'polar',
-              flow: 'checkout-session',
-              paymentMethods: ['card'],
-            },
+            when: { experiment: { providerPreference: 'polar-first' } },
+            use: { provider: 'polar', flow: 'checkout-session', paymentMethods: ['card'] },
           },
           {
             id: 'ch-stripe-inline',
             description: 'Swiss inline card + Twint via Stripe Elements',
-            when: {
-              country: 'CH',
-              currency: 'chf',
-              experiment: { providerPreference: 'stripe-first' },
-            },
-            use: {
-              provider: 'stripe',
-              flow: 'payment-intent',
-              paymentMethods: ['card', 'twint'],
-            },
+            when: { country: 'CH', currency: 'chf', experiment: { providerPreference: 'stripe-first' } },
+            use: { provider: 'stripe', flow: 'payment-intent', paymentMethods: ['card', 'twint'] },
           },
           {
             id: 'dach-stripe-redirect',
             description: 'DACH region redirect via Stripe Checkout',
-            when: {
-              country: { in: ['CH', 'DE', 'AT'] },
-              experiment: { providerPreference: 'stripe-first' },
-            },
-            use: {
-              provider: 'stripe',
-              flow: 'checkout-session',
-              paymentMethods: ['card'],
-            },
+            when: { country: { in: ['CH', 'DE', 'AT'] }, experiment: { providerPreference: 'stripe-first' } },
+            use: { provider: 'stripe', flow: 'checkout-session', paymentMethods: ['card'] },
           },
           {
             id: 'auto-usd-polar',
             description: 'Auto: USD purchases routed to Polar (MoR)',
-            when: {
-              currency: 'usd',
-              experiment: { providerPreference: 'auto' },
-            },
-            use: {
-              provider: 'polar',
-              flow: 'checkout-session',
-              paymentMethods: ['card'],
-            },
+            when: { currency: 'usd', experiment: { providerPreference: 'auto' } },
+            use: { provider: 'polar', flow: 'checkout-session', paymentMethods: ['card'] },
           },
           {
             id: 'auto-eu-stripe',
             description: 'Auto: EU currencies via Stripe inline',
-            when: {
-              currency: { in: ['eur', 'gbp', 'chf'] },
-              experiment: { providerPreference: 'auto' },
-            },
-            use: {
-              provider: 'stripe',
-              flow: 'payment-intent',
-              paymentMethods: ['card'],
-            },
+            when: { currency: { in: ['eur', 'gbp', 'chf'] }, experiment: { providerPreference: 'auto' } },
+            use: { provider: 'stripe', flow: 'payment-intent', paymentMethods: ['card'] },
           },
         ],
         fallback: {
@@ -226,11 +251,7 @@ export function CheckoutPage() {
           name: 'debug',
           onRouteEvaluated({ context, route }) {
             console.log('[tenderlane] Route evaluated:', {
-              context: {
-                country: context.country,
-                currency: context.currency,
-                preference: context.experiment?.providerPreference,
-              },
+              context: { country: context.country, currency: context.currency, preference: context.experiment?.providerPreference },
               provider: route.provider,
               flow: route.flow,
               ruleId: route.ruleId,
@@ -244,10 +265,7 @@ export function CheckoutPage() {
             });
           },
           onCheckoutStart({ route }) {
-            console.log('[tenderlane] Checkout starting:', {
-              provider: route.provider,
-              flow: route.flow,
-            });
+            console.log('[tenderlane] Checkout starting:', { provider: route.provider, flow: route.flow });
           },
           onCheckoutError({ error }) {
             console.error('[tenderlane] Checkout error:', error.message);
@@ -258,42 +276,51 @@ export function CheckoutPage() {
     [country, currency, preference],
   );
 
-  return (
-    <div className={styles.container}>
-      <div className={styles.header}>
-        <h1 className={styles.title}>Tenderlane Checkout</h1>
-        <p className={styles.subtitle}>
-          One catalog, two PSPs. Change the controls to see routing pick a
-          different provider, flow, and payment method. The catalog runs on
-          both client (preview) and server (canonical); the wire payload
-          carries only <code>{'{ sku, quantity, context }'}</code> — never
-          amounts.
-        </p>
-      </div>
+  const previewItem = resolvedItems?.[0];
+  const previewPrice = previewItem
+    ? formatAmount(previewItem.unitAmount, previewItem.currency)
+    : '…';
 
-      <div className={styles.controlPanel}>
-        <div className={styles.controlGroup}>
-          <span className={styles.controlLabel}>Country</span>
-          <select
-            className={styles.controlSelect}
-            value={country}
-            onChange={(event) => setCountry(event.target.value)}
-          >
-            <option value="CH">Switzerland</option>
-            <option value="DE">Germany</option>
-            <option value="AT">Austria</option>
-            <option value="US">United States</option>
-            <option value="GB">United Kingdom</option>
-            <option value="JP">Japan</option>
-          </select>
+  return (
+    <TenderlaneProvider config={config}>
+      <div className={styles.sfRoot}>
+        {/* Stitch nav */}
+        <div className={styles.sfNav}>
+          <span className={styles.sfBrand}>
+            <span className={styles.sfGlyph}>S</span>
+            <span className={styles.sfWordmark}>stitch</span>
+            <span className={styles.sfTag}>example app</span>
+          </span>
+          <div className={styles.sfNavLinks}>
+            <a href="#">Product</a>
+            <a href="#">Docs</a>
+            <a href="#" className={styles.sfActive}>Pricing</a>
+            <button className={styles.sfSignin}>Sign in</button>
+          </div>
         </div>
 
-        <div className={styles.controlGroup}>
-          <span className={styles.controlLabel}>Currency</span>
+        {/* Live demo controls — these drive the actual Tenderlane router. */}
+        <div className={styles.demoBar}>
+          <span className={styles.demoLabel}>country</span>
           <select
-            className={styles.controlSelect}
+            className={styles.demoSelect}
+            value={country}
+            onChange={(event) => setCountry(event.target.value)}
+            aria-label="Country"
+          >
+            <option value="CH">CH · Switzerland</option>
+            <option value="DE">DE · Germany</option>
+            <option value="AT">AT · Austria</option>
+            <option value="US">US · United States</option>
+            <option value="GB">GB · United Kingdom</option>
+            <option value="JP">JP · Japan</option>
+          </select>
+          <span className={styles.demoLabel}>currency</span>
+          <select
+            className={styles.demoSelect}
             value={currency}
             onChange={(event) => setCurrency(event.target.value)}
+            aria-label="Currency"
           >
             <option value="chf">CHF</option>
             <option value="eur">EUR</option>
@@ -301,66 +328,107 @@ export function CheckoutPage() {
             <option value="gbp">GBP</option>
             <option value="jpy">JPY</option>
           </select>
-        </div>
-
-        <div className={styles.controlGroup}>
-          <span className={styles.controlLabel}>Provider preference</span>
+          <span className={styles.demoLabel}>preference</span>
           <select
-            className={styles.controlSelect}
+            className={styles.demoSelect}
             value={preference}
-            onChange={(event) =>
-              setPreference(event.target.value as typeof preference)
-            }
+            onChange={(event) => setPreference(event.target.value as typeof preference)}
+            aria-label="Provider preference"
           >
-            <option value="stripe-first">Stripe first</option>
-            <option value="polar-first">Polar first</option>
-            <option value="auto">Auto (rules pick)</option>
+            <option value="stripe-first">stripe-first</option>
+            <option value="polar-first">polar-first</option>
+            <option value="auto">auto</option>
           </select>
+          <span className={styles.demoSpacer} />
+          <StatusDot />
         </div>
-      </div>
 
-      <TenderlaneProvider config={config}>
-        <RouteDebug resolvedItems={resolvedItems} />
+        {/* Two-pane checkout */}
+        <div className={styles.sfCheckout}>
+          {/* Left: order summary */}
+          <div className={styles.sfSummary}>
+            <div className={styles.sfBack}>← Back to plans</div>
+            <div className={styles.sfEyebrow}>UPGRADING TO</div>
+            <h1 className={styles.sfPlanName}>
+              {PLAN.name} <span style={{ color: 'var(--text-3)' }}>plan</span>
+            </h1>
+            <p className={styles.sfPlanCopy}>{PLAN.copy}</p>
 
-        <div className={styles.orderCard}>
-          <div className={styles.debugLabel}>Order summary</div>
-          <div className={styles.orderRow}>
-            <span className={styles.orderLabel}>Premium Plan (monthly)</span>
-            <span className={styles.orderPrice}>
-              {resolvedItems && resolvedItems[0]
-                ? formatAmount(
-                    resolvedItems[0].unitAmount,
-                    resolvedItems[0].currency,
-                  )
-                : '...'}
-            </span>
+            <div className={styles.sfOrder}>
+              <div className={styles.sfOrderHead}>
+                <div>
+                  <div className={styles.sfOrderName}>{PLAN.name} · monthly</div>
+                  <div className={styles.sfOrderSub}>Renews monthly · cancel anytime</div>
+                </div>
+                <div className={styles.sfOrderAmt}>{previewPrice}</div>
+              </div>
+              <div className={styles.sfOrderLine}>
+                <span>Subtotal</span>
+                <span>{previewPrice}</span>
+              </div>
+              <div className={styles.sfOrderLine}>
+                <span>VAT / Tax</span>
+                <span style={{ color: 'var(--text-3)' }}>calculated at confirmation</span>
+              </div>
+              <div className={styles.sfOrderTotal}>
+                <span className={styles.sfOrderTotalLabel}>Total today</span>
+                <span className={styles.sfTotalAmt}>{previewPrice}</span>
+              </div>
+            </div>
+
+            <ul className={styles.sfFeatures}>
+              {PLAN.features.map((feature) => (
+                <li key={feature}>
+                  <span className={styles.sfCheck}>✓</span>
+                  {feature}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Right: payment */}
+          <div className={styles.sfPay}>
+            <RouteBadge />
+            <h2 className={styles.sfPayTitle}>How would you like to pay?</h2>
+
+            <div className={styles.sfField}>
+              <label className={styles.sfFieldLabel}>email</label>
+              <div className={styles.sfInput}>you@stitch.example</div>
+            </div>
+
+            <div className={styles.sfField}>
+              <label className={styles.sfFieldLabel}>payment method</label>
+              <PaymentMethodList />
+            </div>
+
+            <TenderlaneCheckoutForm
+              input={checkoutInput}
+              elements={{ stripe: StripePaymentElement as any }}
+            >
+              {({ status, canSubmit, submit, error, selectedProvider }) => (
+                <>
+                  <button
+                    type="button"
+                    className={styles.sfPayBtn}
+                    disabled={!canSubmit || status === 'submitting'}
+                    onClick={submit}
+                  >
+                    {status === 'submitting'
+                      ? 'Processing…'
+                      : status === 'preparing'
+                        ? 'Loading payment form…'
+                        : `Pay ${previewPrice}`}
+                  </button>
+                  <p className={styles.sfFoot}>
+                    Powered by {selectedProvider ?? 'tenderlane'} via tenderlane · By paying, you agree to the Terms.
+                  </p>
+                  {error && <div className={styles.sfError}>{error.message}</div>}
+                </>
+              )}
+            </TenderlaneCheckoutForm>
           </div>
         </div>
-
-        <TenderlaneCheckoutForm
-          input={checkoutInput}
-          elements={{ stripe: StripePaymentElement as any }}
-        >
-          {({ status, canSubmit, submit, error, selectedProvider }) => (
-            <>
-              {error && <div className={styles.errorBanner}>{error.message}</div>}
-              <button
-                className={styles.payButton}
-                disabled={!canSubmit || status === 'submitting'}
-                onClick={submit}
-              >
-                {status === 'submitting'
-                  ? 'Processing...'
-                  : status === 'preparing'
-                    ? 'Loading payment form...'
-                    : selectedProvider
-                      ? `Pay with ${selectedProvider}`
-                      : 'Pay'}
-              </button>
-            </>
-          )}
-        </TenderlaneCheckoutForm>
-      </TenderlaneProvider>
-    </div>
+      </div>
+    </TenderlaneProvider>
   );
 }

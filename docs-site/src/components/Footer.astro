@@ -76,6 +76,9 @@ const cols = [
   .footer {
     border-top: 1px solid var(--line-1);
     padding: 64px var(--side-pad) 40px;
+    padding-left: max(var(--side-pad), env(safe-area-inset-left));
+    padding-right: max(var(--side-pad), env(safe-area-inset-right));
+    padding-bottom: max(40px, env(safe-area-inset-bottom));
     background: var(--bg-0);
   }
   .footer-grid {
@@ -126,6 +129,12 @@ const cols = [
     .footer-bottom {
       flex-direction: column;
       gap: 8px;
+    }
+  }
+  @media (max-width: 480px) {
+    .footer-grid {
+      grid-template-columns: 1fr;
+      gap: 28px;
     }
   }
 </style>

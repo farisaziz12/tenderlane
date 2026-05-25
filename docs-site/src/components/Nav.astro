@@ -3,7 +3,7 @@ import Logo from './Logo.astro';
 import Icon from './Icons.astro';
 
 interface Props {
-  active?: 'home' | 'why' | 'docs' | 'showcase' | 'philosophy' | 'changelog';
+  active?: 'home' | 'why' | 'docs' | 'playground' | 'showcase' | 'philosophy' | 'changelog';
   mode?: 'marketing' | 'docs';
 }
 const { active = 'home', mode = 'marketing' } = Astro.props;
@@ -21,6 +21,7 @@ const items =
     : [
         { label: 'Why', href: link('/why'), key: 'why' },
         { label: 'Docs', href: link('/docs'), key: 'docs' },
+        { label: 'Playground', href: link('/playground'), key: 'playground' },
         { label: 'Showcase', href: link('/#showcase'), key: 'showcase' },
         { label: 'Philosophy', href: link('/#philosophy'), key: 'philosophy' },
         { label: 'Changelog', href: link('/#changelog'), key: 'changelog' },
@@ -79,6 +80,19 @@ const items =
   const toggle = document.getElementById('nav-toggle');
   const close = document.getElementById('nav-close');
   const drawer = document.getElementById('mobile-drawer');
-  toggle?.addEventListener('click', () => drawer?.setAttribute('data-open', 'true'));
-  close?.addEventListener('click', () => drawer?.setAttribute('data-open', 'false'));
+
+  const open = () => {
+    drawer?.setAttribute('data-open', 'true');
+    document.body.style.overflow = 'hidden';
+  };
+  const shut = () => {
+    drawer?.setAttribute('data-open', 'false');
+    document.body.style.overflow = '';
+  };
+
+  toggle?.addEventListener('click', open);
+  close?.addEventListener('click', shut);
+  drawer?.querySelectorAll('nav a').forEach((link) => {
+    link.addEventListener('click', shut);
+  });
 </script>

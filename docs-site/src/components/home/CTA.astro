@@ -35,6 +35,8 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 <style>
   .cta-section {
     padding: 140px var(--side-pad);
+    padding-left: max(var(--side-pad), env(safe-area-inset-left));
+    padding-right: max(var(--side-pad), env(safe-area-inset-right));
     border-top: 1px solid var(--line-1);
     background: var(--bg-0);
     position: relative;
@@ -80,7 +82,27 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
   }
   @media (max-width: 900px) {
     .cta-section {
-      padding: 96px var(--side-pad);
+      padding-top: 96px;
+      padding-bottom: 96px;
+    }
+  }
+  @media (max-width: 480px) {
+    .cta-section {
+      padding-top: 64px;
+      padding-bottom: 64px;
+    }
+    .install-bar {
+      font-size: 12px;
+      padding: 10px 14px;
+      gap: 8px;
+      flex-wrap: nowrap;
+      white-space: nowrap;
+      width: 100%;
+      justify-content: flex-start;
+    }
+    .cta-buttons .btn {
+      width: 100%;
+      justify-content: center;
     }
   }
 </style>

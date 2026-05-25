@@ -1,4 +1,6 @@
 ---
+import Icon from './Icons.astro';
+
 interface Heading {
   depth: number;
   text: string;
@@ -12,19 +14,28 @@ const filtered = headings.filter((h) => h.depth === 2 || h.depth === 3);
 ---
 
 {filtered.length > 0 && (
-  <aside class="docs-toc">
-    <div class="t-cap" style="margin-bottom:10px;color:var(--text-3)">On this page</div>
-    <ul>
-      {filtered.map((h) => (
-        <li>
-          <a href={`#${h.slug}`} data-depth={h.depth}>{h.text}</a>
-        </li>
-      ))}
-    </ul>
-    <div class="toc-foot">
-      <a href="https://github.com/farisaziz12/tenderlane">↗ View on GitHub</a>
-    </div>
-  </aside>
+  <>
+    <div class="docs-toc-backdrop side-drawer-backdrop" id="docs-toc-backdrop"></div>
+    <aside class="docs-toc" id="docs-toc">
+      <div class="docs-toc-head">
+        <span class="t-cap" style="color:var(--text-3)">On this page</span>
+        <button class="docs-drawer-close" id="docs-toc-close" aria-label="Close on-this-page">
+          <Icon name="close" size={16} />
+        </button>
+      </div>
+      <div class="t-cap docs-toc-label" style="margin-bottom:10px;color:var(--text-3)">On this page</div>
+      <ul>
+        {filtered.map((h) => (
+          <li>
+            <a href={`#${h.slug}`} data-depth={h.depth}>{h.text}</a>
+          </li>
+        ))}
+      </ul>
+      <div class="toc-foot">
+        <a href="https://github.com/farisaziz12/tenderlane">↗ View on GitHub</a>
+      </div>
+    </aside>
+  </>
 )}
 
 <style>
@@ -37,6 +48,24 @@ const filtered = headings.filter((h) => h.depth === 2 || h.depth === 3);
     align-self: flex-start;
     max-height: calc(100vh - 60px);
     overflow-y: auto;
+  }
+  .docs-toc-head {
+    display: none;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+  .docs-drawer-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border: 1px solid var(--line-2);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text-0);
+    cursor: pointer;
   }
   .docs-toc ul {
     list-style: none;
@@ -76,9 +105,64 @@ const filtered = headings.filter((h) => h.depth === 2 || h.depth === 3);
   .toc-foot a {
     color: var(--text-2);
   }
-  @media (max-width: 1200px) {
+  .docs-toc-backdrop {
+    display: none;
+  }
+
+  @media (max-width: 1024px) {
     .docs-toc {
+      position: fixed;
+      inset: 0 0 0 auto;
+      top: 0;
+      width: min(320px, 86vw);
+      max-height: none;
+      height: 100dvh;
+      border-left: 1px solid var(--line-2);
+      background: var(--bg-1);
+      padding: 20px 20px 80px;
+      padding-top: max(20px, env(safe-area-inset-top));
+      padding-right: max(20px, env(safe-area-inset-right));
+      padding-bottom: max(80px, env(safe-area-inset-bottom));
+      z-index: 100;
+      transform: translateX(100%);
+      transition: transform 0.2s ease;
+      box-shadow: 0 0 0 1px var(--line-1), 0 24px 60px rgba(0, 0, 0, 0.4);
+    }
+    .docs-toc[data-open='true'] {
+      transform: translateX(0);
+    }
+    .docs-toc-head {
+      display: flex;
+    }
+    .docs-toc-label {
       display: none;
+    }
+    .docs-toc-backdrop {
+      display: block;
     }
   }
 </style>
+
+<script>
+  const toc = document.getElementById('docs-toc');
+  const backdrop = document.getElementById('docs-toc-backdrop');
+  const close = document.getElementById('docs-toc-close');
+
+  const shut = () => {
+    toc?.setAttribute('data-open', 'false');
+    backdrop?.setAttribute('data-open', 'false');
+    document.body.style.overflow = '';
+  };
+
+  close?.addEventListener('click', shut);
+  backdrop?.addEventListener('click', shut);
+  toc?.querySelectorAll('a').forEach((link) => {
+    link.addEventListener('click', shut);
+  });
+
+  (window as any).__tenderlaneOpenToc = () => {
+    toc?.setAttribute('data-open', 'true');
+    backdrop?.setAttribute('data-open', 'true');
+    document.body.style.overflow = 'hidden';
+  };
+</script>

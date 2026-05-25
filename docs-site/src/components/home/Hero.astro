@@ -265,6 +265,8 @@ const tagline =
 <style>
   .hero {
     padding: 64px var(--side-pad) 100px;
+    padding-left: max(var(--side-pad), env(safe-area-inset-left));
+    padding-right: max(var(--side-pad), env(safe-area-inset-right));
     position: relative;
   }
   .hero-grid {
@@ -592,6 +594,57 @@ const tagline =
     }
     .hero-demo {
       grid-template-columns: 1fr;
+    }
+  }
+  @media (max-width: 768px) {
+    .hero {
+      padding: 48px var(--side-pad) 72px;
+      padding-left: max(var(--side-pad), env(safe-area-inset-left));
+      padding-right: max(var(--side-pad), env(safe-area-inset-right));
+    }
+    .hero-grid {
+      gap: 36px;
+    }
+    .rules-pane {
+      min-height: 0;
+      font-size: 11px;
+      padding: 14px;
+    }
+    .ui-pane {
+      padding: 16px 18px;
+    }
+    .ui-amount {
+      font-size: 30px;
+    }
+    .trusted {
+      margin-top: 48px;
+      padding-top: 20px;
+      justify-content: flex-start;
+    }
+    .logos {
+      gap: 20px;
+    }
+  }
+  @media (max-width: 480px) {
+    .hero-headline br {
+      display: none;
+    }
+    .install-pill {
+      font-size: 12px;
+      padding: 8px 12px;
+      gap: 8px;
+    }
+    .try-hint {
+      right: 8px;
+      font-size: 10px;
+      padding: 3px 8px;
+    }
+    .ui-amount {
+      font-size: 26px;
+    }
+    .hero-cta .btn {
+      width: 100%;
+      justify-content: center;
     }
   }
 </style>
