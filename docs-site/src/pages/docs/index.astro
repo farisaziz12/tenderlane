@@ -172,13 +172,18 @@ const sections = [
 <style>
   .docs-landing {
     padding: 80px var(--side-pad) 100px;
+    padding-left: max(var(--side-pad), env(safe-area-inset-left));
+    padding-right: max(var(--side-pad), env(safe-area-inset-right));
   }
   .hero-row {
     display: grid;
-    grid-template-columns: 1.2fr 1fr;
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
     gap: 64px;
     align-items: center;
     margin-bottom: 80px;
+  }
+  .hero-row > * {
+    min-width: 0;
   }
   .landing-h1 {
     font-size: clamp(40px, 5.5vw, 64px);
@@ -231,9 +236,12 @@ const sections = [
   }
   .path-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 20px;
     margin-bottom: 80px;
+  }
+  .path-grid > * {
+    min-width: 0;
   }
   .path-card {
     padding: 28px;
@@ -270,9 +278,12 @@ const sections = [
   }
   .section-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 32px;
     margin-bottom: 80px;
+  }
+  .section-grid > * {
+    min-width: 0;
   }
   .section-col {
     border-top: 1px solid var(--line-2);
@@ -316,7 +327,73 @@ const sections = [
     .hero-row,
     .path-grid,
     .section-grid {
-      grid-template-columns: 1fr;
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .hero-row {
+      gap: 40px;
+      margin-bottom: 56px;
+    }
+    .path-grid,
+    .section-grid {
+      margin-bottom: 56px;
+    }
+  }
+  @media (max-width: 900px) {
+    .docs-landing {
+      padding-top: 56px;
+      padding-bottom: 64px;
+    }
+  }
+  @media (max-width: 480px) {
+    .docs-landing {
+      padding-top: 40px;
+      padding-bottom: 48px;
+    }
+    .hero-row {
+      margin-bottom: 40px;
+      gap: 28px;
+    }
+    .install-pill {
+      font-size: 12px;
+      padding: 10px 14px;
+      gap: 8px;
+    }
+    .hero-row-actions .btn {
+      width: 100%;
+      justify-content: center;
+    }
+    .status-panel {
+      padding: 18px;
+    }
+    .pkg-row {
+      gap: 8px;
+    }
+    .pkg-row > span {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .path-card {
+      padding: 20px;
+    }
+    .path-title {
+      font-size: 18px;
+    }
+    .path-foot {
+      margin-top: 18px;
+    }
+    .path-grid,
+    .section-grid {
+      margin-bottom: 40px;
+    }
+    .cta-bar {
+      padding: 22px;
+      gap: 20px;
+    }
+    .cta-bar .btn {
+      width: 100%;
+      justify-content: center;
     }
   }
 </style>

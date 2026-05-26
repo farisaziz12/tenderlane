@@ -103,8 +103,11 @@ const tenderlaneCode = `<span class="tok-k">import</span> { <span class="tok-f">
 <style>
   .diff-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: 24px;
+  }
+  .diff-grid > * {
+    min-width: 0;
   }
   .diff-label {
     display: flex;
@@ -130,7 +133,7 @@ const tenderlaneCode = `<span class="tok-k">import</span> { <span class="tok-f">
   }
   @media (max-width: 1000px) {
     .diff-grid {
-      grid-template-columns: 1fr;
+      grid-template-columns: minmax(0, 1fr);
     }
   }
   @media (max-width: 480px) {

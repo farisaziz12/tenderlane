@@ -76,8 +76,11 @@ const cols = [
 <style>
   .alpha-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 24px;
+  }
+  .alpha-grid > * {
+    min-width: 0;
   }
   .alpha-card {
     padding: 28px;
@@ -129,7 +132,7 @@ const cols = [
   }
   @media (max-width: 900px) {
     .alpha-grid {
-      grid-template-columns: 1fr;
+      grid-template-columns: minmax(0, 1fr);
     }
   }
   @media (max-width: 480px) {

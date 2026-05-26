@@ -38,4 +38,14 @@ const { id, eyebrow, title, kicker, alt = false, maxWidth = 1180 } = Astro.props
     margin: 0 0 64px;
     max-width: 620px;
   }
+  @media (max-width: 900px) {
+    .section-kicker {
+      margin-bottom: 40px;
+    }
+  }
+  @media (max-width: 480px) {
+    .section-kicker {
+      margin-bottom: 32px;
+    }
+  }
 </style>

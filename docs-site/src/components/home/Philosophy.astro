@@ -40,8 +40,11 @@ const tenets = [
 <style>
   .philosophy-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 32px;
+  }
+  .philosophy-grid > * {
+    min-width: 0;
   }
   .tenet {
     display: flex;
@@ -67,7 +70,7 @@ const tenets = [
   }
   @media (max-width: 1000px) {
     .philosophy-grid {
-      grid-template-columns: 1fr;
+      grid-template-columns: minmax(0, 1fr);
       gap: 24px;
     }
   }

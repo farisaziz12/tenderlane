@@ -290,9 +290,12 @@ try {
   }
   .hero-grid {
     display: grid;
-    grid-template-columns: 1.1fr 1fr;
-    gap: 64px;
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.25fr);
+    gap: 56px;
     align-items: center;
+  }
+  .hero-grid > * {
+    min-width: 0;
   }
   .hero-badges {
     display: flex;
@@ -343,7 +346,7 @@ try {
   }
   .hero-demo {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
     gap: 16px;
     border-radius: 14px;
     padding: 12px;
@@ -351,16 +354,21 @@ try {
     border: 1px solid var(--line-2);
     position: relative;
   }
+  .hero-demo > * {
+    min-width: 0;
+  }
   .rules-pane {
     background: var(--code-bg);
     border-radius: 8px;
     padding: 16px 16px 18px;
     border: 1px solid var(--line-1);
     font-family: var(--font-mono);
-    font-size: 12px;
+    font-size: 13px;
     line-height: 1.7;
     color: var(--code-fg);
     min-height: 360px;
+    min-width: 0;
+    overflow-x: auto;
   }
   .rules-head {
     display: flex;
@@ -419,11 +427,17 @@ try {
     display: flex;
     flex-direction: column;
     gap: 14px;
+    min-width: 0;
   }
   .ui-pane-head {
     display: flex;
     justify-content: space-between;
     align-items: baseline;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .ui-pane-head > div {
+    min-width: 0;
   }
   .ui-pane-eyebrow {
     font-size: 11px;
@@ -450,6 +464,15 @@ try {
     background: color-mix(in oklab, var(--accent) 12%, var(--bg-1));
     color: var(--accent);
     border: 1px solid var(--accent-soft);
+    white-space: nowrap;
+    flex-shrink: 0;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .route-badge #route-id {
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .route-badge .dot {
     width: 6px;
@@ -608,11 +631,11 @@ try {
   }
   @media (max-width: 1000px) {
     .hero-grid {
-      grid-template-columns: 1fr;
+      grid-template-columns: minmax(0, 1fr);
       gap: 48px;
     }
     .hero-demo {
-      grid-template-columns: 1fr;
+      grid-template-columns: minmax(0, 1fr);
     }
   }
   @media (max-width: 768px) {
@@ -630,7 +653,7 @@ try {
     }
     .rules-pane {
       min-height: 0;
-      font-size: 11px;
+      font-size: 12.5px;
       padding: 14px;
     }
     .ui-pane {
@@ -668,6 +691,9 @@ try {
       gap: 8px;
       flex-wrap: wrap;
       row-gap: 6px;
+      width: 100%;
+      max-width: 100%;
+      overflow-x: auto;
     }
     .hero-badges {
       gap: 6px;
@@ -678,7 +704,7 @@ try {
       gap: 10px;
     }
     .rules-pane {
-      font-size: 10.5px;
+      font-size: 12px;
       padding: 12px;
     }
     .ui-pane {
@@ -688,9 +714,16 @@ try {
     .ui-amount {
       font-size: 24px;
     }
+    .route-badge {
+      font-size: 10px;
+      padding: 4px 8px;
+    }
     .try-hint {
       font-size: 10px;
       padding: 3px 8px;
+    }
+    .hero-cta {
+      width: 100%;
     }
     .hero-cta .btn {
       width: 100%;

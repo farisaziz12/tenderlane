@@ -171,4 +171,22 @@ const truncate = (text: string | null, max = 160) => {
     gap: 12px;
     flex-wrap: wrap;
   }
+  @media (max-width: 480px) {
+    .changelog-link {
+      padding: 16px 0;
+    }
+    .changelog-link:hover {
+      padding-left: 0;
+    }
+    .changelog-title {
+      font-size: 16px;
+    }
+    .changelog-body {
+      font-size: 13px;
+    }
+    .changelog-foot .btn {
+      width: 100%;
+      justify-content: center;
+    }
+  }
 </style>

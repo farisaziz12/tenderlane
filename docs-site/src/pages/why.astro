@@ -234,9 +234,11 @@ const whenNot = [
 <style>
   .why-hero {
     padding: 80px var(--side-pad) 60px;
+    padding-left: max(var(--side-pad), env(safe-area-inset-left));
+    padding-right: max(var(--side-pad), env(safe-area-inset-right));
   }
   .why-headline {
-    font-size: clamp(40px, 6vw, 76px);
+    font-size: clamp(36px, 6vw, 76px);
     line-height: 0.98;
     margin: 0 0 28px;
     letter-spacing: -0.032em;
@@ -244,15 +246,19 @@ const whenNot = [
   }
   .quadrant-grid {
     display: grid;
-    grid-template-columns: 1fr 320px;
+    grid-template-columns: minmax(0, 1fr) 320px;
     gap: 56px;
     align-items: start;
+  }
+  .quadrant-grid > * {
+    min-width: 0;
   }
   .quadrant-box {
     background: var(--bg-1);
     border: 1px solid var(--line-2);
     border-radius: 14px;
     padding: 32px;
+    overflow-x: auto;
   }
   .quadrant-aside {
     position: sticky;
@@ -321,8 +327,11 @@ const whenNot = [
   }
   .stats {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 24px;
+  }
+  .stats > * {
+    min-width: 0;
   }
   .stat-card {
     padding: 28px;
@@ -375,8 +384,11 @@ const whenNot = [
   }
   .when-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: 24px;
+  }
+  .when-grid > * {
+    min-width: 0;
   }
   .when-card {
     padding: 28px;
@@ -399,18 +411,64 @@ const whenNot = [
   }
   @media (max-width: 1000px) {
     .quadrant-grid {
-      grid-template-columns: 1fr;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 32px;
+    }
+    .quadrant-aside {
+      position: static;
+      top: auto;
     }
     .build-vs-buy {
-      grid-template-columns: 1fr;
+      grid-template-columns: minmax(0, 1fr);
       gap: 24px;
       padding: 24px;
     }
     .stats {
-      grid-template-columns: repeat(2, 1fr);
+      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
     .when-grid {
-      grid-template-columns: 1fr;
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+  @media (max-width: 900px) {
+    .why-hero {
+      padding-top: 56px;
+      padding-bottom: 40px;
+    }
+    .quadrant-box {
+      padding: 18px;
+    }
+    .stat-k {
+      font-size: 44px;
+    }
+  }
+  @media (max-width: 600px) {
+    .stats {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 16px;
+    }
+    .stat-card {
+      padding: 20px;
+    }
+    .stat-k {
+      font-size: 38px;
+      margin-bottom: 8px;
+    }
+  }
+  @media (max-width: 480px) {
+    .why-hero {
+      padding-top: 40px;
+      padding-bottom: 32px;
+    }
+    .quadrant-box {
+      padding: 12px;
+    }
+    .build-vs-buy {
+      margin-top: 40px;
+      padding: 18px;
+    }
+    .when-card {
+      padding: 20px;
     }
   }
 </style>

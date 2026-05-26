@@ -74,6 +74,9 @@ const code = `<span class="tok-k">import</span> { <span class="tok-f">Tenderlane
     grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
     gap: 48px;
   }
+  .walk-grid > * {
+    min-width: 0;
+  }
   .step {
     display: flex;
     gap: 16px;
@@ -112,7 +115,7 @@ const code = `<span class="tok-k">import</span> { <span class="tok-f">Tenderlane
   }
   @media (max-width: 1000px) {
     .walk-grid {
-      grid-template-columns: 1fr;
+      grid-template-columns: minmax(0, 1fr);
       gap: 32px;
     }
   }
@@ -120,6 +123,11 @@ const code = `<span class="tok-k">import</span> { <span class="tok-f">Tenderlane
     .step {
       padding: 16px 0;
       gap: 12px;
+    }
+    .step-num {
+      width: 28px;
+      height: 28px;
+      font-size: 12px;
     }
     .step-title {
       font-size: 15px;

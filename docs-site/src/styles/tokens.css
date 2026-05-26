@@ -222,7 +222,8 @@ a {
 @media (max-width: 900px) {
   .nav-links,
   .nav-search,
-  .nav-icon-link {
+  .nav-icon-link,
+  .nav-cta-secondary {
     display: none;
   }
   .nav-toggle {
@@ -236,6 +237,22 @@ a {
     background: transparent;
     color: var(--text-0);
     cursor: pointer;
+  }
+}
+
+@media (max-width: 480px) {
+  .nav {
+    padding-top: 14px;
+    padding-bottom: 14px;
+  }
+  .nav-cta-primary {
+    display: none;
+  }
+  .nav-right {
+    gap: 8px;
+  }
+  .nav-left {
+    gap: 18px;
   }
 }
 
