@@ -6,12 +6,19 @@ sidebar:
 ---
 
 import StateMachineDiagram from '../../../components/diagrams/StateMachineDiagram.astro';
+import CheckoutFlowComparisonDiagram from '../../../components/diagrams/CheckoutFlowComparisonDiagram.astro';
 
 The Tenderlane client manages checkout state through a deterministic state machine. Every state transition produces a new immutable snapshot, making the client compatible with React's `useSyncExternalStore` and similar external store patterns in other frameworks.
 
 ## State diagram
 
 <StateMachineDiagram />
+
+## Inline vs. redirect flows
+
+The state machine fans out into two distinct flows depending on the route's `flow` field. Inline flows (`payment-intent`) take an extra `prepare` → `prepared` hop to create a server session before submission; redirect flows (`checkout-session`, `redirect`) skip straight to `submit` and hand control to the PSP's hosted page.
+
+<CheckoutFlowComparisonDiagram />
 
 ## States
 

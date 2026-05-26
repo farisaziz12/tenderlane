@@ -30,8 +30,7 @@ You can find your test API keys in the [Stripe Dashboard](https://dashboard.stri
 
 The server endpoint receives checkout requests from Tenderlane and creates Stripe Checkout Sessions. This example uses Next.js App Router, but the handler works with any framework that supports the Web `Request`/`Response` API.
 
-```ts
-// app/api/checkout/route.ts
+```ts title="app/api/checkout/route.ts"
 import { createTenderlaneHandler } from '@tenderlane/core/server';
 import { stripeServerAdapter } from '@tenderlane/stripe/server';
 
@@ -50,8 +49,7 @@ That is the entire server-side setup. The handler dispatches requests to the cor
 
 ## 3. Build the checkout page
 
-```tsx
-// app/checkout/page.tsx
+```tsx title="app/checkout/page.tsx"
 'use client';
 
 import { useState } from 'react';

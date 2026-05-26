@@ -1,0 +1,243 @@
+---
+// UML-style sequence diagram for createTenderlaneHandler's POST flow.
+// Four lanes: Client, Handler, Catalog, Provider Adapter. A single dot
+// traces the request/response trip so the load-bearing dispatch order is
+// readable at a glance. Honors `prefers-reduced-motion`.
+
+const lanes = [
+  { id: 'client', label: 'client', x: 80 },
+  { id: 'handler', label: 'handler', x: 290 },
+  { id: 'catalog', label: 'catalog', x: 500 },
+  { id: 'adapter', label: 'adapter', x: 680 },
+];
+
+const top = 60;
+const bottom = 470;
+
+const steps = [
+  { y: 100, from: 'client', to: 'handler', label: 'POST { provider, action, payload }' },
+  { y: 145, lane: 'handler', label: 'stripClientAmounts() — deletes any unitAmount' },
+  { y: 185, lane: 'handler', label: 'catalogs[provider] ?? catalog', kind: 'decision' },
+  { y: 230, from: 'handler', to: 'catalog', label: 'catalog.resolve(items, context)' },
+  { y: 275, from: 'catalog', to: 'handler', label: 'ResolvedCatalogItem[]', kind: 'return' },
+  { y: 315, lane: 'handler', label: 'middleware: onCatalogResolved' },
+  { y: 360, from: 'handler', to: 'adapter', label: 'adapter.handle(action, { ...payload, items: resolved })' },
+  { y: 405, from: 'adapter', to: 'handler', label: 'CheckoutResult', kind: 'return' },
+  { y: 445, from: 'handler', to: 'client', label: '200 OK { result }', kind: 'return' },
+];
+
+function laneX(id: string): number {
+  return lanes.find((lane) => lane.id === id)!.x;
+}
+---
+
+<figure
+  class="sh-diagram"
+  aria-label="Server handler request sequence. The client POSTs a checkout request to the handler. The handler defensively strips any client-supplied unitAmount, picks the right catalog (per-provider when one is configured, otherwise the default), resolves items via the catalog, fires the onCatalogResolved middleware hook, dispatches to the provider adapter with server-derived amounts, and returns the result to the client."
+>
+  <div class="sh-stage">
+    <svg viewBox="0 0 760 510" role="img" preserveAspectRatio="xMidYMid meet">
+      <defs>
+        <marker id="sh-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+          <path d="M0,0 L10,5 L0,10 z" fill="var(--accent)" />
+        </marker>
+        <marker id="sh-arrow-return" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+          <path d="M0,0 L10,5 L0,10 z" fill="var(--text-2)" />
+        </marker>
+      </defs>
+
+      {/* Lane headers + lifelines */}
+      {lanes.map((lane) => (
+        <g class="sh-lane">
+          <rect x={lane.x - 50} y={top - 28} width={100} height={28} rx="6" class="sh-lane-head" />
+          <text x={lane.x} y={top - 9} text-anchor="middle" class="sh-lane-label">{lane.label}</text>
+          <line x1={lane.x} y1={top} x2={lane.x} y2={bottom + 10} class="sh-lifeline" />
+        </g>
+      ))}
+
+      {/* Steps */}
+      {steps.map((step) => {
+        if (step.from && step.to) {
+          const x1 = laneX(step.from);
+          const x2 = laneX(step.to);
+          const isReturn = step.kind === 'return';
+          const markerId = isReturn ? 'sh-arrow-return' : 'sh-arrow';
+          const labelX = (x1 + x2) / 2;
+          return (
+            <g class={`sh-msg ${isReturn ? 'sh-msg-return' : ''}`}>
+              <line
+                x1={x1}
+                y1={step.y}
+                x2={x2 + (x2 > x1 ? -6 : 6)}
+                y2={step.y}
+                marker-end={`url(#${markerId})`}
+                class={isReturn ? 'sh-msg-line-return' : 'sh-msg-line'}
+              />
+              <text x={labelX} y={step.y - 6} text-anchor="middle" class="sh-msg-label">{step.label}</text>
+            </g>
+          );
+        }
+        // In-lane note (self-call)
+        const x = laneX(step.lane!);
+        const isDecision = step.kind === 'decision';
+        return (
+          <g class={`sh-note ${isDecision ? 'sh-note-decision' : ''}`}>
+            <rect x={x + 10} y={step.y - 14} width={isDecision ? 240 : 280} height={28} rx="6" />
+            <text x={x + 22} y={step.y + 4} class="sh-note-label">{step.label}</text>
+          </g>
+        );
+      })}
+
+      {/* Decision diamond glyph on the handler lifeline */}
+      <g class="sh-diamond">
+        <polygon points={`${laneX('handler')},175 ${laneX('handler') + 10},185 ${laneX('handler')},195 ${laneX('handler') - 10},185`} />
+      </g>
+    </svg>
+  </div>
+
+  <figcaption class="sh-legend">
+    <span class="sh-legend-item"><span class="sh-swatch sh-swatch-call"></span>call</span>
+    <span class="sh-legend-item"><span class="sh-swatch sh-swatch-return"></span>return</span>
+    <span class="sh-legend-item"><span class="sh-swatch sh-swatch-decision"></span>per-provider dispatch</span>
+    <span class="sh-legend-item sh-legend-meta">strip → dispatch → resolve → middleware → adapter</span>
+  </figcaption>
+</figure>
+
+<style>
+  .sh-diagram {
+    margin: 0;
+    padding: 24px;
+    background: var(--bg-1);
+    border: 1px solid var(--line-2);
+    border-radius: 14px;
+    overflow: hidden;
+  }
+  .sh-stage {
+    overflow-x: auto;
+  }
+  .sh-diagram svg {
+    display: block;
+    width: 100%;
+    min-width: 640px;
+    height: auto;
+    font-family: var(--font-mono);
+  }
+
+  .sh-lane-head {
+    fill: var(--bg-2);
+    stroke: var(--line-2);
+    stroke-width: 1;
+  }
+  .sh-lane-label {
+    fill: var(--text-0);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .sh-lifeline {
+    stroke: var(--line-3);
+    stroke-width: 1;
+    stroke-dasharray: 3 4;
+    opacity: 0.6;
+  }
+
+  .sh-msg-line {
+    stroke: var(--accent);
+    stroke-width: 1.5;
+  }
+  .sh-msg-line-return {
+    stroke: var(--text-2);
+    stroke-width: 1;
+    stroke-dasharray: 4 3;
+    opacity: 0.85;
+  }
+  .sh-msg-label {
+    fill: var(--text-1);
+    font-size: 10.5px;
+  }
+  .sh-msg-return .sh-msg-label {
+    fill: var(--text-2);
+  }
+
+  .sh-note rect {
+    fill: color-mix(in oklab, var(--bg-2) 70%, var(--bg-1));
+    stroke: var(--line-2);
+    stroke-width: 1;
+  }
+  .sh-note-label {
+    fill: var(--text-1);
+    font-size: 10.5px;
+  }
+  .sh-note-decision rect {
+    fill: color-mix(in oklab, var(--accent) 10%, var(--bg-2));
+    stroke: var(--accent-soft);
+  }
+  .sh-note-decision .sh-note-label {
+    fill: var(--accent);
+  }
+
+  .sh-diamond polygon {
+    fill: color-mix(in oklab, var(--accent) 25%, var(--bg-2));
+    stroke: var(--accent);
+    stroke-width: 1;
+  }
+
+  .sh-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-top: 18px;
+    padding-top: 16px;
+    border-top: 1px solid var(--line-2);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-2);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .sh-legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .sh-legend-meta {
+    color: var(--text-3);
+    margin-left: auto;
+    text-transform: none;
+    letter-spacing: 0;
+  }
+  .sh-swatch {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+    border: 1px solid var(--line-3);
+  }
+  .sh-swatch-call {
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+  .sh-swatch-return {
+    background: var(--bg-2);
+    border-color: var(--text-2);
+  }
+  .sh-swatch-decision {
+    background: color-mix(in oklab, var(--accent) 25%, var(--bg-2));
+    border-color: var(--accent);
+  }
+
+  @media (max-width: 768px) {
+    .sh-diagram {
+      padding: 16px;
+    }
+    .sh-legend {
+      font-size: 10px;
+      gap: 12px;
+    }
+    .sh-legend-meta {
+      width: 100%;
+      margin-left: 0;
+      margin-top: 4px;
+    }
+  }
+</style>

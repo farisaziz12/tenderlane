@@ -5,6 +5,8 @@ sidebar:
   order: 2
 ---
 
+import ServerHandlerFlowDiagram from '../../../components/diagrams/ServerHandlerFlowDiagram.astro';
+
 A **provider** in Tenderlane is an adapter that bridges the gap between Tenderlane's normalized API and a specific payment service provider (PSP) like Stripe, Adyen, or PayPal. Each provider has two sides: a **browser adapter** that runs in the frontend, and a **server adapter** that runs on your backend.
 
 ## Browser payment provider
@@ -81,6 +83,12 @@ const handler = createTenderlaneHandler({
   ],
 });
 ```
+
+### Request lifecycle
+
+A single `POST` to the handler runs through six steps. The defensive `stripClientAmounts()` call and the per-provider catalog dispatch are the load-bearing pieces — they're why the server can trust the resolved amounts no matter what the client sent.
+
+<ServerHandlerFlowDiagram />
 
 ### Stripe server adapter actions
 
