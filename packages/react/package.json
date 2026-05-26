@@ -1,6 +1,6 @@
 {
   "name": "@tenderlane/react",
-  "version": "0.1.0-alpha.0",
+  "version": "0.1.0-alpha.1",
   "description": "React bindings for Tenderlane payment orchestration",
   "type": "module",
   "exports": {
@@ -11,7 +11,10 @@
   },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "files": ["dist", "README.md"],
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "publishConfig": {
     "access": "public",
     "provenance": true
@@ -24,7 +27,13 @@
   "homepage": "https://github.com/farisaziz12/tenderlane#readme",
   "bugs": "https://github.com/farisaziz12/tenderlane/issues",
   "author": "Faris Aziz",
-  "keywords": ["payments", "checkout", "react", "hooks", "tenderlane"],
+  "keywords": [
+    "payments",
+    "checkout",
+    "react",
+    "hooks",
+    "tenderlane"
+  ],
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
