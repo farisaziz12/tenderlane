@@ -10,5 +10,7 @@
     "@tenderlane/stripe": "0.1.0-alpha.0",
     "tenderlane": "0.1.0-alpha.0"
   },
-  "changesets": []
+  "changesets": [
+    "initial-release"
+  ]
 }

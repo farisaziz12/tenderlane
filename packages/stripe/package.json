@@ -1,6 +1,6 @@
 {
   "name": "@tenderlane/stripe",
-  "version": "0.1.0-alpha.0",
+  "version": "0.1.0-alpha.1",
   "description": "Stripe provider adapter for Tenderlane payment orchestration",
   "type": "module",
   "exports": {
@@ -19,7 +19,10 @@
   },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "files": ["dist", "README.md"],
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "publishConfig": {
     "access": "public",
     "provenance": true
@@ -32,7 +35,12 @@
   "homepage": "https://github.com/farisaziz12/tenderlane#readme",
   "bugs": "https://github.com/farisaziz12/tenderlane/issues",
   "author": "Faris Aziz",
-  "keywords": ["payments", "stripe", "checkout", "tenderlane"],
+  "keywords": [
+    "payments",
+    "stripe",
+    "checkout",
+    "tenderlane"
+  ],
   "scripts": {
     "build": "rm -rf dist && tsup",
     "dev": "tsup --watch",
@@ -50,10 +58,18 @@
     "react": ">=18.0.0"
   },
   "peerDependenciesMeta": {
-    "stripe": { "optional": true },
-    "@stripe/stripe-js": { "optional": true },
-    "@stripe/react-stripe-js": { "optional": true },
-    "react": { "optional": true }
+    "stripe": {
+      "optional": true
+    },
+    "@stripe/stripe-js": {
+      "optional": true
+    },
+    "@stripe/react-stripe-js": {
+      "optional": true
+    },
+    "react": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@stripe/stripe-js": "^4.0.0",
