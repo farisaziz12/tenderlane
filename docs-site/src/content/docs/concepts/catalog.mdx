@@ -5,6 +5,8 @@ sidebar:
   order: 4
 ---
 
+import CatalogResolutionDiagram from '../../../components/diagrams/CatalogResolutionDiagram.astro';
+
 A **catalog** is the provider-agnostic primitive that resolves what a customer is buying (`sku`, `quantity`) into canonical pricing the PSP can charge against. It's the same architectural slot as a router: the user supplies one catalog, every provider knows how to consume its output.
 
 The catalog is what makes Tenderlane work across PSPs with fundamentally different product models — Stripe's inline `price_data`, Polar's pre-created product IDs, your own database — without leaking those differences into the rest of the stack.
@@ -19,17 +21,7 @@ The wire payload is `{ items: [{ sku, quantity }], context, ... }`. The client s
 
 Client-side catalog resolution exists for **preview UX only** — running totals, currency-switcher demos, hover cards. If client and server disagree (stale code, coupon applied between view and submit, A/B variant flipped), the server wins, silently and always.
 
-```
-Browser                                          Server
-─────────                                        ─────────
-catalog.resolve(items, context)  ← display only  catalog.resolve(items, context)  ← canonical
-        ↓                                                ↓
-ResolvedItem[] (preview total)                   ResolvedItem[] (real amounts)
-        ↓                                                ↓
-POST { provider, action,        ───────────►     adapter.handle(action, resolved)
-       payload: { items, ctx } }                         ↓
-   (NO unitAmount in payload)                    PSP session created w/ server prices
-```
+<CatalogResolutionDiagram />
 
 ## The Catalog interface
 

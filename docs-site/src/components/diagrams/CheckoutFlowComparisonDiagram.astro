@@ -1,0 +1,397 @@
+---
+// Side-by-side comparison of the two checkout flows the client supports:
+//   - inline (flow: 'payment-intent') — prepare() creates a session,
+//     Elements renders, submit() confirms.
+//   - redirect (flow: 'checkout-session' or 'redirect') — submit() directly,
+//     browser is redirected to the PSP-hosted checkout page.
+//
+// Both lanes start at `ready` and end at `success`. The inline lane has the
+// extra `preparing` → `prepared` hop. Honors `prefers-reduced-motion`.
+
+const colW = 320;
+const inlineX = 24;
+const redirectX = inlineX + colW + 32;
+const pillH = 36;
+const pillW = 180;
+const gap = 22;
+const top = 70;
+
+const inlineSteps = [
+  { state: 'ready', kind: 'stable' as const },
+  { state: 'preparing', kind: 'transient' as const, via: 'client.prepare(input)' },
+  { state: 'prepared', kind: 'stable' as const, via: 'session.clientSecret returned' },
+  { state: 'submitting', kind: 'transient' as const, via: 'client.submit(input)' },
+  { state: 'success', kind: 'success' as const, via: 'elements.confirmPayment()' },
+];
+
+const redirectSteps = [
+  { state: 'ready', kind: 'stable' as const },
+  { state: 'submitting', kind: 'transient' as const, via: 'client.submit(input)' },
+  { state: 'success', kind: 'success' as const, via: 'window.location.href = url' },
+];
+
+function stepY(index: number): number {
+  return top + index * (pillH + gap);
+}
+
+const totalH = Math.max(
+  stepY(inlineSteps.length - 1),
+  stepY(redirectSteps.length - 1),
+) + pillH + 30;
+
+const inlinePillCenterX = inlineX + colW / 2;
+const redirectPillCenterX = redirectX + colW / 2;
+
+const inlinePathSegments = inlineSteps
+  .map((_, index) => {
+    if (index === 0) return `M ${inlinePillCenterX},${stepY(0) + pillH / 2}`;
+    return `L ${inlinePillCenterX},${stepY(index) + pillH / 2}`;
+  })
+  .join(' ');
+
+const redirectPathSegments = redirectSteps
+  .map((_, index) => {
+    if (index === 0) return `M ${redirectPillCenterX},${stepY(0) + pillH / 2}`;
+    return `L ${redirectPillCenterX},${stepY(index) + pillH / 2}`;
+  })
+  .join(' ');
+---
+
+<figure
+  class="cf-diagram"
+  aria-label="Comparison of inline and redirect checkout flows. The inline flow (payment-intent) calls prepare() to create a server session, transitions through preparing and prepared, then submit() confirms via Stripe Elements. The redirect flow (checkout-session) calls submit() directly, and the browser is redirected to the PSP-hosted checkout page. Both flows end at success."
+>
+  <div class="cf-stage">
+    <svg viewBox={`0 0 760 ${totalH}`} role="img" preserveAspectRatio="xMidYMid meet">
+      <defs>
+        <marker id="cf-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+          <path d="M0,0 L10,5 L0,10 z" fill="var(--text-2)" />
+        </marker>
+        <path id="cf-inline-path" d={inlinePathSegments} />
+        <path id="cf-redirect-path" d={redirectPathSegments} />
+      </defs>
+
+      {/* Column headers */}
+      <g class="cf-col-head">
+        <rect x={inlineX} y={20} width={colW} height={36} rx="8" />
+        <text x={inlineX + 18} y={36} class="cf-col-eyebrow">inline</text>
+        <text x={inlineX + 18} y={50} class="cf-col-title">flow: 'payment-intent'</text>
+        <text x={inlineX + colW - 18} y={43} text-anchor="end" class="cf-col-meta">Stripe Elements</text>
+      </g>
+      <g class="cf-col-head cf-col-head-redirect">
+        <rect x={redirectX} y={20} width={colW} height={36} rx="8" />
+        <text x={redirectX + 18} y={36} class="cf-col-eyebrow">redirect</text>
+        <text x={redirectX + 18} y={50} class="cf-col-title">flow: 'checkout-session'</text>
+        <text x={redirectX + colW - 18} y={43} text-anchor="end" class="cf-col-meta">Stripe Checkout · Polar</text>
+      </g>
+
+      {/* Inline lane steps */}
+      {inlineSteps.map((step, index) => (
+        <g class={`cf-step cf-step-${step.kind}`}>
+          <rect
+            x={inlinePillCenterX - pillW / 2}
+            y={stepY(index)}
+            width={pillW}
+            height={pillH}
+            rx="8"
+          />
+          <text
+            x={inlinePillCenterX}
+            y={stepY(index) + 22}
+            text-anchor="middle"
+            class="cf-step-label"
+          >{step.state}</text>
+          {step.via && (
+            <text
+              x={inlinePillCenterX + pillW / 2 + 14}
+              y={stepY(index) + 22}
+              class="cf-via"
+            >{step.via}</text>
+          )}
+          {index < inlineSteps.length - 1 && (
+            <line
+              x1={inlinePillCenterX}
+              y1={stepY(index) + pillH}
+              x2={inlinePillCenterX}
+              y2={stepY(index + 1) - 2}
+              class="cf-edge"
+              marker-end="url(#cf-arrow)"
+            />
+          )}
+        </g>
+      ))}
+
+      {/* Redirect lane steps */}
+      {redirectSteps.map((step, index) => (
+        <g class={`cf-step cf-step-${step.kind}`}>
+          <rect
+            x={redirectPillCenterX - pillW / 2}
+            y={stepY(index)}
+            width={pillW}
+            height={pillH}
+            rx="8"
+          />
+          <text
+            x={redirectPillCenterX}
+            y={stepY(index) + 22}
+            text-anchor="middle"
+            class="cf-step-label"
+          >{step.state}</text>
+          {step.via && (
+            <text
+              x={redirectPillCenterX + pillW / 2 + 14}
+              y={stepY(index) + 22}
+              class="cf-via"
+            >{step.via}</text>
+          )}
+          {index < redirectSteps.length - 1 && (
+            <line
+              x1={redirectPillCenterX}
+              y1={stepY(index) + pillH}
+              x2={redirectPillCenterX}
+              y2={stepY(index + 1) - 2}
+              class="cf-edge"
+              marker-end="url(#cf-arrow)"
+            />
+          )}
+        </g>
+      ))}
+
+      {/* Redirect lane: explicit "browser redirect" note in the gap */}
+      <g class="cf-redirect-note">
+        <text
+          x={redirectPillCenterX - pillW / 2 - 12}
+          y={(stepY(1) + stepY(2)) / 2 + 4}
+          text-anchor="end"
+          class="cf-redirect-arrow"
+        >↪ PSP-hosted</text>
+      </g>
+
+      {/* Inline lane: highlight the prepare hop */}
+      <g class="cf-inline-note">
+        <text
+          x={inlinePillCenterX - pillW / 2 - 12}
+          y={stepY(1) + 22}
+          text-anchor="end"
+          class="cf-inline-eyebrow"
+        >★ extra hop</text>
+        <text
+          x={inlinePillCenterX - pillW / 2 - 12}
+          y={stepY(2) + 22}
+          text-anchor="end"
+          class="cf-inline-eyebrow-sub"
+        >server session</text>
+      </g>
+
+      {/* Animated dots — each lane has its own pacing */}
+      <g class="cf-flow">
+        <circle r="5" class="cf-flow-glow">
+          <animateMotion dur="9s" repeatCount="indefinite">
+            <mpath href="#cf-inline-path" />
+          </animateMotion>
+        </circle>
+        <circle r="3" class="cf-flow-dot">
+          <animateMotion dur="9s" repeatCount="indefinite">
+            <mpath href="#cf-inline-path" />
+          </animateMotion>
+        </circle>
+        <circle r="5" class="cf-flow-glow">
+          <animateMotion dur="5.4s" repeatCount="indefinite">
+            <mpath href="#cf-redirect-path" />
+          </animateMotion>
+        </circle>
+        <circle r="3" class="cf-flow-dot">
+          <animateMotion dur="5.4s" repeatCount="indefinite">
+            <mpath href="#cf-redirect-path" />
+          </animateMotion>
+        </circle>
+      </g>
+    </svg>
+  </div>
+
+  <figcaption class="cf-legend">
+    <span class="cf-legend-item"><span class="cf-swatch cf-swatch-stable"></span>stable</span>
+    <span class="cf-legend-item"><span class="cf-swatch cf-swatch-transient"></span>transient</span>
+    <span class="cf-legend-item"><span class="cf-swatch cf-swatch-success"></span>success</span>
+    <span class="cf-legend-item cf-legend-meta">inline adds prepare → prepared; redirect skips straight to submit</span>
+  </figcaption>
+</figure>
+
+<style>
+  .cf-diagram {
+    margin: 0;
+    padding: 24px;
+    background: var(--bg-1);
+    border: 1px solid var(--line-2);
+    border-radius: 14px;
+    overflow: hidden;
+  }
+  .cf-stage {
+    overflow-x: auto;
+  }
+  .cf-diagram svg {
+    display: block;
+    width: 100%;
+    min-width: 640px;
+    height: auto;
+    font-family: var(--font-mono);
+  }
+
+  .cf-col-head rect {
+    fill: var(--bg-2);
+    stroke: var(--accent-soft);
+    stroke-width: 1;
+  }
+  .cf-col-head-redirect rect {
+    stroke: var(--line-2);
+  }
+  .cf-col-eyebrow {
+    fill: var(--accent);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .cf-col-head-redirect .cf-col-eyebrow {
+    fill: var(--text-2);
+  }
+  .cf-col-title {
+    fill: var(--text-1);
+    font-size: 10.5px;
+  }
+  .cf-col-meta {
+    fill: var(--text-3);
+    font-size: 10.5px;
+    letter-spacing: 0.02em;
+  }
+
+  .cf-step rect {
+    fill: var(--bg-2);
+    stroke: var(--line-3);
+    stroke-width: 1;
+  }
+  .cf-step-label {
+    fill: var(--text-0);
+    font-size: 12px;
+    font-weight: 500;
+  }
+  .cf-step-stable rect {
+    stroke: var(--accent-soft);
+  }
+  .cf-step-transient rect {
+    stroke: var(--line-3);
+  }
+  .cf-step-success rect {
+    fill: color-mix(in oklab, var(--accent) 12%, var(--bg-2));
+    stroke: var(--accent-soft);
+  }
+  .cf-step-success .cf-step-label {
+    fill: var(--accent);
+  }
+  .cf-via {
+    fill: var(--text-3);
+    font-size: 10.5px;
+  }
+  .cf-edge {
+    stroke: var(--text-3);
+    stroke-width: 1.25;
+    fill: none;
+  }
+
+  .cf-inline-eyebrow {
+    fill: var(--accent);
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .cf-inline-eyebrow-sub {
+    fill: var(--text-3);
+    font-size: 10px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .cf-redirect-arrow {
+    fill: var(--text-3);
+    font-size: 10.5px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .cf-flow-dot {
+    fill: var(--accent);
+  }
+  .cf-flow-glow {
+    fill: var(--accent);
+    opacity: 0.4;
+    filter: blur(4px);
+  }
+  .cf-diagram:hover .cf-flow-dot,
+  .cf-diagram:hover .cf-flow-glow {
+    animation-play-state: paused;
+  }
+
+  .cf-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-top: 18px;
+    padding-top: 16px;
+    border-top: 1px solid var(--line-2);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-2);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .cf-legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .cf-legend-meta {
+    color: var(--text-3);
+    margin-left: auto;
+    text-transform: none;
+    letter-spacing: 0;
+  }
+  .cf-swatch {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+    border: 1px solid var(--line-3);
+  }
+  .cf-swatch-stable {
+    background: var(--bg-2);
+    border-color: var(--accent-soft);
+  }
+  .cf-swatch-transient {
+    background: var(--bg-2);
+    border-color: var(--line-3);
+  }
+  .cf-swatch-success {
+    background: color-mix(in oklab, var(--accent) 12%, var(--bg-2));
+    border-color: var(--accent-soft);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .cf-flow-dot,
+    .cf-flow-glow {
+      display: none;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .cf-diagram {
+      padding: 16px;
+    }
+    .cf-legend {
+      font-size: 10px;
+      gap: 12px;
+    }
+    .cf-legend-meta {
+      width: 100%;
+      margin-left: 0;
+      margin-top: 4px;
+    }
+  }
+</style>

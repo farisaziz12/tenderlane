@@ -38,8 +38,7 @@ pnpm add stripe  # server-side
 
 The same server endpoint handles both checkout sessions and payment intents. The Stripe server adapter supports both actions.
 
-```ts
-// app/api/checkout/route.ts
+```ts title="app/api/checkout/route.ts"
 import { createTenderlaneHandler } from '@tenderlane/core/server';
 import { stripeServerAdapter } from '@tenderlane/stripe/server';
 
@@ -66,8 +65,7 @@ The key differences from the redirect flow:
 2. We use `TenderlaneCheckoutForm` with an `elements` map to auto-prepare and render the inline form
 3. We import `StripePaymentElement` from `@tenderlane/stripe/react`
 
-```tsx
-// app/checkout/page.tsx
+```tsx title="app/checkout/page.tsx"
 'use client';
 
 import { useState, useMemo } from 'react';

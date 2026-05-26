@@ -5,7 +5,13 @@ sidebar:
   order: 1
 ---
 
+import RoutingPipelineDiagram from '../../../components/diagrams/RoutingPipelineDiagram.astro';
+
 Routing is the core of Tenderlane. The routing engine evaluates your checkout context against a set of rules and selects the provider, payment flow, and payment methods to use. When the context changes, routing re-evaluates automatically.
+
+## How rules are evaluated
+
+<RoutingPipelineDiagram />
 
 Tenderlane provides two router implementations:
 

@@ -26,8 +26,7 @@ app/
 
 ## 1. Environment setup
 
-```bash
-# .env.local
+```bash title=".env.local"
 STRIPE_SECRET_KEY=sk_test_51ABC...
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_51ABC...
 ```
@@ -42,8 +41,7 @@ pnpm add @tenderlane/core @tenderlane/client @tenderlane/react @tenderlane/strip
 
 Create a single API route that handles all Tenderlane checkout requests. The handler is created lazily on the first request to avoid cold-start overhead during builds.
 
-```ts
-// app/api/checkout/route.ts
+```ts title="app/api/checkout/route.ts"
 import { createTenderlaneHandler } from '@tenderlane/core/server';
 import { stripeServerAdapter } from '@tenderlane/stripe/server';
 
@@ -75,8 +73,7 @@ Lazy initialization avoids creating a Stripe SDK instance during the build step,
 
 This is a client component (`'use client'`) because it uses React state and browser APIs. The `TenderlaneProvider` and hooks are browser-only.
 
-```tsx
-// app/checkout/page.tsx
+```tsx title="app/checkout/page.tsx"
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -231,8 +228,7 @@ function CheckoutForm() {
 
 ## 4. Success and cancel pages
 
-```tsx
-// app/success/page.tsx
+```tsx title="app/success/page.tsx"
 import { Suspense } from 'react';
 
 function SuccessContent() {
@@ -254,8 +250,7 @@ export default function SuccessPage() {
 }
 ```
 
-```tsx
-// app/cancel/page.tsx
+```tsx title="app/cancel/page.tsx"
 export default function CancelPage() {
   return (
     <main style={{ maxWidth: 480, margin: '2rem auto', textAlign: 'center' }}>
@@ -339,8 +334,7 @@ No special configuration needed. Ensure your environment variables are set in th
 
 Set environment variables in your Docker compose or runtime config:
 
-```yaml
-# docker-compose.yml
+```yaml title="docker-compose.yml"
 services:
   app:
     environment:
@@ -352,7 +346,6 @@ services:
 
 The Tenderlane server handler uses the Web `Request`/`Response` standard and works with Edge runtimes (Vercel Edge Functions, Cloudflare Workers). However, the `stripe` npm package may not be fully compatible with all Edge runtimes. Check Stripe's Edge support for your platform.
 
-```ts
-// app/api/checkout/route.ts
+```ts title="app/api/checkout/route.ts"
 export const runtime = 'edge'; // Optional: use Edge runtime
 ```

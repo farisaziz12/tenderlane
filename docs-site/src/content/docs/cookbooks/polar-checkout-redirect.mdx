@@ -41,8 +41,7 @@ pnpm add tenderlane @polar-sh/sdk
 
 ## 3. Set up environment variables
 
-```bash
-# .env
+```bash title=".env"
 POLAR_ACCESS_TOKEN=polar_oat_...
 POLAR_ORGANIZATION_ID=org_...
 ```
@@ -51,8 +50,7 @@ POLAR_ORGANIZATION_ID=org_...
 
 The cleanest setup uses `createPolarCatalog` — the catalog calls `polar.products.get(...)` at submit time, so the canonical price lives in Polar (not in your code or DB).
 
-```ts
-// app/api/payments/polar/route.ts (Next.js App Router)
+```ts title="app/api/payments/polar/route.ts"
 import { createTenderlaneHandler } from 'tenderlane/server';
 import {
   polarServerAdapter,
@@ -97,15 +95,13 @@ skus: {
 
 If your client uses `createRemoteCatalog` for preview, also wire up the resolve route:
 
-```ts
-// app/api/payments/polar/resolve/route.ts
+```ts title="app/api/payments/polar/resolve/route.ts"
 export const POST = handler.resolve;
 ```
 
 ## 5. Build the React checkout page
 
-```tsx
-// app/checkout/page.tsx
+```tsx title="app/checkout/page.tsx"
 'use client';
 
 import { useState } from 'react';

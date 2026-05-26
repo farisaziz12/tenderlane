@@ -57,8 +57,7 @@ Never commit your secret key to version control. Add `.env.local` to your `.giti
 
 The server endpoint receives checkout requests from the Tenderlane browser provider and creates Stripe Checkout Sessions.
 
-```ts
-// app/api/checkout/route.ts (Next.js App Router)
+```ts title="app/api/checkout/route.ts"
 import { createTenderlaneHandler } from '@tenderlane/core/server';
 import { stripeServerAdapter } from '@tenderlane/stripe/server';
 
@@ -82,8 +81,7 @@ This is the entire server-side setup. Here is what happens when a request arrive
 
 ## 5. Build the checkout page
 
-```tsx
-// app/checkout/page.tsx
+```tsx title="app/checkout/page.tsx"
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -264,8 +262,7 @@ function CheckoutForm() {
 
 ## 6. Create success and cancel pages
 
-```tsx
-// app/success/page.tsx
+```tsx title="app/success/page.tsx"
 export default function SuccessPage() {
   return (
     <div style={{ maxWidth: 480, margin: '2rem auto', textAlign: 'center' }}>

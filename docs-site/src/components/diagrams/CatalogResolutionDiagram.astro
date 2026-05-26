@@ -1,0 +1,355 @@
+---
+// Two-column data flow showing the price-integrity contract:
+// browser-side catalog.resolve() is display-only; the server's resolve is
+// canonical. The wire payload between them carries { items, context } only.
+// A red "✗ unitAmount" badge makes the stripped field unmissable.
+// Honors `prefers-reduced-motion`.
+
+const colW = 240;
+const colH = 320;
+const browserX = 30;
+const serverX = 450;
+const colY = 60;
+const wireY = colY + 130;
+---
+
+<figure
+  class="cr-diagram"
+  aria-label="Catalog resolution flow. The browser calls catalog.resolve() for display-only preview, then posts a wire payload to the server with items, context, successUrl, and explicitly no unitAmount. The server strips any client-supplied unitAmount defensively, runs its own canonical catalog.resolve(), fires the onCatalogResolved middleware hook, then dispatches to the provider adapter with the server-derived amounts."
+>
+  <div class="cr-stage">
+    <svg viewBox="0 0 760 420" role="img" preserveAspectRatio="xMidYMid meet">
+      <defs>
+        <marker id="cr-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+          <path d="M0,0 L10,5 L0,10 z" fill="var(--accent)" />
+        </marker>
+        <marker id="cr-arrow-soft" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+          <path d="M0,0 L10,5 L0,10 z" fill="var(--text-3)" />
+        </marker>
+        <path
+          id="cr-wire-path"
+          d={`M ${browserX + colW},${wireY} L ${serverX},${wireY}`}
+        />
+      </defs>
+
+      {/* Column headers */}
+      <text x={browserX + colW / 2} y={colY - 22} text-anchor="middle" class="cr-col-header">browser</text>
+      <text x={serverX + colW / 2} y={colY - 22} text-anchor="middle" class="cr-col-header">server · canonical</text>
+
+      {/* Browser column container */}
+      <rect x={browserX} y={colY} width={colW} height={colH} rx="12" class="cr-col-bg" />
+      {/* Server column container */}
+      <rect x={serverX} y={colY} width={colW} height={colH} rx="12" class="cr-col-bg cr-col-bg-server" />
+
+      {/* Browser stack: catalog.resolve() (preview) */}
+      <g class="cr-step">
+        <rect x={browserX + 16} y={colY + 18} width={colW - 32} height={64} rx="8" />
+        <text x={browserX + 30} y={colY + 38} class="cr-step-title">catalog.resolve()</text>
+        <text x={browserX + 30} y={colY + 56} class="cr-step-sub">preview only</text>
+        <text x={browserX + 30} y={colY + 72} class="cr-step-sub-faded">running total · currency switch</text>
+      </g>
+
+      {/* Browser bottom: client.submit() */}
+      <g class="cr-step">
+        <rect x={browserX + 16} y={colY + colH - 90} width={colW - 32} height={72} rx="8" />
+        <text x={browserX + 30} y={colY + colH - 70} class="cr-step-title">client.submit()</text>
+        <text x={browserX + 30} y={colY + colH - 52} class="cr-step-sub">posts to server endpoint</text>
+        <text x={browserX + 30} y={colY + colH - 36} class="cr-step-sub-faded">items + context · no amounts</text>
+      </g>
+
+      {/* Server stack: strip → resolve → middleware → adapter */}
+      <g class="cr-step cr-step-strip">
+        <rect x={serverX + 16} y={colY + 18} width={colW - 32} height={56} rx="8" />
+        <text x={serverX + 30} y={colY + 38} class="cr-step-title">stripClientAmounts()</text>
+        <text x={serverX + 30} y={colY + 56} class="cr-step-sub-faded">deletes any unitAmount</text>
+      </g>
+
+      <g class="cr-step cr-step-resolve">
+        <rect x={serverX + 16} y={colY + 84} width={colW - 32} height={56} rx="8" />
+        <text x={serverX + 30} y={colY + 104} class="cr-step-title">catalog.resolve()</text>
+        <text x={serverX + 30} y={colY + 122} class="cr-step-sub-faded">source of truth</text>
+      </g>
+
+      <g class="cr-step">
+        <rect x={serverX + 16} y={colY + 150} width={colW - 32} height={48} rx="8" />
+        <text x={serverX + 30} y={colY + 170} class="cr-step-title">onCatalogResolved</text>
+        <text x={serverX + 30} y={colY + 186} class="cr-step-sub-faded">middleware hook</text>
+      </g>
+
+      <g class="cr-step cr-step-adapter">
+        <rect x={serverX + 16} y={colY + 208} width={colW - 32} height={64} rx="8" />
+        <text x={serverX + 30} y={colY + 228} class="cr-step-title">adapter.handle()</text>
+        <text x={serverX + 30} y={colY + 246} class="cr-step-sub">items: ResolvedCatalogItem[]</text>
+        <text x={serverX + 30} y={colY + 262} class="cr-step-sub-faded">server-derived amounts</text>
+      </g>
+
+      {/* Internal arrows on server side */}
+      <g class="cr-internal-edges">
+        <line x1={serverX + colW / 2} y1={colY + 74} x2={serverX + colW / 2} y2={colY + 82} marker-end="url(#cr-arrow-soft)" />
+        <line x1={serverX + colW / 2} y1={colY + 140} x2={serverX + colW / 2} y2={colY + 148} marker-end="url(#cr-arrow-soft)" />
+        <line x1={serverX + colW / 2} y1={colY + 198} x2={serverX + colW / 2} y2={colY + 206} marker-end="url(#cr-arrow-soft)" />
+      </g>
+
+      {/* Wire path connecting browser column to server column */}
+      <line
+        x1={browserX + colW}
+        y1={wireY}
+        x2={serverX}
+        y2={wireY}
+        class="cr-wire"
+        marker-end="url(#cr-arrow)"
+      />
+
+      {/* Wire payload pill */}
+      <g class="cr-payload">
+        <rect x={browserX + colW + 10} y={wireY - 38} width={serverX - browserX - colW - 20} height={32} rx="6" />
+        <text x={(browserX + colW + serverX) / 2} y={wireY - 17} text-anchor="middle" class="cr-payload-text">
+          {`{ items: [{ sku, quantity }], context, successUrl }`}
+        </text>
+      </g>
+
+      {/* ✗ unitAmount badge — emphatically stripped from the wire */}
+      <g class="cr-strip-badge">
+        <rect x={(browserX + colW + serverX) / 2 - 70} y={wireY + 16} width={140} height={28} rx="14" />
+        <text x={(browserX + colW + serverX) / 2} y={wireY + 35} text-anchor="middle" class="cr-strip-text">
+          ✗ unitAmount
+        </text>
+      </g>
+      <text
+        x={(browserX + colW + serverX) / 2}
+        y={wireY + 60}
+        text-anchor="middle"
+        class="cr-strip-caption"
+      >never on the wire</text>
+
+      {/* Wire label */}
+      <text
+        x={(browserX + colW + serverX) / 2}
+        y={wireY - 50}
+        text-anchor="middle"
+        class="cr-wire-label"
+      >POST /api/tenderlane</text>
+
+      {/* Animated dot — browser → server */}
+      <g class="cr-flow">
+        <circle r="5" class="cr-flow-glow">
+          <animateMotion dur="3.5s" repeatCount="indefinite">
+            <mpath href="#cr-wire-path" />
+          </animateMotion>
+        </circle>
+        <circle r="3" class="cr-flow-dot">
+          <animateMotion dur="3.5s" repeatCount="indefinite">
+            <mpath href="#cr-wire-path" />
+          </animateMotion>
+        </circle>
+      </g>
+    </svg>
+  </div>
+
+  <figcaption class="cr-legend">
+    <span class="cr-legend-item"><span class="cr-swatch cr-swatch-strip"></span>defensive strip</span>
+    <span class="cr-legend-item"><span class="cr-swatch cr-swatch-resolve"></span>canonical resolve</span>
+    <span class="cr-legend-item"><span class="cr-swatch cr-swatch-payload"></span>wire payload</span>
+    <span class="cr-legend-item cr-legend-meta">price integrity · server always wins</span>
+  </figcaption>
+</figure>
+
+<style>
+  .cr-diagram {
+    margin: 0;
+    padding: 24px;
+    background: var(--bg-1);
+    border: 1px solid var(--line-2);
+    border-radius: 14px;
+    overflow: hidden;
+  }
+  .cr-stage {
+    overflow-x: auto;
+  }
+  .cr-diagram svg {
+    display: block;
+    width: 100%;
+    min-width: 620px;
+    height: auto;
+    max-height: 460px;
+    font-family: var(--font-mono);
+  }
+
+  .cr-col-header {
+    fill: var(--text-3);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .cr-col-bg {
+    fill: var(--bg-2);
+    stroke: var(--line-2);
+    stroke-width: 1;
+  }
+  .cr-col-bg-server {
+    fill: color-mix(in oklab, var(--accent) 4%, var(--bg-2));
+    stroke: var(--accent-soft);
+  }
+
+  .cr-step rect {
+    fill: color-mix(in oklab, var(--bg-1) 80%, var(--bg-2));
+    stroke: var(--line-3);
+    stroke-width: 1;
+  }
+  .cr-step-strip rect {
+    fill: color-mix(in oklab, var(--err) 10%, var(--bg-2));
+    stroke: color-mix(in oklab, var(--err) 30%, transparent);
+  }
+  .cr-step-resolve rect {
+    fill: color-mix(in oklab, var(--accent) 14%, var(--bg-2));
+    stroke: var(--accent-soft);
+  }
+  .cr-step-adapter rect {
+    fill: color-mix(in oklab, var(--accent) 8%, var(--bg-2));
+    stroke: var(--accent-soft);
+  }
+  .cr-step-title {
+    fill: var(--text-0);
+    font-size: 12px;
+    font-weight: 500;
+  }
+  .cr-step-sub {
+    fill: var(--text-1);
+    font-size: 10.5px;
+  }
+  .cr-step-sub-faded {
+    fill: var(--text-3);
+    font-size: 10.5px;
+  }
+  .cr-step-strip .cr-step-title {
+    fill: var(--err);
+  }
+  .cr-step-resolve .cr-step-title {
+    fill: var(--accent);
+  }
+
+  .cr-internal-edges line {
+    stroke: var(--text-3);
+    stroke-width: 1;
+    opacity: 0.6;
+  }
+
+  .cr-wire {
+    stroke: var(--accent);
+    stroke-width: 1.5;
+    fill: none;
+  }
+  .cr-wire-label {
+    fill: var(--text-3);
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .cr-payload rect {
+    fill: var(--bg-1);
+    stroke: var(--line-2);
+    stroke-width: 1;
+  }
+  .cr-payload-text {
+    fill: var(--text-1);
+    font-size: 10.5px;
+  }
+
+  .cr-strip-badge rect {
+    fill: color-mix(in oklab, var(--err) 14%, var(--bg-1));
+    stroke: color-mix(in oklab, var(--err) 40%, transparent);
+    stroke-width: 1;
+  }
+  .cr-strip-text {
+    fill: var(--err);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+  }
+  .cr-strip-caption {
+    fill: var(--err);
+    opacity: 0.75;
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .cr-flow-dot {
+    fill: var(--accent);
+  }
+  .cr-flow-glow {
+    fill: var(--accent);
+    opacity: 0.45;
+    filter: blur(4px);
+  }
+  .cr-diagram:hover .cr-flow-dot,
+  .cr-diagram:hover .cr-flow-glow {
+    animation-play-state: paused;
+  }
+
+  .cr-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-top: 18px;
+    padding-top: 16px;
+    border-top: 1px solid var(--line-2);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-2);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .cr-legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .cr-legend-meta {
+    color: var(--text-3);
+    margin-left: auto;
+    text-transform: none;
+    letter-spacing: 0;
+  }
+  .cr-swatch {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+    border: 1px solid var(--line-3);
+  }
+  .cr-swatch-strip {
+    background: color-mix(in oklab, var(--err) 10%, var(--bg-2));
+    border-color: color-mix(in oklab, var(--err) 30%, transparent);
+  }
+  .cr-swatch-resolve {
+    background: color-mix(in oklab, var(--accent) 14%, var(--bg-2));
+    border-color: var(--accent-soft);
+  }
+  .cr-swatch-payload {
+    background: var(--bg-1);
+    border-color: var(--line-2);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .cr-flow-dot,
+    .cr-flow-glow {
+      display: none;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .cr-diagram {
+      padding: 16px;
+    }
+    .cr-legend {
+      font-size: 10px;
+      gap: 12px;
+    }
+    .cr-legend-meta {
+      width: 100%;
+      margin-left: 0;
+      margin-top: 4px;
+    }
+  }
+</style>

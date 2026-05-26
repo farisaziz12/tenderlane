@@ -1,0 +1,324 @@
+---
+// Vertical decision tree showing how a rules router evaluates rules in order.
+// A traveling dot enters at the context, drops past skipped rules, lights up
+// the first match, then exits to the SelectedPaymentRoute below.
+// Honors `prefers-reduced-motion`.
+
+const cardW = 360;
+const cardH = 78;
+const ruleX = 200;
+const contextY = 30;
+const rule1Y = contextY + cardH + 26;
+const rule2Y = rule1Y + cardH + 22;
+const rule3Y = rule2Y + cardH + 22;
+const routeY = rule3Y + cardH + 26;
+const totalH = routeY + cardH + 30;
+
+const rules = [
+  {
+    id: 'us-only',
+    when: "{ country: 'US' }",
+    use: "{ provider: 'stripe', flow: 'checkout-session' }",
+    status: 'skip',
+    y: rule1Y,
+    note: 'country !== "US"',
+  },
+  {
+    id: 'swiss-twint',
+    when: "{ country: 'CH', amount: { gte: 1000 } }",
+    use: "{ provider: 'stripe', methods: ['twint', 'card'] }",
+    status: 'match',
+    y: rule2Y,
+    note: 'first match wins',
+  },
+  {
+    id: 'default',
+    when: '{}',
+    use: "{ provider: 'stripe', methods: ['card'] }",
+    status: 'unreached',
+    y: rule3Y,
+    note: 'never evaluated',
+  },
+];
+---
+
+<figure
+  class="rp-diagram"
+  aria-label="Routing pipeline. A TenderlaneContext flows top-down through three rule cards. The first rule is skipped because country is not 'US'. The second rule matches because country is 'CH' and amount is at least 1000. The third rule is never evaluated because first-match-wins exits the pipeline. The output is a SelectedPaymentRoute."
+>
+  <div class="rp-stage">
+    <svg viewBox={`0 0 720 ${totalH}`} role="img" preserveAspectRatio="xMidYMid meet">
+      <defs>
+        <marker id="rp-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+          <path d="M0,0 L10,5 L0,10 z" fill="var(--text-2)" />
+        </marker>
+        <marker id="rp-arrow-soft" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+          <path d="M0,0 L10,5 L0,10 z" fill="var(--text-3)" />
+        </marker>
+        <marker id="rp-arrow-acc" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+          <path d="M0,0 L10,5 L0,10 z" fill="var(--accent)" />
+        </marker>
+        <path
+          id="rp-flow-path"
+          d={`M ${ruleX + cardW / 2},${contextY + cardH} L ${ruleX + cardW / 2},${rule1Y} L ${ruleX + cardW / 2},${rule1Y + cardH} L ${ruleX + cardW / 2},${rule2Y} L ${ruleX + cardW / 2},${rule2Y + cardH} L ${ruleX + cardW / 2},${routeY}`}
+        />
+      </defs>
+
+      {/* Context card */}
+      <g class="rp-card rp-card-context">
+        <rect x={ruleX} y={contextY} width={cardW} height={cardH} rx="10" />
+        <text x={ruleX + 16} y={contextY + 24} class="rp-label">context</text>
+        <text x={ruleX + 16} y={contextY + 48} class="rp-code">{`{ country: 'CH',`}</text>
+        <text x={ruleX + 16} y={contextY + 64} class="rp-code">{`  amount: 5000, currency: 'chf' }`}</text>
+      </g>
+
+      {/* Rule cards */}
+      {rules.map((rule) => (
+        <g class={`rp-card rp-card-rule rp-card-${rule.status}`}>
+          <rect x={ruleX} y={rule.y} width={cardW} height={cardH} rx="10" />
+          <text x={ruleX + 16} y={rule.y + 22} class="rp-rule-id">{rule.id}</text>
+          <text x={ruleX + 16} y={rule.y + 42} class="rp-code">when {rule.when}</text>
+          <text x={ruleX + 16} y={rule.y + 60} class="rp-code rp-code-dim">→ {rule.use}</text>
+          <text x={ruleX + cardW - 16} y={rule.y + 22} text-anchor="end" class="rp-status">
+            {rule.status === 'match' ? '✓ match' : rule.status === 'skip' ? '✗ skip' : '· unreached'}
+          </text>
+          <text x={ruleX + cardW + 16} y={rule.y + cardH / 2 + 4} class="rp-note">{rule.note}</text>
+        </g>
+      ))}
+
+      {/* Vertical connector segments — drawn with arrows entering each card */}
+      <g class="rp-edges">
+        <line x1={ruleX + cardW / 2} y1={contextY + cardH} x2={ruleX + cardW / 2} y2={rule1Y - 4} marker-end="url(#rp-arrow-soft)" />
+        <line x1={ruleX + cardW / 2} y1={rule1Y + cardH} x2={ruleX + cardW / 2} y2={rule2Y - 4} marker-end="url(#rp-arrow-soft)" />
+        <line x1={ruleX + cardW / 2} y1={rule2Y + cardH} x2={ruleX + cardW / 2} y2={routeY - 4} class="rp-edge-match" marker-end="url(#rp-arrow-acc)" />
+      </g>
+
+      {/* Output card */}
+      <g class="rp-card rp-card-route">
+        <rect x={ruleX} y={routeY} width={cardW} height={cardH} rx="10" />
+        <text x={ruleX + 16} y={routeY + 22} class="rp-label rp-label-acc">SelectedPaymentRoute</text>
+        <text x={ruleX + 16} y={routeY + 44} class="rp-code">{`{ provider: 'stripe', flow: 'checkout-session',`}</text>
+        <text x={ruleX + 16} y={routeY + 60} class="rp-code">{`  paymentMethods: ['twint', 'card'], source: 'rule' }`}</text>
+      </g>
+
+      {/* Animated dot — travels from context down through each rule to the route */}
+      <g class="rp-flow">
+        <circle r="6" class="rp-flow-glow">
+          <animateMotion dur="10s" repeatCount="indefinite">
+            <mpath href="#rp-flow-path" />
+          </animateMotion>
+        </circle>
+        <circle r="3.5" class="rp-flow-dot">
+          <animateMotion dur="10s" repeatCount="indefinite">
+            <mpath href="#rp-flow-path" />
+          </animateMotion>
+        </circle>
+      </g>
+    </svg>
+  </div>
+
+  <figcaption class="rp-legend">
+    <span class="rp-legend-item"><span class="rp-swatch rp-swatch-skip"></span>skipped</span>
+    <span class="rp-legend-item"><span class="rp-swatch rp-swatch-match"></span>matched</span>
+    <span class="rp-legend-item"><span class="rp-swatch rp-swatch-unreached"></span>unreached</span>
+    <span class="rp-legend-item rp-legend-meta">first-match-wins · evaluates top to bottom</span>
+  </figcaption>
+</figure>
+
+<style>
+  .rp-diagram {
+    margin: 0;
+    padding: 24px;
+    background: var(--bg-1);
+    border: 1px solid var(--line-2);
+    border-radius: 14px;
+    overflow: hidden;
+  }
+  .rp-stage {
+    overflow-x: auto;
+  }
+  .rp-diagram svg {
+    display: block;
+    width: 100%;
+    min-width: 560px;
+    height: auto;
+    font-family: var(--font-mono);
+  }
+
+  .rp-card rect {
+    fill: var(--bg-2);
+    stroke: var(--line-3);
+    stroke-width: 1;
+    transition: stroke 0.3s, fill 0.3s;
+  }
+  .rp-card text {
+    fill: var(--text-1);
+  }
+  .rp-label {
+    fill: var(--text-2);
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .rp-label-acc {
+    fill: var(--accent);
+  }
+  .rp-rule-id {
+    fill: var(--text-0);
+    font-size: 12px;
+    font-weight: 500;
+  }
+  .rp-code {
+    fill: var(--text-1);
+    font-size: 11px;
+  }
+  .rp-code-dim {
+    fill: var(--text-2);
+  }
+  .rp-status {
+    fill: var(--text-3);
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .rp-note {
+    fill: var(--text-3);
+    font-size: 10px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  /* Skip — dimmed + red accent */
+  .rp-card-skip rect {
+    stroke: color-mix(in oklab, var(--err) 25%, var(--line-3));
+    opacity: 0.7;
+  }
+  .rp-card-skip .rp-status {
+    fill: var(--err);
+    opacity: 0.7;
+  }
+  .rp-card-skip text:not(.rp-status):not(.rp-note) {
+    opacity: 0.55;
+  }
+
+  /* Match — accent border + subtle fill */
+  .rp-card-match rect {
+    fill: color-mix(in oklab, var(--accent) 8%, var(--bg-2));
+    stroke: var(--accent-soft);
+  }
+  .rp-card-match .rp-status {
+    fill: var(--accent);
+  }
+  .rp-card-match .rp-rule-id {
+    fill: var(--accent);
+  }
+
+  /* Unreached — strongly dimmed */
+  .rp-card-unreached rect {
+    stroke-dasharray: 3 4;
+    opacity: 0.5;
+  }
+  .rp-card-unreached text {
+    opacity: 0.4;
+  }
+
+  .rp-card-context rect {
+    stroke: var(--line-2);
+    fill: color-mix(in oklab, var(--text-3) 6%, var(--bg-2));
+  }
+  .rp-card-route rect {
+    fill: color-mix(in oklab, var(--accent) 12%, var(--bg-2));
+    stroke: var(--accent-soft);
+  }
+
+  .rp-edges line {
+    stroke: var(--text-3);
+    stroke-width: 1.25;
+    fill: none;
+  }
+  .rp-edge-match {
+    stroke: var(--accent) !important;
+    opacity: 0.7;
+  }
+
+  .rp-flow-dot {
+    fill: var(--accent);
+  }
+  .rp-flow-glow {
+    fill: var(--accent);
+    opacity: 0.4;
+    filter: blur(4px);
+  }
+
+  .rp-diagram:hover .rp-flow-dot,
+  .rp-diagram:hover .rp-flow-glow {
+    animation-play-state: paused;
+  }
+
+  .rp-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-top: 18px;
+    padding-top: 16px;
+    border-top: 1px solid var(--line-2);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-2);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .rp-legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .rp-legend-meta {
+    color: var(--text-3);
+    margin-left: auto;
+    text-transform: none;
+    letter-spacing: 0;
+  }
+  .rp-swatch {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+    border: 1px solid var(--line-3);
+  }
+  .rp-swatch-skip {
+    background: var(--bg-2);
+    border-color: color-mix(in oklab, var(--err) 30%, transparent);
+  }
+  .rp-swatch-match {
+    background: color-mix(in oklab, var(--accent) 12%, var(--bg-2));
+    border-color: var(--accent-soft);
+  }
+  .rp-swatch-unreached {
+    background: var(--bg-2);
+    border-color: var(--line-3);
+    opacity: 0.5;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .rp-flow-dot,
+    .rp-flow-glow {
+      display: none;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .rp-diagram {
+      padding: 16px;
+    }
+    .rp-legend {
+      font-size: 10px;
+      gap: 12px;
+    }
+    .rp-legend-meta {
+      width: 100%;
+      margin-left: 0;
+      margin-top: 4px;
+    }
+  }
+</style>
