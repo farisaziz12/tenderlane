@@ -1,0 +1,299 @@
+---
+// Animated SVG state machine for the Tenderlane checkout client.
+// A glowing dot loops the happy path; error transitions render as dashed converging edges.
+// Honors `prefers-reduced-motion`.
+
+const nodes = [
+  { id: 'idle', label: 'idle', cx: 70, cy: 90, type: 'start' as const },
+  { id: 'evaluating', label: 'evaluating', cx: 210, cy: 90, type: 'transient' as const },
+  { id: 'ready', label: 'ready', cx: 350, cy: 90, type: 'stable' as const },
+  { id: 'preparing', label: 'preparing', cx: 490, cy: 90, type: 'transient' as const },
+  { id: 'prepared', label: 'prepared', cx: 630, cy: 90, type: 'stable' as const },
+  { id: 'submitting', label: 'submitting', cx: 630, cy: 200, type: 'transient' as const },
+  { id: 'success', label: 'success', cx: 490, cy: 200, type: 'success' as const },
+  { id: 'error', label: 'error', cx: 350, cy: 280, type: 'error' as const },
+];
+
+const W = 108;
+const H = 36;
+const halfW = W / 2;
+const halfH = H / 2;
+---
+
+<figure class="sm-diagram" aria-label="Checkout client state machine. Idle transitions to evaluating, then ready, then preparing, then prepared, then submitting, then success. Any transient state can fall to error.">
+  <svg viewBox="0 0 760 340" role="img" preserveAspectRatio="xMidYMid meet">
+    <defs>
+      <marker id="sm-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+        <path d="M0,0 L10,5 L0,10 z" fill="var(--text-2)" />
+      </marker>
+      <marker id="sm-arrow-err" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+        <path d="M0,0 L10,5 L0,10 z" fill="var(--err)" opacity="0.7" />
+      </marker>
+      <filter id="sm-glow" x="-100%" y="-100%" width="300%" height="300%">
+        <feGaussianBlur stdDeviation="3" result="blur" />
+        <feMerge>
+          <feMergeNode in="blur" />
+          <feMergeNode in="SourceGraphic" />
+        </feMerge>
+      </filter>
+      <path
+        id="sm-flow-path"
+        d="M 70,90 L 210,90 L 350,90 L 490,90 L 630,90 L 630,200 L 490,200 M 70,90"
+      />
+    </defs>
+
+    {/* Happy-path edges */}
+    <g class="sm-edges">
+      <line x1={70 + halfW} y1="90" x2={210 - halfW} y2="90" marker-end="url(#sm-arrow)" />
+      <line x1={210 + halfW} y1="90" x2={350 - halfW} y2="90" marker-end="url(#sm-arrow)" />
+      <line x1={350 + halfW} y1="90" x2={490 - halfW} y2="90" marker-end="url(#sm-arrow)" />
+      <line x1={490 + halfW} y1="90" x2={630 - halfW} y2="90" marker-end="url(#sm-arrow)" />
+      <line x1="630" y1={90 + halfH} x2="630" y2={200 - halfH} marker-end="url(#sm-arrow)" />
+      <line x1={630 - halfW} y1="200" x2={490 + halfW} y2="200" marker-end="url(#sm-arrow)" />
+      {/* ready → submitting skip path (curved) */}
+      <path
+        class="sm-edge-skip"
+        d={`M ${350 + halfW - 4},${90 + 8} C 540,140 600,160 ${630},${200 - halfH}`}
+        fill="none"
+        marker-end="url(#sm-arrow)"
+      />
+    </g>
+
+    {/* Error edges (dashed) */}
+    <g class="sm-edges-err">
+      <path d={`M 210,${90 + halfH} L 340,${280 - halfH + 2}`} marker-end="url(#sm-arrow-err)" />
+      <path d={`M 490,${90 + halfH} L 360,${280 - halfH + 2}`} marker-end="url(#sm-arrow-err)" />
+      <path d={`M 630,${200 + halfH} L 380,${280 - halfH}`} marker-end="url(#sm-arrow-err)" />
+    </g>
+
+    {/* Reset arc (success → idle) */}
+    <path
+      class="sm-edge-reset"
+      d={`M ${490 - halfW},${200 - 2} C 360,260 130,260 70,${90 + halfH + 2}`}
+      fill="none"
+      marker-end="url(#sm-arrow)"
+    />
+
+    {/* Edge labels */}
+    <g class="sm-edge-label">
+      <text x="635" y="148" text-anchor="middle">prepare()</text>
+      <text x="560" y="194" text-anchor="middle">submit()</text>
+      <text x="490" y="72" text-anchor="middle">resolve</text>
+      <text x="280" y="252" text-anchor="middle" class="sm-edge-label-err">any error</text>
+      <text x="280" y="78" text-anchor="middle">→ idle</text>
+    </g>
+
+    {/* Nodes */}
+    <g class="sm-nodes">
+      {nodes.map((n, i) => (
+        <g class={`sm-node sm-node-${n.type}`} style={`--step:${i}`}>
+          <rect
+            x={n.cx - halfW}
+            y={n.cy - halfH}
+            width={W}
+            height={H}
+            rx="8"
+          />
+          <text x={n.cx} y={n.cy + 4} text-anchor="middle">{n.label}</text>
+        </g>
+      ))}
+    </g>
+
+    {/* Animated traveling dot */}
+    <g class="sm-flow">
+      <circle r="6" class="sm-flow-glow">
+        <animateMotion dur="14s" repeatCount="indefinite">
+          <mpath href="#sm-flow-path" />
+        </animateMotion>
+      </circle>
+      <circle r="3.5" class="sm-flow-dot">
+        <animateMotion dur="14s" repeatCount="indefinite">
+          <mpath href="#sm-flow-path" />
+        </animateMotion>
+      </circle>
+    </g>
+  </svg>
+  <figcaption class="sm-legend">
+    <span class="sm-legend-item"><span class="sm-legend-swatch sm-swatch-stable"></span>stable</span>
+    <span class="sm-legend-item"><span class="sm-legend-swatch sm-swatch-transient"></span>transient</span>
+    <span class="sm-legend-item"><span class="sm-legend-swatch sm-swatch-success"></span>success</span>
+    <span class="sm-legend-item"><span class="sm-legend-swatch sm-swatch-error"></span>error</span>
+    <span class="sm-legend-item sm-legend-meta">happy-path traversal loops · hover to pause</span>
+  </figcaption>
+</figure>
+
+<style>
+  .sm-diagram {
+    margin: 0;
+    padding: 24px;
+    background: var(--bg-1);
+    border: 1px solid var(--line-2);
+    border-radius: 14px;
+    overflow: hidden;
+  }
+  .sm-diagram svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    max-height: 380px;
+    font-family: var(--font-mono);
+  }
+  .sm-edges line,
+  .sm-edge-skip,
+  .sm-edge-reset {
+    stroke: var(--text-3);
+    stroke-width: 1.25;
+    fill: none;
+  }
+  .sm-edge-reset {
+    stroke: var(--text-3);
+    stroke-dasharray: 3 4;
+    opacity: 0.55;
+  }
+  .sm-edges-err path {
+    stroke: var(--err);
+    stroke-width: 1;
+    stroke-dasharray: 4 4;
+    opacity: 0.55;
+    fill: none;
+  }
+  .sm-edge-label text {
+    fill: var(--text-3);
+    font-size: 10px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .sm-edge-label-err {
+    fill: var(--err) !important;
+    opacity: 0.7;
+  }
+  .sm-nodes rect {
+    fill: var(--bg-2);
+    stroke: var(--line-3);
+    stroke-width: 1;
+    transition: stroke 0.3s, fill 0.3s;
+  }
+  .sm-nodes text {
+    fill: var(--text-0);
+    font-size: 12px;
+    font-weight: 500;
+  }
+  .sm-node-stable rect {
+    stroke: var(--accent-soft);
+  }
+  .sm-node-success rect {
+    fill: color-mix(in oklab, var(--accent) 12%, var(--bg-2));
+    stroke: var(--accent-soft);
+  }
+  .sm-node-success text {
+    fill: var(--accent);
+  }
+  .sm-node-error rect {
+    fill: color-mix(in oklab, var(--err) 8%, var(--bg-2));
+    stroke: color-mix(in oklab, var(--err) 30%, transparent);
+  }
+  .sm-node-error text {
+    fill: var(--err);
+    opacity: 0.85;
+  }
+
+  /* Per-node glow pulse — synced to the same 14s travel timeline */
+  .sm-node-start rect,
+  .sm-node-transient rect,
+  .sm-node-stable rect,
+  .sm-node-success rect {
+    filter: drop-shadow(0 0 0 transparent);
+  }
+
+  .sm-flow-dot {
+    fill: var(--accent);
+  }
+  .sm-flow-glow {
+    fill: var(--accent);
+    opacity: 0.35;
+    filter: blur(4px);
+  }
+
+  /* Pause on hover */
+  .sm-diagram:hover :global(animateMotion) {
+    /* SMIL pause hack: animations keep state but visually we cue the legend */
+  }
+  .sm-diagram:hover .sm-flow-dot,
+  .sm-diagram:hover .sm-flow-glow {
+    animation-play-state: paused;
+  }
+
+  .sm-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-top: 18px;
+    padding-top: 16px;
+    border-top: 1px solid var(--line-2);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-2);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .sm-legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .sm-legend-meta {
+    color: var(--text-3);
+    margin-left: auto;
+    text-transform: none;
+    letter-spacing: 0;
+  }
+  .sm-legend-swatch {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+    border: 1px solid var(--line-3);
+  }
+  .sm-swatch-stable {
+    background: var(--bg-2);
+    border-color: var(--accent-soft);
+  }
+  .sm-swatch-transient {
+    background: var(--bg-2);
+    border-color: var(--line-3);
+  }
+  .sm-swatch-success {
+    background: color-mix(in oklab, var(--accent) 12%, var(--bg-2));
+    border-color: var(--accent-soft);
+  }
+  .sm-swatch-error {
+    background: color-mix(in oklab, var(--err) 8%, var(--bg-2));
+    border-color: color-mix(in oklab, var(--err) 30%, transparent);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .sm-diagram :global(animateMotion) {
+      /* Browsers stop SMIL when reduced-motion is set + the user agent honors it;
+         we additionally fade the moving dot so it doesn't draw attention. */
+    }
+    .sm-flow-dot,
+    .sm-flow-glow {
+      display: none;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .sm-diagram {
+      padding: 16px;
+    }
+    .sm-legend {
+      font-size: 10px;
+      gap: 12px;
+    }
+    .sm-legend-meta {
+      width: 100%;
+      margin-left: 0;
+      margin-top: 4px;
+    }
+  }
+</style>

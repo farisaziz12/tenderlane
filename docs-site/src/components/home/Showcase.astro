@@ -1,0 +1,136 @@
+---
+import Section from '../Section.astro';
+import Icon from '../Icons.astro';
+
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+
+const cards = [
+  {
+    eyebrow: 'Live',
+    title: 'Reactive routing playground',
+    blurb: 'Change country, currency, and amount — watch the route, methods, and total update in real time.',
+    href: `${base}/playground`,
+    external: false,
+    snippet: `<span class="tok-pu">{ </span><span class="tok-p">country</span><span class="tok-pu">: </span><span class="tok-s">'CH'</span><span class="tok-pu">, </span><span class="tok-p">currency</span><span class="tok-pu">: </span><span class="tok-s">'chf'</span><span class="tok-pu"> }</span>
+<span class="tok-c">// → ch-inline · card, twint</span>`,
+    label: 'open playground',
+  },
+  {
+    eyebrow: 'Cookbook',
+    title: 'Country-based routing',
+    blurb: 'TWINT in Switzerland, iDEAL in the Netherlands, Pix in Brazil. One rules table, declarative and serializable.',
+    href: `${base}/docs/cookbooks/country-based-routing`,
+    external: false,
+    snippet: `<span class="tok-p">when</span><span class="tok-pu">: </span><span class="tok-pu">{ </span><span class="tok-p">country</span><span class="tok-pu">: </span><span class="tok-pu">{ </span><span class="tok-p">in</span><span class="tok-pu">: </span><span class="tok-pu">[</span><span class="tok-s">'NL'</span><span class="tok-pu">, </span><span class="tok-s">'BE'</span><span class="tok-pu">] } }</span>
+<span class="tok-c">// → ideal, bancontact</span>`,
+    label: 'read cookbook',
+  },
+  {
+    eyebrow: 'Cookbook',
+    title: 'Stripe Checkout redirect',
+    blurb: 'Wire the Stripe provider, register routing rules, hand the user off — the typed way.',
+    href: `${base}/docs/cookbooks/stripe-checkout-redirect`,
+    external: false,
+    snippet: `<span class="tok-k">await</span> <span class="tok-p">checkout</span><span class="tok-pu">.</span><span class="tok-f">submit</span><span class="tok-pu">({ </span><span class="tok-p">items</span><span class="tok-pu">, </span><span class="tok-p">successUrl</span> <span class="tok-pu">});</span>
+<span class="tok-c">// → redirect to Stripe-hosted page</span>`,
+    label: 'read cookbook',
+  },
+];
+---
+
+<Section
+  id="showcase"
+  eyebrow="Showcase"
+  title="See it route, before you ship it."
+  kicker="A live playground and two cookbooks that match the patterns most teams reach for first."
+>
+  <div class="showcase-grid">
+    {cards.map((c) => (
+      <a class="showcase-card" href={c.href}>
+        <div class="showcase-card-head">
+          <span class="t-cap" style="color:var(--accent)">{c.eyebrow}</span>
+          <Icon name="arrowExt" size={12} />
+        </div>
+        <h3 class="t-h4 showcase-title">{c.title}</h3>
+        <p class="showcase-blurb">{c.blurb}</p>
+        <div class="showcase-snippet">
+          <pre><code set:html={c.snippet} /></pre>
+        </div>
+        <div class="showcase-cta">
+          <span>{c.label}</span>
+          <Icon name="arrow" size={11} />
+        </div>
+      </a>
+    ))}
+  </div>
+</Section>
+
+<style>
+  .showcase-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+  }
+  .showcase-card {
+    display: flex;
+    flex-direction: column;
+    padding: 22px;
+    border-radius: 14px;
+    background: var(--bg-1);
+    border: 1px solid var(--line-2);
+    color: var(--text-0);
+    transition: border-color 0.2s, transform 0.2s, background 0.2s;
+  }
+  .showcase-card:hover {
+    border-color: var(--accent-soft);
+    background: color-mix(in oklab, var(--accent) 4%, var(--bg-1));
+    transform: translateY(-2px);
+  }
+  .showcase-card-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    color: var(--text-3);
+    margin-bottom: 18px;
+  }
+  .showcase-title {
+    margin: 0 0 10px;
+  }
+  .showcase-blurb {
+    color: var(--text-2);
+    font-size: 14px;
+    line-height: 1.55;
+    margin: 0 0 18px;
+  }
+  .showcase-snippet {
+    background: var(--code-bg);
+    border: 1px solid var(--line-1);
+    border-radius: 8px;
+    padding: 12px 14px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--code-fg);
+    overflow-x: auto;
+    margin-bottom: 18px;
+  }
+  .showcase-snippet pre {
+    margin: 0;
+  }
+  .showcase-cta {
+    margin-top: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  @media (max-width: 1000px) {
+    .showcase-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

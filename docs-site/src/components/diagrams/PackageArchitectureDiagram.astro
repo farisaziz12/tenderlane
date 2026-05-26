@@ -1,0 +1,226 @@
+---
+// Layered package architecture diagram.
+// Three layers, arrows indicate import direction (downstream → upstream).
+// On IntersectionObserver, layers cascade fade-in (honors prefers-reduced-motion).
+
+const layers = [
+  {
+    n: '0',
+    label: 'core',
+    sub: 'types · routing · catalog · middleware · handler',
+    badge: 'zero deps',
+  },
+  {
+    n: '1',
+    label: 'client',
+    sub: 'state machine · subscribe / getSnapshot',
+  },
+  {
+    n: '2',
+    label: 'react',
+    sub: 'TenderlaneProvider · hooks',
+  },
+];
+
+const adapters = [
+  { label: 'stripe', sub: 'browser + server' },
+  { label: 'polar', sub: 'redirect-only (v1)' },
+];
+---
+
+<figure class="pkg-diagram" aria-label="Tenderlane package architecture. Core is the zero-dependency root. Client extends core. React extends client. Stripe and Polar adapters extend core directly.">
+  <div class="pkg-grid">
+    <div class="pkg-column">
+      <div class="pkg-eyebrow">core path</div>
+      <div class="pkg-stack">
+        {layers.map((layer, index) => (
+          <div class="pkg-card" style={`--step:${index}`}>
+            <div class="pkg-card-head">
+              <span class="pkg-num">{layer.n}</span>
+              <span class="pkg-name">@tenderlane/{layer.label}</span>
+              {layer.badge && <span class="pkg-badge">{layer.badge}</span>}
+            </div>
+            <div class="pkg-sub">{layer.sub}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+    <div class="pkg-spacer" aria-hidden="true">
+      <svg viewBox="0 0 80 240" preserveAspectRatio="xMidYMid meet">
+        <defs>
+          <marker id="pkg-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+            <path d="M0,0 L10,5 L0,10 z" fill="var(--text-3)" />
+          </marker>
+        </defs>
+        <line x1="40" y1="20" x2="40" y2="220" stroke="var(--line-2)" stroke-dasharray="3 4" stroke-width="1" marker-end="url(#pkg-arrow)" />
+        <text x="46" y="120" fill="var(--text-3)" font-family="var(--font-mono)" font-size="10" letter-spacing="0.04em" text-transform="uppercase">imports</text>
+      </svg>
+    </div>
+    <div class="pkg-column">
+      <div class="pkg-eyebrow">provider adapters</div>
+      <div class="pkg-stack">
+        {adapters.map((adapter, index) => (
+          <div class="pkg-card pkg-card-adapter" style={`--step:${layers.length + index}`}>
+            <div class="pkg-card-head">
+              <span class="pkg-num pkg-num-adapter">·</span>
+              <span class="pkg-name">@tenderlane/{adapter.label}</span>
+            </div>
+            <div class="pkg-sub">{adapter.sub}</div>
+          </div>
+        ))}
+      </div>
+      <div class="pkg-footnote">Each adapter implements the same provider contract from <code>@tenderlane/core</code>.</div>
+    </div>
+  </div>
+</figure>
+
+<style>
+  .pkg-diagram {
+    margin: 0;
+    padding: 24px;
+    background: var(--bg-1);
+    border: 1px solid var(--line-2);
+    border-radius: 14px;
+  }
+  .pkg-grid {
+    display: grid;
+    grid-template-columns: 1fr 80px 1fr;
+    gap: 16px;
+    align-items: stretch;
+  }
+  .pkg-column {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .pkg-eyebrow {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-3);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 4px;
+  }
+  .pkg-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .pkg-card {
+    padding: 12px 14px;
+    border-radius: 10px;
+    background: var(--bg-2);
+    border: 1px solid var(--line-2);
+    opacity: 0;
+    transform: translateY(6px);
+    transition: opacity 0.4s ease, transform 0.4s ease, border-color 0.2s;
+    transition-delay: calc(var(--step) * 80ms);
+  }
+  .pkg-diagram[data-visible='true'] .pkg-card {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  .pkg-card-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 4px;
+  }
+  .pkg-num {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--accent);
+    background: color-mix(in oklab, var(--accent) 12%, transparent);
+    border: 1px solid var(--accent-soft);
+    border-radius: 4px;
+    padding: 2px 6px;
+  }
+  .pkg-num-adapter {
+    background: transparent;
+    color: var(--text-2);
+    border-color: var(--line-2);
+  }
+  .pkg-name {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--text-0);
+    font-weight: 500;
+  }
+  .pkg-badge {
+    margin-left: auto;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--accent);
+    background: color-mix(in oklab, var(--accent) 8%, transparent);
+    border: 1px solid var(--accent-soft);
+    border-radius: 999px;
+    padding: 2px 8px;
+  }
+  .pkg-sub {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-2);
+    line-height: 1.5;
+  }
+  .pkg-spacer svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+    min-height: 200px;
+  }
+  .pkg-footnote {
+    margin-top: 8px;
+    font-size: 12px;
+    color: var(--text-3);
+    line-height: 1.5;
+  }
+  .pkg-footnote code {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text-1);
+    background: var(--bg-2);
+    border: 1px solid var(--line-2);
+    border-radius: 4px;
+    padding: 1px 6px;
+  }
+
+  @media (max-width: 768px) {
+    .pkg-grid {
+      grid-template-columns: 1fr;
+    }
+    .pkg-spacer {
+      display: none;
+    }
+    .pkg-diagram {
+      padding: 16px;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .pkg-card {
+      opacity: 1;
+      transform: none;
+      transition: none;
+    }
+  }
+</style>
+
+<script>
+  const diagrams = document.querySelectorAll('.pkg-diagram');
+  if (diagrams.length > 0) {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.setAttribute('data-visible', 'true');
+            observer.unobserve(entry.target);
+          }
+        });
+      },
+      { threshold: 0.2 },
+    );
+    diagrams.forEach((diagram) => observer.observe(diagram));
+  }
+</script>

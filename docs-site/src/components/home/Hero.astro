@@ -4,17 +4,36 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 
 const tagline =
   'Reactive payment orchestration for modern web apps. The right provider, the right methods, the right flow — picked in the browser, the moment your app knows enough to decide. Headless, typed, MIT.';
+
+const fallbackVersion = '0.4.0';
+let coreVersion = fallbackVersion;
+try {
+  const response = await fetch('https://registry.npmjs.org/@tenderlane/core/latest', {
+    headers: { Accept: 'application/json' },
+  });
+  if (response.ok) {
+    const data = (await response.json()) as { version?: string };
+    if (typeof data.version === 'string' && data.version.length > 0) {
+      coreVersion = data.version;
+    }
+  }
+} catch {
+  coreVersion = fallbackVersion;
+}
 ---
 
 <section class="hero glow-bg">
   <div class="container hero-grid">
     <div class="hero-copy">
       <div class="hero-badges">
-        <span class="badge alpha"><span class="dot"></span>v0.4.0 · pre-1.0 alpha</span>
-        <span class="badge"><span style="color:var(--text-2)">MIT</span></span>
-        <a href="https://github.com/farisaziz12/tenderlane" class="badge link-badge">
-          frontend-first orchestration <Icon name="arrowExt" size={11} />
+        <a class="badge alpha link-badge" href="https://github.com/farisaziz12/tenderlane/releases" title="View all releases on GitHub">
+          <span class="dot"></span>v{coreVersion} · pre-1.0 alpha
         </a>
+        <a class="badge link-badge" href={`https://www.npmjs.com/package/@tenderlane/core`} title="@tenderlane/core on npm">
+          <span style="color:var(--text-2)">npm</span>
+          <Icon name="arrowExt" size={11} />
+        </a>
+        <span class="badge"><span style="color:var(--text-2)">MIT</span></span>
       </div>
       <h1 class="t-display t-h1 hero-headline">
         One checkout.<br />
@@ -605,6 +624,10 @@ const tagline =
     .hero-grid {
       gap: 36px;
     }
+    .hero-demo {
+      gap: 12px;
+      padding: 10px;
+    }
     .rules-pane {
       min-height: 0;
       font-size: 11px;
@@ -614,7 +637,7 @@ const tagline =
       padding: 16px 18px;
     }
     .ui-amount {
-      font-size: 30px;
+      font-size: 28px;
     }
     .trusted {
       margin-top: 48px;
@@ -624,23 +647,50 @@ const tagline =
     .logos {
       gap: 20px;
     }
+    /* Detach the try-hint from the absolute top-right slot and let it sit above the card as a label */
+    .hero-demo-wrap {
+      display: flex;
+      flex-direction: column;
+    }
+    .try-hint {
+      position: static;
+      align-self: flex-start;
+      margin-bottom: 10px;
+    }
   }
   @media (max-width: 480px) {
     .hero-headline br {
       display: none;
     }
     .install-pill {
-      font-size: 12px;
+      font-size: 11px;
       padding: 8px 12px;
       gap: 8px;
+      flex-wrap: wrap;
+      row-gap: 6px;
     }
-    .try-hint {
-      right: 8px;
-      font-size: 10px;
-      padding: 3px 8px;
+    .hero-badges {
+      gap: 6px;
+      margin-bottom: 22px;
+    }
+    .hero-demo {
+      padding: 8px;
+      gap: 10px;
+    }
+    .rules-pane {
+      font-size: 10.5px;
+      padding: 12px;
+    }
+    .ui-pane {
+      padding: 14px 16px;
+      gap: 12px;
     }
     .ui-amount {
-      font-size: 26px;
+      font-size: 24px;
+    }
+    .try-hint {
+      font-size: 10px;
+      padding: 3px 8px;
     }
     .hero-cta .btn {
       width: 100%;

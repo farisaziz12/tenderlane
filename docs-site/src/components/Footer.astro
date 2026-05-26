@@ -10,7 +10,7 @@ const cols = [
       { l: 'Home', h: link('/') },
       { l: 'Why Tenderlane', h: link('/why') },
       { l: 'Docs', h: link('/docs') },
-      { l: 'Changelog', h: 'https://github.com/farisaziz12/tenderlane/releases' },
+      { l: 'Playground', h: link('/playground') },
     ],
   },
   {
@@ -30,6 +30,16 @@ const cols = [
       { l: 'Country-based routing', h: link('/docs/cookbooks/country-based-routing') },
       { l: 'A/B test flows', h: link('/docs/cookbooks/ab-testing-payment-flows') },
       { l: 'Next.js App Router', h: link('/docs/cookbooks/nextjs-app-router') },
+    ],
+  },
+  {
+    title: 'Releases',
+    items: [
+      { l: '@tenderlane/core', h: 'https://www.npmjs.com/package/@tenderlane/core' },
+      { l: '@tenderlane/client', h: 'https://www.npmjs.com/package/@tenderlane/client' },
+      { l: '@tenderlane/react', h: 'https://www.npmjs.com/package/@tenderlane/react' },
+      { l: '@tenderlane/stripe', h: 'https://www.npmjs.com/package/@tenderlane/stripe' },
+      { l: 'Changelog', h: 'https://github.com/farisaziz12/tenderlane/releases' },
     ],
   },
   {
@@ -83,8 +93,14 @@ const cols = [
   }
   .footer-grid {
     display: grid;
-    grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
-    gap: 48px;
+    grid-template-columns: 1.6fr 1fr 1fr 1fr 1fr 1fr;
+    gap: 40px;
+  }
+  @media (max-width: 1100px) {
+    .footer-grid {
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 36px;
+    }
   }
   .footer-tag {
     margin-top: 18px;

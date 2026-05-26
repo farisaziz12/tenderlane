@@ -1,0 +1,74 @@
+---
+import Section from '../Section.astro';
+
+const tenets = [
+  {
+    n: '01',
+    title: 'Frontend-first orchestration',
+    body: "Routing happens in the browser, where the app already knows the user's country, currency, experiment variant, and cart shape. The server-side handler exists to mint sessions and re-verify price — not to decide which payment method to render. State changes the UI; the UI doesn't wait on state.",
+  },
+  {
+    n: '02',
+    title: 'Typed end-to-end',
+    body: 'Phantom `~types` metadata carries literal provider IDs, capability sets, and context shapes through every generic boundary. Add a provider, get auto-complete for its methods. Tighten a context, get a compile error on a stale rule. Nothing is stringly-typed where it could be a literal.',
+  },
+  {
+    n: '03',
+    title: 'Provider-agnostic by default',
+    body: '`@tenderlane/core` has zero runtime dependencies and never imports a PSP SDK. Stripe, Polar, and every future adapter live behind the same contract. Swap providers, run two side-by-side, or A/B-test them — without rewriting your checkout UI or your server.',
+  },
+];
+---
+
+<Section
+  id="philosophy"
+  eyebrow="Philosophy"
+  title="Three rules the codebase lives by."
+  kicker="Tenderlane is not a backend payment wrapper. It is the connective tissue between application state and the PSPs that take money — and it has opinions."
+>
+  <div class="philosophy-grid">
+    {tenets.map((t) => (
+      <div class="tenet">
+        <div class="tenet-num">{t.n}</div>
+        <h3 class="t-h4 tenet-title">{t.title}</h3>
+        <p class="tenet-body">{t.body}</p>
+      </div>
+    ))}
+  </div>
+</Section>
+
+<style>
+  .philosophy-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 32px;
+  }
+  .tenet {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 24px 0 0;
+    border-top: 1px solid var(--line-2);
+  }
+  .tenet-num {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    color: var(--accent);
+  }
+  .tenet-title {
+    margin: 0;
+  }
+  .tenet-body {
+    color: var(--text-1);
+    font-size: 15px;
+    line-height: 1.6;
+    margin: 0;
+  }
+  @media (max-width: 1000px) {
+    .philosophy-grid {
+      grid-template-columns: 1fr;
+      gap: 24px;
+    }
+  }
+</style>

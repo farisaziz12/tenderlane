@@ -5,6 +5,8 @@ sidebar:
   order: 1
 ---
 
+import PackageArchitectureDiagram from '../../../components/diagrams/PackageArchitectureDiagram.astro';
+
 ## What is Tenderlane?
 
 Tenderlane is a TypeScript SDK for **reactive payment orchestration**. It sits between your application and your payment service providers (PSPs), making your checkout flow responsive to changes in application state like country, currency, cart contents, and experiment flags.
@@ -40,15 +42,7 @@ Every time the context changes (the user switches country, the cart updates, an 
 
 Tenderlane follows a layered architecture inspired by TanStack libraries:
 
-```
-@tenderlane/core          (zero external deps, provider-agnostic)
-    │
-    ├── @tenderlane/client   (headless checkout state machine)
-    │       │
-    │       └── @tenderlane/react  (thin React bindings via useSyncExternalStore)
-    │
-    └── @tenderlane/stripe   (browser provider + server adapter)
-```
+<PackageArchitectureDiagram />
 
 | Package | What it does | Runtime dependencies |
 |---------|-------------|---------------------|
