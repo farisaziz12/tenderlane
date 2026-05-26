@@ -19,7 +19,20 @@
   },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "files": ["dist"],
+  "files": ["dist", "README.md"],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/farisaziz12/tenderlane.git",
+    "directory": "packages/stripe"
+  },
+  "homepage": "https://github.com/farisaziz12/tenderlane#readme",
+  "bugs": "https://github.com/farisaziz12/tenderlane/issues",
+  "author": "Faris Aziz",
+  "keywords": ["payments", "stripe", "checkout", "tenderlane"],
   "scripts": {
     "build": "rm -rf dist && tsup",
     "dev": "tsup --watch",

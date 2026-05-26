@@ -1,0 +1,14 @@
+{
+  "$schema": "https://unpkg.com/@changesets/config@3.1.4/schema.json",
+  "changelog": [
+    "@changesets/changelog-github",
+    { "repo": "farisaziz12/tenderlane" }
+  ],
+  "commit": false,
+  "fixed": [["tenderlane", "@tenderlane/core", "@tenderlane/client", "@tenderlane/react", "@tenderlane/stripe", "@tenderlane/polar"]],
+  "linked": [],
+  "access": "public",
+  "baseBranch": "main",
+  "updateInternalDependencies": "patch",
+  "ignore": ["tenderlane-docs", "nextjs-multi-psp-checkout-example"]
+}

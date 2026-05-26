@@ -1,5 +1,5 @@
 {
-  "name": "tenderlane",
+  "name": "tenderlane-monorepo",
   "private": true,
   "version": "0.0.0",
   "description": "Reactive payment orchestration SDK for modern web apps",
@@ -16,9 +16,14 @@
     "dev": "turbo run dev",
     "docs": "cd docs-site && pnpm build",
     "docs:dev": "cd docs-site && pnpm dev",
-    "docs:serve": "cd docs-site && pnpm preview"
+    "docs:serve": "cd docs-site && pnpm preview",
+    "changeset": "changeset",
+    "version-packages": "changeset version",
+    "release": "pnpm build && changeset publish"
   },
   "devDependencies": {
+    "@changesets/changelog-github": "^0.7.0",
+    "@changesets/cli": "^2.31.0",
     "turbo": "^2.3.0",
     "typedoc": "^0.28.0",
     "typescript": "^5.7.0"

@@ -1,0 +1,14 @@
+{
+  "mode": "pre",
+  "tag": "alpha",
+  "initialVersions": {
+    "nextjs-multi-psp-checkout-example": "0.0.0",
+    "@tenderlane/client": "0.1.0-alpha.0",
+    "@tenderlane/core": "0.1.0-alpha.0",
+    "@tenderlane/polar": "0.1.0-alpha.0",
+    "@tenderlane/react": "0.1.0-alpha.0",
+    "@tenderlane/stripe": "0.1.0-alpha.0",
+    "tenderlane": "0.1.0-alpha.0"
+  },
+  "changesets": []
+}
