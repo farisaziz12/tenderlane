@@ -1,4 +1,5 @@
 ---
+import { Code } from 'astro:components';
 import '../styles/tokens.css';
 import Logo from '../components/Logo.astro';
 import Icon from '../components/Icons.astro';
@@ -32,32 +33,36 @@ const COUNTRIES = [
 
 const DATA_JSON = JSON.stringify({ PLANS, RULES, FALLBACK, COUNTRIES });
 
-const SOURCE_CODE = `import { TenderlaneProvider,
-         TenderlaneCheckoutForm } from 'tenderlane/react';
-import { createRulesRouter }       from 'tenderlane';
-import { stripeProvider }          from 'tenderlane/stripe';
-import { StripePaymentElement }    from 'tenderlane/stripe/react';
+const CHECKOUT_TSX = `import { TenderlaneProvider, TenderlaneCheckoutForm } from '@tenderlane/react';
+import { createRulesRouter } from '@tenderlane/core';
+import { stripeProvider } from '@tenderlane/stripe';
+import { StripePaymentElement } from '@tenderlane/stripe/react';
 
 import { rules, fallback } from './routing';
-import { useAppContext }   from './context';
+import { useAppContext } from './context';
 
 const stripe = stripeProvider({
-  publishableKey: env.STRIPE_PK,
+  publishableKey: import.meta.env.STRIPE_PK,
   serverEndpoint: '/api/pay',
 });
 
-export function Checkout({ plan }) {
-  const ctx = useAppContext();   // country, currency, tier, flags
+export function Checkout({ plan }: { plan: Plan }) {
+  const context = useAppContext();
 
   return (
-    <TenderlaneProvider config={{
-      context: ctx,
-      providers: [stripe],
-      routing: createRulesRouter({ rules, fallback }),
-    }}>
+    <TenderlaneProvider
+      config={{
+        context,
+        providers: [stripe],
+        routing: createRulesRouter({ rules, fallback }),
+      }}
+    >
       <OrderSummary plan={plan} />
       <TenderlaneCheckoutForm
-        input={{ amount: plan.amount[ctx.currency], currency: ctx.currency }}
+        input={{
+          items: [{ sku: plan.id, quantity: 1 }],
+          successUrl: '/thanks',
+        }}
         elements={{ stripe: StripePaymentElement }}
       >
         {({ canSubmit, submit, status }) => (
@@ -68,7 +73,101 @@ export function Checkout({ plan }) {
       </TenderlaneCheckoutForm>
     </TenderlaneProvider>
   );
-}`;
+}
+`;
+
+const ROUTING_TS = `import type { RoutingRule, Route } from '@tenderlane/core';
+
+// First-match-wins. Rules are plain JSON — serializable, swappable at runtime.
+export const rules: RoutingRule[] = [
+  {
+    id: 'ch-inline',
+    when: { country: 'CH', currency: 'chf' },
+    use: {
+      provider: 'stripe',
+      flow: 'payment-intent',
+      paymentMethods: ['card', 'twint'],
+    },
+  },
+  {
+    id: 'nl-ideal',
+    when: { country: 'NL', currency: 'eur' },
+    use: {
+      provider: 'stripe',
+      flow: 'payment-intent',
+      paymentMethods: ['card', 'ideal', 'sepa'],
+    },
+  },
+  {
+    id: 'de-klarna',
+    when: { country: 'DE', currency: 'eur' },
+    use: {
+      provider: 'stripe',
+      flow: 'payment-intent',
+      paymentMethods: ['card', 'sepa', 'klarna'],
+    },
+  },
+  {
+    id: 'br-pix',
+    when: { country: 'BR', currency: 'brl' },
+    use: {
+      provider: 'stripe',
+      flow: 'payment-intent',
+      paymentMethods: ['card', 'pix'],
+    },
+  },
+  {
+    id: 'gb-card',
+    when: { country: 'GB', currency: 'gbp' },
+    use: {
+      provider: 'stripe',
+      flow: 'payment-intent',
+      paymentMethods: ['card'],
+    },
+  },
+];
+
+export const fallback: Route = {
+  provider: 'stripe',
+  flow: 'checkout-session',
+  paymentMethods: ['card'],
+};
+`;
+
+const CONTEXT_TS = `import { createContext, useContext, useState } from 'react';
+
+export interface AppContext {
+  country: string;
+  currency: 'usd' | 'eur' | 'chf' | 'brl' | 'jpy' | 'gbp';
+  plan: 'starter' | 'pro' | 'team';
+  tier: 'free' | 'starter' | 'pro' | 'team';
+  flag_inline: boolean;
+  flag_threeds: boolean;
+  flag_localized: boolean;
+}
+
+const AppCtx = createContext<AppContext | null>(null);
+
+export function AppProvider({ children }: { children: React.ReactNode }) {
+  const [context] = useState<AppContext>({
+    country: 'CH',
+    currency: 'chf',
+    plan: 'pro',
+    tier: 'free',
+    flag_inline: true,
+    flag_threeds: true,
+    flag_localized: false,
+  });
+
+  return <AppCtx.Provider value={context}>{children}</AppCtx.Provider>;
+}
+
+export function useAppContext(): AppContext {
+  const context = useContext(AppCtx);
+  if (!context) throw new Error('AppProvider missing in tree');
+  return context;
+}
+`;
 ---
 
 <!doctype html>
@@ -159,16 +258,16 @@ export function Checkout({ plan }) {
               <div class="sf-checkout">
                 <div class="sf-summary">
                   <div class="sf-back">← Back to plans</div>
-                  <div class="t-eyebrow sf-eyebrow">UPGRADING TO</div>
-                  <h1 class="sf-plan-name">
-                    <span id="sf-plan-name">Pro</span> <span style="color:var(--text-3)">plan</span>
+                  <div class="t-eyebrow sf-eyebrow" id="sf-eyebrow">UPGRADING TO</div>
+                  <h1 class="sf-plan-name" id="sf-plan-heading">
+                    <span id="sf-plan-name">Pro</span> <span style="color:var(--text-3)" id="sf-plan-suffix">plan</span>
                   </h1>
                   <p class="sf-plan-copy" id="sf-plan-copy">For small teams</p>
                   <div class="sf-order">
                     <div class="sf-order-head">
                       <div>
-                        <div class="sf-order-row-name"><span id="sf-order-name">Pro</span> · monthly</div>
-                        <div class="sf-order-row-sub">Renews monthly · cancel anytime</div>
+                        <div class="sf-order-row-name"><span id="sf-order-name">Pro</span> <span id="sf-order-suffix">· monthly</span></div>
+                        <div class="sf-order-row-sub" id="sf-order-sub">Renews monthly · cancel anytime</div>
                       </div>
                       <div class="sf-order-row-amt t-mono" id="sf-price-top">CHF 27.00</div>
                     </div>
@@ -212,7 +311,7 @@ export function Checkout({ plan }) {
                       <div class="sf-input t-mono" style="color:var(--text-3)">CVC</div>
                     </div>
                   </div>
-                  <button class="sf-pay-btn">
+                  <button class="sf-pay-btn" id="sf-pay-btn" type="button">
                     Pay <span id="sf-pay-amt">CHF 27.00</span>
                     <Icon name="arrow" size={12} />
                   </button>
@@ -249,44 +348,59 @@ export function Checkout({ plan }) {
                   <div class="t-mono pg-panel-sub">first-match-wins · {RULES.length} rules · 1 fallback</div>
                 </div>
                 <div class="pg-panel-actions">
-                  <button class="btn btn-ghost pg-mini-btn">+ Add rule</button>
-                  <button class="btn btn-ghost pg-mini-btn">↗ Export</button>
+                  <button class="btn btn-ghost pg-mini-btn" id="pg-add-rule-toggle">+ Add rule</button>
+                  <button class="btn btn-ghost pg-mini-btn" id="pg-export-rules">↗ Export</button>
                 </div>
               </div>
               <div class="pg-rules">
-                {RULES.map((rule, i) => (
-                  <div class="pg-rule" data-rule-id={rule.id}>
-                    <div class="pg-rule-head">
-                      <div class="pg-rule-id">
-                        <span class="t-mono pg-rule-idx">#{i + 1}</span>
-                        <span class="t-mono pg-rule-name">{rule.id}</span>
-                        <span class="pg-rule-match live-dot">matched</span>
-                      </div>
-                      <div class="pg-rule-actions">
-                        <button class="pg-rule-btn" aria-label="Activate">
-                          <svg width="11" height="11" viewBox="0 0 16 16" fill="none"><path d="M5 10l3 3 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                        </button>
-                        <button class="pg-rule-btn" aria-label="More">
-                          <svg width="11" height="11" viewBox="0 0 16 16" fill="none"><circle cx="3" cy="8" r="1" fill="currentColor"/><circle cx="8" cy="8" r="1" fill="currentColor"/><circle cx="13" cy="8" r="1" fill="currentColor"/></svg>
-                        </button>
-                      </div>
-                    </div>
-                    <div class="pg-rule-body">
-                      <span class="pg-rule-k">when</span>
-                      <span class="t-mono pg-rule-v">{JSON.stringify(rule.when).split('"').join("'")}</span>
-                      <span class="pg-rule-k">use</span>
-                      <span class="t-mono pg-rule-v">{JSON.stringify(rule.use).split('"').join("'")}</span>
-                    </div>
-                  </div>
-                ))}
+                <div id="pg-rule-list"></div>
                 <div class="pg-rule pg-rule-fallback" data-rule-id="fallback">
                   <div class="pg-rule-head">
                     <span class="t-mono pg-rule-name" style="color:var(--text-2)">fallback</span>
                     <span class="pg-rule-match live-dot">matched</span>
                   </div>
-                  <div class="t-mono" style="font-size:11px;color:var(--text-1)">{JSON.stringify(FALLBACK).split('"').join("'")}</div>
+                  <div class="t-mono pg-rule-fallback-body" id="pg-fallback-body"></div>
                 </div>
               </div>
+              <form class="pg-add-rule" id="pg-add-rule-form" hidden>
+                <div class="pg-add-rule-head">
+                  <span class="t-cap" style="color:var(--text-3)">NEW RULE</span>
+                  <button type="button" class="pg-rule-btn" id="pg-add-rule-close" aria-label="Close">
+                    <svg width="10" height="10" viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                  </button>
+                </div>
+                <div class="pg-add-rule-grid">
+                  <label class="pg-add-rule-field">
+                    <span>id</span>
+                    <input name="id" placeholder="jp-konbini" required autocomplete="off" />
+                  </label>
+                  <label class="pg-add-rule-field">
+                    <span>country</span>
+                    <input name="country" placeholder="JP" maxlength="2" autocomplete="off" />
+                  </label>
+                  <label class="pg-add-rule-field">
+                    <span>currency</span>
+                    <input name="currency" placeholder="jpy" autocomplete="off" />
+                  </label>
+                  <label class="pg-add-rule-field">
+                    <span>provider</span>
+                    <input name="provider" placeholder="stripe" value="stripe" autocomplete="off" />
+                  </label>
+                  <label class="pg-add-rule-field">
+                    <span>flow</span>
+                    <input name="flow" placeholder="payment-intent" value="payment-intent" autocomplete="off" />
+                  </label>
+                  <label class="pg-add-rule-field pg-add-rule-field-wide">
+                    <span>paymentMethods</span>
+                    <input name="paymentMethods" placeholder="card, konbini" autocomplete="off" />
+                  </label>
+                </div>
+                <div class="pg-add-rule-error" id="pg-add-rule-error" hidden></div>
+                <div class="pg-add-rule-actions">
+                  <button type="button" class="btn btn-ghost pg-mini-btn" id="pg-add-rule-cancel">Cancel</button>
+                  <button type="submit" class="btn btn-primary pg-mini-btn">Add rule</button>
+                </div>
+              </form>
             </div>
 
             <!-- Context panel -->
@@ -353,7 +467,7 @@ export function Checkout({ plan }) {
               <div class="pg-resolved">
                 <div class="pg-resolved-head">
                   <span class="t-cap" style="color:var(--text-3)">RESOLVED CONTEXT</span>
-                  <button class="pg-rule-btn" aria-label="Copy">
+                  <button class="pg-rule-btn" id="pg-ctx-copy" aria-label="Copy resolved context">
                     <Icon name="copy" size={11} />
                   </button>
                 </div>
@@ -369,8 +483,8 @@ export function Checkout({ plan }) {
                   <div class="t-mono pg-panel-sub">onRouteEvaluated · onStateChange</div>
                 </div>
                 <div class="pg-panel-actions">
-                  <button class="btn btn-ghost pg-mini-btn">⏸ Pause</button>
-                  <button class="btn btn-ghost pg-mini-btn">Clear</button>
+                  <button class="btn btn-ghost pg-mini-btn" id="pg-events-pause">⏸ Pause</button>
+                  <button class="btn btn-ghost pg-mini-btn" id="pg-events-clear">Clear</button>
                 </div>
               </div>
               <div class="pg-events" id="pg-events"></div>
@@ -387,11 +501,21 @@ export function Checkout({ plan }) {
               <div class="t-cap" style="color:var(--text-3);margin-bottom:16px">SOURCE · the code that wires this playground</div>
               <div class="pg-code">
                 <div class="pg-code-tabs">
-                  <button data-active="true">Checkout.tsx</button>
-                  <button>routing.ts</button>
-                  <button>context.ts</button>
+                  <button data-file="checkout.tsx" data-active="true">Checkout.tsx</button>
+                  <button data-file="routing.ts">routing.ts</button>
+                  <button data-file="context.ts">context.ts</button>
                 </div>
-                <pre class="pg-code-body t-mono">{SOURCE_CODE}</pre>
+                <div class="pg-code-body">
+                  <div data-file="checkout.tsx" data-active="true" class="pg-code-pane">
+                    <Code code={CHECKOUT_TSX} lang="tsx" />
+                  </div>
+                  <div data-file="routing.ts" class="pg-code-pane">
+                    <Code code={ROUTING_TS} lang="ts" />
+                  </div>
+                  <div data-file="context.ts" class="pg-code-pane">
+                    <Code code={CONTEXT_TS} lang="tsx" />
+                  </div>
+                </div>
               </div>
               <div class="pg-code-cta">
                 <a class="btn btn-ghost pg-mini-btn" href="https://github.com/farisaziz12/tenderlane" target="_blank" rel="noopener">
@@ -414,9 +538,16 @@ export function Checkout({ plan }) {
       const { PLANS, RULES, FALLBACK, COUNTRIES } = window.__PG;
       const state = {
         ctx: { country: 'CH', currency: 'chf', plan: 'pro', tier: 'free', flag_inline: true, flag_threeds: true, flag_localized: false },
+        rules: RULES.map((rule) => ({ ...rule, when: { ...rule.when }, use: { ...rule.use, paymentMethods: [...rule.use.paymentMethods] } })),
+        fallback: { ...FALLBACK, paymentMethods: [...FALLBACK.paymentMethods] },
         tab: 'rules',
         device: 'desktop',
         scenario: 'subscription',
+        codeFile: 'checkout.tsx',
+        events: [],
+        paused: false,
+        startedAt: null,
+        lastRouteId: null,
       };
 
       const PRICE_BY_CURRENCY = {
@@ -426,27 +557,80 @@ export function Checkout({ plan }) {
       };
       const CUR_SYM = { usd: '$', eur: '€', chf: 'CHF', brl: 'R$', jpy: '¥', gbp: '£' };
 
+      const SCENARIOS = {
+        subscription: { eyebrow: 'UPGRADING TO', planSuffix: 'plan', orderSuffix: '· monthly', orderSub: 'Renews monthly · cancel anytime' },
+        cart:         { eyebrow: 'YOUR CART',    planSuffix: 'bundle', orderSuffix: '· 1 item', orderSub: 'Ships in 2 business days' },
+        donation:     { eyebrow: 'ONE-TIME GIFT', planSuffix: 'tier',  orderSuffix: '· donation', orderSub: 'Tax-deductible · one-time' },
+      };
+
+      const METHOD_META = {
+        card:    { label: 'Card', sub: 'Visa · Mastercard · Amex',   color: '#3b3f49', letter: 'C', dark: false },
+        twint:   { label: 'TWINT', sub: 'Pay with your phone (CH)',  color: '#ED1C24', letter: 'T' },
+        ideal:   { label: 'iDEAL', sub: 'Dutch bank transfer',        color: '#CC0066', letter: 'i' },
+        sepa:    { label: 'SEPA Direct', sub: 'Bank debit (EU)',      color: '#0033A0', letter: 'S' },
+        klarna:  { label: 'Klarna', sub: 'Pay later or in 3',         color: '#FFB3C7', letter: 'K', dark: true },
+        pix:     { label: 'Pix', sub: 'Instant transfer (BR)',        color: '#32BCAD', letter: 'P' },
+        konbini: { label: 'Konbini', sub: 'Convenience-store cash (JP)', color: '#7c4dff', letter: 'K' },
+      };
+
       function priceFmt(amount, cur) {
-        if (amount == null) return `${CUR_SYM[cur] || ''} —`;
-        if (cur === 'jpy') return `¥${amount.toLocaleString()}`;
-        if (cur === 'chf') return `CHF ${amount}.00`;
-        if (cur === 'brl') return `R$ ${amount}.00`;
-        return `${CUR_SYM[cur] || ''}${amount}.00`;
+        if (amount == null) return (CUR_SYM[cur] || '') + ' —';
+        if (cur === 'jpy') return '¥' + amount.toLocaleString();
+        if (cur === 'chf') return 'CHF ' + amount + '.00';
+        if (cur === 'brl') return 'R$ ' + amount + '.00';
+        return (CUR_SYM[cur] || '') + amount + '.00';
+      }
+
+      function escapeHtml(value) {
+        return String(value).replace(/[&<>"']/g, (c) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+      }
+
+      function jsonForRule(value) {
+        return escapeHtml(JSON.stringify(value).split('"').join("'"));
       }
 
       function matchRoute(ctx) {
-        const rule = RULES.find((r) => Object.entries(r.when).every(([k, v]) => ctx[k] === v));
-        return rule ? { id: rule.id, ...rule.use } : { id: 'fallback', ...FALLBACK };
+        const rule = state.rules.find((r) =>
+          Object.entries(r.when).every(([key, value]) => ctx[key] === value),
+        );
+        return rule ? { id: rule.id, ...rule.use } : { id: 'fallback', ...state.fallback };
       }
 
-      const METHOD_META = {
-        card:   { label: 'Card', sub: 'Visa · Mastercard · Amex',   color: '#3b3f49', letter: 'C', dark: false },
-        twint:  { label: 'TWINT', sub: 'Pay with your phone (CH)',  color: '#ED1C24', letter: 'T' },
-        ideal:  { label: 'iDEAL', sub: 'Dutch bank transfer',        color: '#CC0066', letter: 'i' },
-        sepa:   { label: 'SEPA Direct', sub: 'Bank debit (EU)',      color: '#0033A0', letter: 'S' },
-        klarna: { label: 'Klarna', sub: 'Pay later or in 3',         color: '#FFB3C7', letter: 'K', dark: true },
-        pix:    { label: 'Pix', sub: 'Instant transfer (BR)',        color: '#32BCAD', letter: 'P' },
-      };
+      // ───────── live event log ─────────
+      function pushEvent(kind, detail, cls) {
+        if (state.paused) return;
+        if (state.startedAt === null) state.startedAt = performance.now();
+        const t = Math.round(performance.now() - state.startedAt);
+        state.events.push({ t, kind, detail, cls: cls || 'ev-default' });
+        renderEvents();
+      }
+
+      function seedInitialEvents() {
+        const route = matchRoute(state.ctx);
+        const ctx = state.ctx;
+        state.startedAt = performance.now() - 320;
+        state.events = [
+          { t: 0,   kind: 'context:set',     detail: 'country = ' + ctx.country + ', currency = ' + ctx.currency, cls: 'ev-ctx' },
+          { t: 12,  kind: 'route:eval',      detail: state.rules.length + ' rules tested → matched \'' + route.id + '\'', cls: 'ev-route' },
+          { t: 14,  kind: 'route:resolved',  detail: 'provider: ' + route.provider + ' · flow: ' + route.flow + ' · methods: [' + route.paymentMethods.join(', ') + ']', cls: 'ev-default' },
+          { t: 18,  kind: 'adapter:load',    detail: 'lazy: @tenderlane/' + route.provider + ' (5.8kb)', cls: 'ev-adapter' },
+          { t: 280, kind: 'state:idle→ready', detail: 'PaymentElement mounted', cls: 'ev-state' },
+        ];
+        state.lastRouteId = route.id;
+      }
+
+      function pushContextChange(field, value, prevRoute) {
+        pushEvent('context:set', field + ' = ' + value, 'ev-ctx');
+        const nextRoute = matchRoute(state.ctx);
+        if (nextRoute.id === prevRoute.id) {
+          pushEvent('route:eval', 'context unchanged in routable keys · no re-route', 'ev-muted');
+        } else {
+          pushEvent('route:eval', state.rules.length + ' rules tested → matched \'' + nextRoute.id + '\'', 'ev-route');
+          pushEvent('route:resolved', 'provider: ' + nextRoute.provider + ' · flow: ' + nextRoute.flow + ' · methods: [' + nextRoute.paymentMethods.join(', ') + ']', 'ev-default');
+          pushEvent('ui:swap', 'methods rendered: [' + nextRoute.paymentMethods.join(', ') + ']', 'ev-route');
+          state.lastRouteId = nextRoute.id;
+        }
+      }
 
       // ───────── renderers ─────────
       function renderStorefront() {
@@ -455,6 +639,12 @@ export function Checkout({ plan }) {
         const route = matchRoute(ctx);
         const amount = PRICE_BY_CURRENCY[plan.id][ctx.currency];
         const price = priceFmt(amount, ctx.currency);
+        const scenario = SCENARIOS[state.scenario] || SCENARIOS.subscription;
+
+        document.getElementById('sf-eyebrow').textContent = scenario.eyebrow;
+        document.getElementById('sf-plan-suffix').textContent = scenario.planSuffix;
+        document.getElementById('sf-order-suffix').textContent = scenario.orderSuffix;
+        document.getElementById('sf-order-sub').textContent = scenario.orderSub;
 
         document.getElementById('sf-plan-name').textContent = plan.name;
         document.getElementById('sf-plan-copy').textContent = plan.copy;
@@ -468,7 +658,7 @@ export function Checkout({ plan }) {
 
         const featuresList = document.getElementById('sf-features');
         featuresList.innerHTML = plan.features
-          .map((f) => `<li><span class="sf-check">✓</span>${f}</li>`)
+          .map((f) => '<li><span class="sf-check">✓</span>' + escapeHtml(f) + '</li>')
           .join('');
 
         const methodsList = document.getElementById('sf-methods');
@@ -476,29 +666,75 @@ export function Checkout({ plan }) {
           .map((method, index) => {
             const meta = METHOD_META[method] || { label: method, sub: '', color: '#888', letter: (method[0] || '?').toUpperCase() };
             const selected = index === 0;
-            return `
-              <label class="sf-method${selected ? ' sf-method-selected' : ''}">
-                <span class="sf-radio">${selected ? '<span></span>' : ''}</span>
-                <span class="sf-method-glyph" style="background:${meta.color};color:${meta.dark ? '#000' : '#fff'}">${meta.letter}</span>
-                <span class="sf-method-text">
-                  <span class="sf-method-label">${meta.label}</span>
-                  <span class="sf-method-sub">${meta.sub}</span>
-                </span>
-              </label>`;
+            return (
+              '<label class="sf-method' + (selected ? ' sf-method-selected' : '') + '">' +
+                '<span class="sf-radio">' + (selected ? '<span></span>' : '') + '</span>' +
+                '<span class="sf-method-glyph" style="background:' + meta.color + ';color:' + (meta.dark ? '#000' : '#fff') + '">' + escapeHtml(meta.letter) + '</span>' +
+                '<span class="sf-method-text">' +
+                  '<span class="sf-method-label">' + escapeHtml(meta.label) + '</span>' +
+                  '<span class="sf-method-sub">' + escapeHtml(meta.sub) + '</span>' +
+                '</span>' +
+              '</label>'
+            );
           })
           .join('');
 
         const showCard = route.paymentMethods[0] === 'card';
         document.getElementById('sf-card-form').style.display = showCard ? '' : 'none';
 
-        // preview head
         document.getElementById('pg-route-id').textContent = route.id;
         document.getElementById('pg-route-flow').textContent = route.flow;
       }
 
+      function renderRules() {
+        const list = document.getElementById('pg-rule-list');
+        list.innerHTML = state.rules
+          .map((rule, index) => (
+            '<div class="pg-rule" data-rule-id="' + escapeHtml(rule.id) + '">' +
+              '<div class="pg-rule-head">' +
+                '<div class="pg-rule-id">' +
+                  '<span class="t-mono pg-rule-idx">#' + (index + 1) + '</span>' +
+                  '<span class="t-mono pg-rule-name">' + escapeHtml(rule.id) + '</span>' +
+                  '<span class="pg-rule-match live-dot">matched</span>' +
+                '</div>' +
+                '<div class="pg-rule-actions">' +
+                  '<button class="pg-rule-btn" data-rule-remove="' + escapeHtml(rule.id) + '" aria-label="Remove rule">' +
+                    '<svg width="11" height="11" viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>' +
+                  '</button>' +
+                '</div>' +
+              '</div>' +
+              '<div class="pg-rule-body">' +
+                '<span class="pg-rule-k">when</span>' +
+                '<span class="t-mono pg-rule-v">' + jsonForRule(rule.when) + '</span>' +
+                '<span class="pg-rule-k">use</span>' +
+                '<span class="t-mono pg-rule-v">' + jsonForRule(rule.use) + '</span>' +
+              '</div>' +
+            '</div>'
+          ))
+          .join('');
+
+        document.getElementById('pg-fallback-body').innerHTML = jsonForRule(state.fallback);
+
+        document.querySelectorAll('[data-rule-remove]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const id = btn.getAttribute('data-rule-remove');
+            const idx = state.rules.findIndex((r) => r.id === id);
+            if (idx === -1) return;
+            state.rules.splice(idx, 1);
+            renderRules();
+            renderRulesHighlight();
+            renderStorefront();
+            pushEvent('rules:remove', "removed '" + id + "' · " + state.rules.length + ' rules', 'ev-route');
+          });
+        });
+
+        document.querySelectorAll('.pg-tab[data-tab="rules"] .pg-tab-n').forEach((node) => {
+          node.textContent = String(state.rules.length);
+        });
+      }
+
       function renderRulesHighlight() {
-        const { ctx } = state;
-        const matched = matchRoute(ctx).id;
+        const matched = matchRoute(state.ctx).id;
         document.querySelectorAll('.pg-rule').forEach((node) => {
           const isMatch = node.getAttribute('data-rule-id') === matched;
           node.setAttribute('data-matched', isMatch ? 'true' : 'false');
@@ -527,73 +763,82 @@ export function Checkout({ plan }) {
       }
 
       function renderEvents() {
-        const { ctx } = state;
-        const route = matchRoute(ctx);
-        const events = [
-          { t: 0, kind: 'context:set', detail: `country = ${ctx.country}, currency = ${ctx.currency}`, cls: 'ev-ctx' },
-          { t: 12, kind: 'route:eval', detail: `${RULES.length} rules tested → matched '${route.id}'`, cls: 'ev-route' },
-          { t: 14, kind: 'route:resolved', detail: `provider: ${route.provider} · flow: ${route.flow} · methods: [${route.paymentMethods.join(', ')}]`, cls: 'ev-default' },
-          { t: 18, kind: 'adapter:load', detail: `lazy: tenderlane/${route.provider} (5.8kb)`, cls: 'ev-adapter' },
-          { t: 280, kind: 'state:idle→ready', detail: 'PaymentElement mounted', cls: 'ev-adapter' },
-          { t: 1840, kind: 'plan:change', detail: `plan = ${ctx.plan}`, cls: 'ev-ctx' },
-          { t: 1848, kind: 'route:eval', detail: 'context unchanged in routable keys · no re-route', cls: 'ev-muted' },
-          { t: 3120, kind: 'context:set', detail: 'preview re-render', cls: 'ev-ctx' },
-          { t: 3128, kind: 'route:eval', detail: `→ '${route.id}'`, cls: 'ev-route' },
-          { t: 3140, kind: 'adapter:reuse', detail: `cached: tenderlane/${route.provider}`, cls: 'ev-adapter' },
-          { t: 3160, kind: 'ui:swap', detail: `methods rendered: [${route.paymentMethods.join(', ')}]`, cls: 'ev-route' },
-          { t: 3210, kind: 'state:ready', detail: 'ready in 50ms', cls: 'ev-state' },
-        ];
-        document.getElementById('pg-events').innerHTML = events
+        const stream = document.getElementById('pg-events');
+        if (!stream) return;
+        const items = state.events
+          .slice()
+          .reverse()
           .map(
-            (e) => `
-            <div class="pg-event">
-              <span class="pg-event-t">+${e.t}ms</span>
-              <span class="pg-event-k ${e.cls}">${e.kind}</span>
-              <span class="pg-event-d">${e.detail}</span>
-            </div>`,
+            (e) =>
+              '<div class="pg-event">' +
+                '<span class="pg-event-t">+' + e.t + 'ms</span>' +
+                '<span class="pg-event-k ' + e.cls + '">' + escapeHtml(e.kind) + '</span>' +
+                '<span class="pg-event-d">' + escapeHtml(e.detail) + '</span>' +
+              '</div>'
           )
           .join('');
-        document.getElementById('pg-events-n').textContent = String(events.length);
+        stream.innerHTML = items || '<div class="pg-events-empty">no events yet · interact with the playground</div>';
+        document.getElementById('pg-events-n').textContent = String(state.events.length);
+        if (!state.paused) stream.scrollTop = 0;
       }
 
       function renderAll() {
         renderStorefront();
+        renderRules();
         renderRulesHighlight();
         renderContextPanel();
-        renderEvents();
       }
 
-      // ───────── wire interactions ─────────
+      // ───────── interactions ─────────
+      function withRouteEvent(field, value, mutate) {
+        const prevRoute = matchRoute(state.ctx);
+        mutate();
+        renderStorefront();
+        renderRulesHighlight();
+        renderContextPanel();
+        pushContextChange(field, value, prevRoute);
+      }
+
       document.querySelectorAll('[data-country]').forEach((b) => {
         b.addEventListener('click', () => {
-          state.ctx.country = b.getAttribute('data-country');
-          state.ctx.currency = b.getAttribute('data-cur');
-          renderAll();
+          const country = b.getAttribute('data-country');
+          const currency = b.getAttribute('data-cur');
+          withRouteEvent('country', country, () => {
+            state.ctx.country = country;
+            state.ctx.currency = currency;
+          });
         });
       });
       document.querySelectorAll('[data-currency]').forEach((b) => {
         b.addEventListener('click', () => {
-          state.ctx.currency = b.getAttribute('data-currency');
-          renderAll();
+          const currency = b.getAttribute('data-currency');
+          withRouteEvent('currency', currency, () => {
+            state.ctx.currency = currency;
+          });
         });
       });
       document.querySelectorAll('[data-plan]').forEach((b) => {
         b.addEventListener('click', () => {
-          state.ctx.plan = b.getAttribute('data-plan');
-          renderAll();
+          const plan = b.getAttribute('data-plan');
+          withRouteEvent('plan', plan, () => {
+            state.ctx.plan = plan;
+          });
         });
       });
       document.querySelectorAll('[data-tier]').forEach((b) => {
         b.addEventListener('click', () => {
-          state.ctx.tier = b.getAttribute('data-tier');
-          renderAll();
+          const tier = b.getAttribute('data-tier');
+          withRouteEvent('tier', tier, () => {
+            state.ctx.tier = tier;
+          });
         });
       });
       document.querySelectorAll('[data-flag]').forEach((b) => {
         b.addEventListener('click', () => {
           const key = b.getAttribute('data-flag');
           state.ctx[key] = !state.ctx[key];
-          renderAll();
+          renderContextPanel();
+          pushEvent('flag:toggle', key + ' = ' + state.ctx[key], 'ev-ctx');
         });
       });
 
@@ -615,6 +860,8 @@ export function Checkout({ plan }) {
           document.querySelectorAll('[data-scenario]').forEach((s) => {
             s.setAttribute('data-active', s === b ? 'true' : 'false');
           });
+          renderStorefront();
+          pushEvent('scenario:change', 'scenario = ' + state.scenario, 'ev-ctx');
         });
       });
 
@@ -625,26 +872,153 @@ export function Checkout({ plan }) {
             d.setAttribute('data-active', d === b ? 'true' : 'false');
           });
           document.getElementById('pg-frame').setAttribute('data-device', state.device);
+          pushEvent('device:change', 'viewport = ' + state.device, 'ev-muted');
         });
       });
 
-      // keyboard shortcuts
+      // ───────── code-file tabs ─────────
+      document.querySelectorAll('.pg-code-tabs button[data-file]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const file = btn.getAttribute('data-file');
+          state.codeFile = file;
+          document.querySelectorAll('.pg-code-tabs button[data-file]').forEach((b) => {
+            b.setAttribute('data-active', b === btn ? 'true' : 'false');
+          });
+          document.querySelectorAll('.pg-code-pane[data-file]').forEach((pane) => {
+            pane.setAttribute('data-active', pane.getAttribute('data-file') === file ? 'true' : 'false');
+          });
+        });
+      });
+
+      // ───────── events panel: pause / clear ─────────
+      const pauseBtn = document.getElementById('pg-events-pause');
+      pauseBtn?.addEventListener('click', () => {
+        state.paused = !state.paused;
+        pauseBtn.textContent = state.paused ? '▶ Resume' : '⏸ Pause';
+        pauseBtn.setAttribute('data-paused', state.paused ? 'true' : 'false');
+      });
+      document.getElementById('pg-events-clear')?.addEventListener('click', () => {
+        state.events = [];
+        state.startedAt = null;
+        renderEvents();
+      });
+
+      // ───────── rules: add ─────────
+      const addToggle = document.getElementById('pg-add-rule-toggle');
+      const addForm = document.getElementById('pg-add-rule-form');
+      const addError = document.getElementById('pg-add-rule-error');
+
+      function closeAddForm() {
+        addForm.hidden = true;
+        addError.hidden = true;
+        addError.textContent = '';
+        addForm.reset();
+      }
+
+      addToggle?.addEventListener('click', () => {
+        addForm.hidden = !addForm.hidden;
+        if (!addForm.hidden) {
+          addForm.querySelector('input[name="id"]').focus();
+        }
+      });
+      document.getElementById('pg-add-rule-close')?.addEventListener('click', closeAddForm);
+      document.getElementById('pg-add-rule-cancel')?.addEventListener('click', closeAddForm);
+
+      addForm?.addEventListener('submit', (event) => {
+        event.preventDefault();
+        const formData = new FormData(addForm);
+        const id = String(formData.get('id') || '').trim();
+        const country = String(formData.get('country') || '').trim().toUpperCase();
+        const currency = String(formData.get('currency') || '').trim().toLowerCase();
+        const provider = String(formData.get('provider') || 'stripe').trim() || 'stripe';
+        const flow = String(formData.get('flow') || 'payment-intent').trim() || 'payment-intent';
+        const paymentMethods = String(formData.get('paymentMethods') || '')
+          .split(',')
+          .map((s) => s.trim().toLowerCase())
+          .filter(Boolean);
+
+        if (!id) {
+          addError.textContent = 'id is required';
+          addError.hidden = false;
+          return;
+        }
+        if (state.rules.some((r) => r.id === id)) {
+          addError.textContent = "rule id '" + id + "' already exists";
+          addError.hidden = false;
+          return;
+        }
+        if (paymentMethods.length === 0) {
+          addError.textContent = 'paymentMethods must list at least one method';
+          addError.hidden = false;
+          return;
+        }
+
+        const when = {};
+        if (country) when.country = country;
+        if (currency) when.currency = currency;
+        if (Object.keys(when).length === 0) {
+          addError.textContent = 'rule needs at least one matcher (country or currency)';
+          addError.hidden = false;
+          return;
+        }
+
+        state.rules.push({ id, when, use: { provider, flow, paymentMethods } });
+        closeAddForm();
+        renderRules();
+        renderRulesHighlight();
+        renderStorefront();
+        pushEvent('rules:add', "added '" + id + "' · " + state.rules.length + ' rules', 'ev-route');
+      });
+
+      // ───────── rules: export ─────────
+      document.getElementById('pg-export-rules')?.addEventListener('click', () => {
+        const payload = { rules: state.rules, fallback: state.fallback };
+        const json = JSON.stringify(payload, null, 2);
+        navigator.clipboard?.writeText(json).catch(() => {});
+        const blob = new Blob([json], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'routing.json';
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        pushEvent('rules:export', state.rules.length + ' rules · clipboard + routing.json', 'ev-adapter');
+      });
+
+      // ───────── pay button (demo) ─────────
+      document.getElementById('sf-pay-btn')?.addEventListener('click', () => {
+        const route = matchRoute(state.ctx);
+        pushEvent('submit:start', "provider '" + route.provider + "' · " + route.flow, 'ev-state');
+        setTimeout(() => {
+          pushEvent('submit:success', 'redirect ' + (route.flow === 'checkout-session' ? 'to hosted page' : 'confirmed inline'), 'ev-state');
+        }, 700);
+      });
+
+      // ───────── copy buttons ─────────
+      document.getElementById('pg-ctx-copy')?.addEventListener('click', () => {
+        navigator.clipboard?.writeText(JSON.stringify(state.ctx, null, 2)).catch(() => {});
+      });
+      document.getElementById('pg-install')?.addEventListener('click', () => {
+        navigator.clipboard?.writeText('npx create-tenderlane-app').catch(() => {});
+      });
+
+      // ───────── keyboard shortcuts ─────────
       document.addEventListener('keydown', (event) => {
         if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) return;
         const k = event.key.toLowerCase();
         const map = { r: 'rules', c: 'context', e: 'events', v: 'code' };
         if (map[k]) {
-          const target = document.querySelector(`.pg-tab[data-tab="${map[k]}"]`);
+          const target = document.querySelector('.pg-tab[data-tab="' + map[k] + '"]');
           target?.click();
         }
       });
 
-      // install copy
-      document.getElementById('pg-install')?.addEventListener('click', () => {
-        navigator.clipboard?.writeText('npx create-tenderlane-app').catch(() => {});
-      });
-
+      // ───────── boot ─────────
+      seedInitialEvents();
       renderAll();
+      renderEvents();
     </script>
 
     <style is:global>
@@ -1339,6 +1713,86 @@ export function Checkout({ plan }) {
         background: color-mix(in oklab, var(--accent) 10%, var(--bg-2));
         border-color: var(--accent-soft);
       }
+      .pg-rule-fallback-body {
+        font-size: 11px;
+        color: var(--text-1);
+        word-break: break-all;
+      }
+
+      #pg-rule-list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .pg-add-rule {
+        margin-top: 14px;
+        padding: 14px;
+        border-radius: 10px;
+        background: var(--bg-2);
+        border: 1px dashed var(--line-3);
+      }
+      .pg-add-rule[hidden] {
+        display: none;
+      }
+      .pg-add-rule-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 12px;
+      }
+      .pg-add-rule-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+      .pg-add-rule-field {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .pg-add-rule-field-wide {
+        grid-column: 1 / -1;
+      }
+      .pg-add-rule-field > span {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        color: var(--text-3);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+      .pg-add-rule-field input {
+        padding: 8px 10px;
+        border-radius: 6px;
+        background: var(--bg-1);
+        border: 1px solid var(--line-2);
+        color: var(--text-0);
+        font-family: var(--font-mono);
+        font-size: 12px;
+        outline: none;
+      }
+      .pg-add-rule-field input:focus {
+        border-color: var(--accent-soft);
+      }
+      .pg-add-rule-error {
+        margin-top: 10px;
+        padding: 8px 10px;
+        border-radius: 6px;
+        background: color-mix(in oklab, var(--danger, #ff7a7a) 12%, var(--bg-2));
+        border: 1px solid color-mix(in oklab, var(--danger, #ff7a7a) 40%, transparent);
+        color: var(--danger, #ff7a7a);
+        font-family: var(--font-mono);
+        font-size: 11px;
+      }
+      .pg-add-rule-error[hidden] {
+        display: none;
+      }
+      .pg-add-rule-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+        margin-top: 12px;
+      }
 
       .pg-field {
         margin-bottom: 18px;
@@ -1479,7 +1933,19 @@ export function Checkout({ plan }) {
         background: var(--code-bg);
         border: 1px solid var(--line-2);
         border-radius: 8px;
-        overflow: hidden;
+        overflow: hidden auto;
+        max-height: 420px;
+      }
+      .pg-events-empty {
+        padding: 18px 14px;
+        font-family: var(--font-mono);
+        font-size: 11px;
+        color: var(--text-3);
+        text-align: center;
+      }
+      #pg-events-pause[data-paused='true'] {
+        color: var(--accent);
+        border-color: var(--accent-soft);
       }
       .pg-event {
         display: grid;
@@ -1556,13 +2022,27 @@ export function Checkout({ plan }) {
         font-weight: 500;
       }
       .pg-code-body {
+        position: relative;
+      }
+      .pg-code-pane {
+        display: none;
+      }
+      .pg-code-pane[data-active='true'] {
+        display: block;
+      }
+      .pg-code-body pre.astro-code,
+      .pg-code-body pre {
         margin: 0;
-        padding: 14px;
+        padding: 14px 16px;
         font-size: 11.5px;
-        line-height: 1.7;
-        color: var(--code-fg);
+        line-height: 1.65;
+        background: transparent !important;
+        font-family: var(--font-mono);
         overflow-x: auto;
         white-space: pre;
+      }
+      .pg-code-body pre.astro-code code {
+        font-family: inherit;
       }
       .pg-code-cta {
         margin-top: 14px;
