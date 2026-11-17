@@ -1,6 +1,6 @@
 {
   "name": "@tenderlane/core",
-  "version": "0.1.0-alpha.1",
+  "version": "0.1.0-alpha.2",
   "description": "Core types, routing engine, middleware, and server handler for Tenderlane",
   "type": "module",
   "sideEffects": false,
