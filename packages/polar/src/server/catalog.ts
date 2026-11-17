@@ -91,7 +91,9 @@ export function createPolarCatalog<TSku extends string>(
     async resolve(items) {
       const resolved: ResolvedCatalogItem[] = [];
       for (const item of items) {
-        const skuConfig = config.skus[item.sku as TSku];
+        const skuConfig = Object.hasOwn(config.skus, item.sku)
+          ? config.skus[item.sku as TSku]
+          : undefined;
         if (!skuConfig) {
           throw new CatalogError(
             `SKU not registered in Polar catalog: '${item.sku}'`,

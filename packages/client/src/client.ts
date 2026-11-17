@@ -81,6 +81,18 @@ export function createTenderlaneClient(config: TenderlaneClientConfig): Tenderla
 
   const listeners = new Set<() => void>();
   let evaluationVersion = 0;
+  // One submit at a time. Tracked apart from `status`, which a context change
+  // during a submit moves back to `ready`.
+  let submitInFlight = false;
+
+  /** A route is selected and nothing terminal has happened. `error` is retryable. */
+  function canAct(): boolean {
+    return (
+      (state.status === 'ready' || state.status === 'prepared' || state.status === 'error') &&
+      state.route !== null &&
+      state.selectedProvider !== null
+    );
+  }
 
   function setState(partial: Partial<TenderlaneClientState>) {
     state = { ...state, ...partial };
@@ -111,13 +123,19 @@ export function createTenderlaneClient(config: TenderlaneClientConfig): Tenderla
     }
 
     const methods = getPaymentMethods(provider, context, route.paymentMethods);
+    // Keep the user's choice when the new route still offers it.
+    const previousMethod = state.selectedPaymentMethod;
+    const selectedPaymentMethod =
+      previousMethod !== null && methods.some((method) => method.id === previousMethod)
+        ? previousMethod
+        : (methods[0]?.id ?? null);
 
     setState({
       status: 'ready',
       route,
       selectedProvider: route.provider,
       paymentMethods: methods,
-      selectedPaymentMethod: methods[0]?.id ?? null,
+      selectedPaymentMethod,
       canSubmit: true,
     });
 
@@ -134,9 +152,14 @@ export function createTenderlaneClient(config: TenderlaneClientConfig): Tenderla
             { cause: error },
           );
 
+    // No route was selected, so there is nothing to retry against.
     setState({
       status: 'error',
       error: tenderlaneError,
+      route: null,
+      selectedProvider: null,
+      paymentMethods: [],
+      selectedPaymentMethod: null,
       canSubmit: false,
     });
 
@@ -196,6 +219,10 @@ export function createTenderlaneClient(config: TenderlaneClientConfig): Tenderla
 
     updateContext(context: TenderlaneContext) {
       const previousContext = state.context;
+      // A structurally equal context is not a change: re-evaluating would
+      // drop the provider session for nothing (an inline `context={{...}}`
+      // prop is a new object on every render).
+      if (isDeepEqual(previousContext, context)) return;
       setState({ context });
 
       runMiddlewareHook(middleware, 'onContextChange', {
@@ -217,15 +244,14 @@ export function createTenderlaneClient(config: TenderlaneClientConfig): Tenderla
     },
 
     async prepare(input: CheckoutInput): Promise<void> {
-      if (
-        (state.status !== 'ready' && state.status !== 'prepared') ||
-        !state.route ||
-        !state.selectedProvider
-      ) {
+      if (!canAct() || !state.route || !state.selectedProvider) {
         throw new TenderlaneError(
           `Cannot prepare in status "${state.status}". Wait for route evaluation to complete.`,
           'INVALID_STATE',
         );
+      }
+      if (submitInFlight) {
+        throw new TenderlaneError('Cannot prepare while a submit is in flight.', 'INVALID_STATE');
       }
 
       const provider = providerMap.get(state.selectedProvider);
@@ -244,11 +270,17 @@ export function createTenderlaneClient(config: TenderlaneClientConfig): Tenderla
 
       const route = state.route;
       const context = state.context;
+      const providerId = state.selectedProvider;
+      const version = evaluationVersion;
 
       setState({ status: 'preparing', error: null });
 
       try {
         const session = await provider.createSession(input, route);
+
+        // The context changed while the session was being created: it belongs
+        // to a route that is no longer selected.
+        if (version !== evaluationVersion) return;
 
         setState({
           status: 'prepared',
@@ -267,9 +299,11 @@ export function createTenderlaneClient(config: TenderlaneClientConfig): Tenderla
             ? error
             : new ProviderError(
                 error instanceof Error ? error.message : 'Session creation failed',
-                state.selectedProvider,
+                providerId,
                 { cause: error },
               );
+
+        if (version !== evaluationVersion) return;
 
         setState({
           status: 'error',
@@ -286,11 +320,10 @@ export function createTenderlaneClient(config: TenderlaneClientConfig): Tenderla
     },
 
     async submit(input: CheckoutInput): Promise<CheckoutResult> {
-      if (
-        (state.status !== 'ready' && state.status !== 'prepared') ||
-        !state.route ||
-        !state.selectedProvider
-      ) {
+      if (submitInFlight) {
+        throw new TenderlaneError('A submit is already in flight.', 'INVALID_STATE');
+      }
+      if (!canAct() || !state.route || !state.selectedProvider) {
         throw new TenderlaneError(
           `Cannot submit in status "${state.status}". Wait for route evaluation or preparation to complete.`,
           'INVALID_STATE',
@@ -306,28 +339,34 @@ export function createTenderlaneClient(config: TenderlaneClientConfig): Tenderla
 
       const route = state.route;
       const context = state.context;
+      const providerId = state.selectedProvider;
 
-      setState({ status: 'submitting', error: null });
-
-      await runMiddlewareHook(middleware, 'onCheckoutStart', {
-        context,
-        route,
-        input,
-      });
+      submitInFlight = true;
+      setState({ status: 'submitting', error: null, canSubmit: false });
 
       try {
-        const result = await provider.submit(input, route);
-
-        setState({
-          status: 'success',
-          checkoutResult: result,
-        });
-
-        await runMiddlewareHook(middleware, 'onCheckoutSuccess', {
+        await runMiddlewareHook(middleware, 'onCheckoutStart', {
           context,
           route,
-          result,
+          input,
         });
+
+        const result = await provider.submit(input, route);
+
+        // Only a completed payment is a success. A hosted checkout has merely
+        // been created at this point, and an inline payment may still be
+        // processing or waiting on the customer.
+        if (result.status === 'complete') {
+          setState({ status: 'success', checkoutResult: result, canSubmit: false });
+          await runMiddlewareHook(middleware, 'onCheckoutSuccess', { context, route, result });
+        } else {
+          setState({
+            status: result.url ? 'redirecting' : 'pending',
+            checkoutResult: result,
+            canSubmit: false,
+          });
+          await runMiddlewareHook(middleware, 'onCheckoutPending', { context, route, result });
+        }
 
         return result;
       } catch (error) {
@@ -336,14 +375,16 @@ export function createTenderlaneClient(config: TenderlaneClientConfig): Tenderla
             ? error
             : new ProviderError(
                 error instanceof Error ? error.message : 'Checkout failed',
-                state.selectedProvider,
+                providerId,
                 { cause: error },
               );
 
+        // The route is kept, so the customer can correct the payment details
+        // and submit again.
         setState({
           status: 'error',
           error: tenderlaneError,
-          canSubmit: true,
+          canSubmit: state.route !== null,
         });
 
         await runMiddlewareHook(middleware, 'onCheckoutError', {
@@ -353,6 +394,8 @@ export function createTenderlaneClient(config: TenderlaneClientConfig): Tenderla
         });
 
         throw tenderlaneError;
+      } finally {
+        submitInFlight = false;
       }
     },
 
@@ -369,6 +412,29 @@ export function createTenderlaneClient(config: TenderlaneClientConfig): Tenderla
         checkoutResult: null,
         providerSession: null,
       });
+      // Select a route again so the client is usable; `idle` is only ever
+      // observed by a listener between these two updates.
+      evaluate(state.context);
     },
   };
+}
+
+/** Structural equality for plain JSON-like context values. */
+function isDeepEqual(left: unknown, right: unknown): boolean {
+  if (Object.is(left, right)) return true;
+  if (typeof left !== 'object' || typeof right !== 'object' || left === null || right === null) {
+    return false;
+  }
+  if (Array.isArray(left) !== Array.isArray(right)) return false;
+  const leftKeys = Object.keys(left);
+  const rightKeys = Object.keys(right);
+  if (leftKeys.length !== rightKeys.length) return false;
+  return leftKeys.every(
+    (key) =>
+      Object.hasOwn(right, key) &&
+      isDeepEqual(
+        (left as Record<string, unknown>)[key],
+        (right as Record<string, unknown>)[key],
+      ),
+  );
 }

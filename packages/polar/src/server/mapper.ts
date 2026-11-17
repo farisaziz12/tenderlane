@@ -11,10 +11,8 @@ import { CatalogError } from '@tenderlane/core';
  * `@polar-sh/sdk` — the SDK is consumed only in adapter.ts.
  */
 export interface PolarCheckoutCreateParams {
-  /** Polar product IDs being purchased. Min 1; first is default-selected. */
+  /** Polar product IDs offered at this checkout. Tenderlane always sends one. */
   readonly products: string[];
-  /** Optional ad-hoc price overrides keyed by product ID. */
-  readonly prices?: Record<string, { amount: number; price_currency: string }>;
   readonly success_url?: string;
   readonly customer_email?: string;
   readonly customer_name?: string;
@@ -55,34 +53,37 @@ function requirePolarProductId(item: ResolvedCatalogItem): string {
  * `@polar-sh/sdk`'s `polar.checkouts.create()`.
  *
  * Behavior notes:
- * - Each resolved item must carry `providerRefs.polar.productId`.
- * - When a resolved item's `unitAmount` differs from the Polar product's
- *   default price, we emit an entry in `prices` to override at checkout time
- *   (Polar's ad-hoc-price escape hatch).
+ * - A Polar checkout sells one product. `products` in Polar's API is the list
+ *   the customer chooses from, not a cart, and there is no quantity. A cart
+ *   with several items or a quantity above 1 is rejected with a
+ *   `CatalogError` instead of being charged as something else.
+ * - The amount charged is the Polar product's own price. The resolved
+ *   `unitAmount` is for display; it is not sent.
  * - `cancelUrl` is not represented in Polar's API — the customer cancels by
  *   closing the hosted page or letting the session expire.
  */
 export function mapToPolarCheckoutParams(
   input: ResolvedCheckoutInput,
 ): PolarCheckoutCreateParams {
-  const productIds = input.items.map(requirePolarProductId);
-
-  const prices: Record<string, { amount: number; price_currency: string }> = {};
-  for (const item of input.items) {
-    const productId = item.providerRefs!.polar!.productId;
-    // Only emit a price override when the catalog supplied a non-zero
-    // unitAmount — otherwise let Polar use the product's default price.
-    if (item.unitAmount > 0) {
-      prices[productId] = {
-        amount: item.unitAmount,
-        price_currency: item.currency,
-      };
-    }
+  const [item, ...otherItems] = input.items;
+  if (!item) {
+    throw new CatalogError('A Polar checkout needs one resolved item.', { provider: 'polar' });
+  }
+  if (otherItems.length > 0) {
+    throw new CatalogError(
+      `A Polar checkout sells one product, but the cart has ${input.items.length} items. Route multi-item carts to a provider that supports them.`,
+      { sku: item.sku, provider: 'polar' },
+    );
+  }
+  if (item.quantity !== 1) {
+    throw new CatalogError(
+      `A Polar checkout has no quantity, but SKU '${item.sku}' has quantity ${item.quantity}.`,
+      { sku: item.sku, provider: 'polar' },
+    );
   }
 
   const params: PolarCheckoutCreateParams = {
-    products: productIds,
-    ...(Object.keys(prices).length > 0 ? { prices } : {}),
+    products: [requirePolarProductId(item)],
     ...(input.successUrl ? { success_url: input.successUrl } : {}),
     ...(input.customerEmail ? { customer_email: input.customerEmail } : {}),
   };

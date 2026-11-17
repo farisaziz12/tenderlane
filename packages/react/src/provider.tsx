@@ -48,9 +48,24 @@ export function TenderlaneProvider({ config, children }: TenderlaneProviderProps
   useEffect(() => {
     if (contextRef.current !== config.context && clientRef.current) {
       contextRef.current = config.context;
+      // A no-op when the new object is structurally equal to the current context.
       clientRef.current.updateContext(config.context);
     }
   }, [config.context]);
+
+  // Coming back from a hosted checkout with the browser's back button restores
+  // this page from the back/forward cache still in `redirecting`.
+  useEffect(() => {
+    const client = clientRef.current;
+    if (!client || typeof window === 'undefined') return;
+    const handlePageShow = (event: PageTransitionEvent) => {
+      if (event.persisted && client.getSnapshot().status === 'redirecting') {
+        client.reset();
+      }
+    };
+    window.addEventListener('pageshow', handlePageShow);
+    return () => window.removeEventListener('pageshow', handlePageShow);
+  }, []);
 
   return (
     <TenderlaneContext.Provider value={clientRef.current}>

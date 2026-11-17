@@ -89,20 +89,22 @@ export function TenderlaneCheckoutForm({
   // effects before parent effects — without the defer, this effect would
   // call prepare() before TenderlaneProvider's effect has called
   // updateContext(), causing prepare() to use a stale route.
+  const hasProviderSession = checkout.providerSession !== null;
+
   useEffect(() => {
     if (!isInlineFlow || prepareKey === null) {
       return;
     }
 
-    if (prepareKey === lastPrepareKey.current) {
+    // Already prepared for this route and input, and the session is still there.
+    // A context change clears the session, so that case prepares again.
+    if (prepareKey === lastPrepareKey.current && hasProviderSession) {
       return;
     }
 
     if (status !== 'ready' && status !== 'prepared') {
       return;
     }
-
-    lastPrepareKey.current = prepareKey;
 
     const timeout = setTimeout(() => {
       // Read fresh state — parent effects have now run and route is current
@@ -121,13 +123,18 @@ export function TenderlaneCheckoutForm({
         return;
       }
 
+      // Recorded only once prepare() is really called. Recording it when the
+      // timer is scheduled loses the prepare whenever the effect is cleaned up
+      // first, which React StrictMode does on every mount.
+      lastPrepareKey.current = prepareKey;
+
       client.prepare(inputRef.current).catch(() => {
         // Error is captured in client state (status: 'error', error: ...)
       });
     }, 0);
 
     return () => clearTimeout(timeout);
-  }, [status, isInlineFlow, prepareKey, client]);
+  }, [status, isInlineFlow, prepareKey, hasProviderSession, client]);
 
   // Reset tracking when route changes away from inline
   useEffect(() => {

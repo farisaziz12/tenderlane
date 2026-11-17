@@ -54,7 +54,7 @@ Use `InferProviderId<T>`, `InferProviderIds<T[]>`, `InferCapabilities<T>` to ext
 Rules are serializable JSON objects, not functions. First match wins. Support operators: exact match, `{ in: [...] }`, `{ notIn: [...] }`, `{ gt, gte, lt, lte }`. Nested object matching for `experiment: { variant: "a" }`. Optional `predicates` escape hatch for function-based rules keyed by rule ID.
 
 ### State Machine
-Client state transitions: `idle → evaluating → ready → (preparing → prepared →) submitting → success | error`. `preparing`/`prepared` only occur for inline flows (`payment-intent`). State is replaced immutably. `getSnapshot()` returns stable references for `useSyncExternalStore`.
+Client state transitions: `idle → evaluating → ready → (preparing → prepared →) submitting → success | redirecting | pending | error`. `preparing`/`prepared` only occur for inline flows (`payment-intent`). `success` means the provider reported the payment complete; a created hosted checkout is `redirecting`. `error` after a failed submit keeps the route, so `submit()` can be retried. One submit runs at a time. State is replaced immutably. `getSnapshot()` returns stable references for `useSyncExternalStore`.
 
 ### Server Handler
 Uses Web `Request`/`Response` standard. Framework-agnostic. Body format: `{ provider: string, action: string, payload: CheckoutInput }`.
@@ -65,7 +65,7 @@ A `Catalog` is the same architectural slot as a router: one user-supplied object
 The server handler accepts `catalogs: Record<ProviderId, Catalog>` for per-provider dispatch — when routing picks Stripe, `catalogs.stripe` runs; when routing picks Polar, `catalogs.polar` runs. PSP-sourced catalogs (`createStripeCatalog`, `createPolarCatalog`) call the PSP API at resolve time so the PSP dashboard itself is the source of truth for money. Top-level `catalog` is a fallback and the target for the `/resolve` route used by `createRemoteCatalog` clients.
 
 ### Price integrity (load-bearing rule)
-**`unitAmount` MUST never cross the wire from client to server.** Wire payload is `{ items: [{ sku, quantity }], context, successUrl, ... }`. The client says *what* (SKU + quantity + context); the server runs its own `catalog.resolve()` and decides *for how much*. Client-side catalog resolution is display-only; the server re-resolves at submit time and always wins. The handler strips any client-supplied `unitAmount` defensively before resolution.
+**`unitAmount` MUST never cross the wire from client to server.** Wire payload is `{ items: [{ sku, quantity }], context, successUrl, ... }`. The client says *what* (SKU + quantity + context); the server runs its own `catalog.resolve()` and decides *for how much*. Client-side catalog resolution is display-only; the server re-resolves at submit time and always wins. The handler strips any client-supplied `unitAmount` defensively before resolution. Nothing else from the request body may reach PSP parameters that carry money: client `providerOptions` is dropped (server config `providerOptions` replaces it), legacy `lineItems` is rejected unless `allowLegacyLineItems` is set with no catalog, and `items` are validated. The client's `context` is untrusted too: use the handler's `resolveContext` hook when pricing depends on it.
 
 ## Conventions
 

@@ -4,7 +4,7 @@ import type {
   ResolvedCheckoutInput,
   CheckoutResult,
 } from '@tenderlane/core';
-import { ProviderError } from '@tenderlane/core';
+import { CatalogError, ProviderError } from '@tenderlane/core';
 import type { StripeServerConfig } from './types.js';
 import {
   mapToStripeSessionParams,
@@ -38,15 +38,18 @@ import {
  * });
  *
  * // Use with any framework (e.g. Next.js App Router)
- * export async function POST(request: Request) {
- *   return handler(request);
- * }
+ * export const POST = handler.POST;
  * ```
  */
 export function stripeServerAdapter(
   config: StripeServerConfig,
 ): ServerProviderAdapter<'stripe'> {
-  const stripe = new Stripe(config.secretKey);
+  const stripe = new Stripe(
+    config.secretKey,
+    config.apiVersion
+      ? ({ apiVersion: config.apiVersion } as ConstructorParameters<typeof Stripe>[1])
+      : undefined,
+  );
 
   return {
     id: 'stripe' as const,
@@ -85,7 +88,7 @@ export function stripeServerAdapter(
           'stripe',
         );
       } catch (error) {
-        if (error instanceof ProviderError) throw error;
+        if (error instanceof ProviderError || error instanceof CatalogError) throw error;
 
         if (error instanceof Stripe.errors.StripeError) {
           throw new ProviderError(

@@ -212,27 +212,35 @@ describe('createTenderlaneClient', () => {
     expect(client.getSnapshot().selectedPaymentMethod).toBe('bank');
   });
 
-  it('reset returns to idle state', async () => {
+  it('reset clears the result and evaluates the route again', async () => {
     const client = createTenderlaneClient(createConfig());
 
     await vi.waitFor(() => {
       expect(client.getSnapshot().status).toBe('ready');
     });
 
+    await client.submit({ items: [{ sku: 'test', quantity: 1 }], successUrl: '/s', cancelUrl: '/c' });
+    expect(client.getSnapshot().status).toBe('redirecting');
+
     client.reset();
-    expect(client.getSnapshot().status).toBe('idle');
-    expect(client.getSnapshot().route).toBeNull();
-    expect(client.getSnapshot().selectedProvider).toBeNull();
+    await vi.waitFor(() => {
+      expect(client.getSnapshot().status).toBe('ready');
+    });
+    expect(client.getSnapshot().checkoutResult).toBeNull();
+    expect(client.getSnapshot().selectedProvider).toBe('mock');
   });
 
   it('fires middleware hooks', async () => {
     const onRouteEvaluated = vi.fn();
     const onCheckoutStart = vi.fn();
     const onCheckoutSuccess = vi.fn();
+    const onCheckoutPending = vi.fn();
 
     const client = createTenderlaneClient(
       createConfig({
-        middleware: [{ name: 'test', onRouteEvaluated, onCheckoutStart, onCheckoutSuccess }],
+        middleware: [
+          { name: 'test', onRouteEvaluated, onCheckoutStart, onCheckoutSuccess, onCheckoutPending },
+        ],
       }),
     );
 
@@ -249,6 +257,8 @@ describe('createTenderlaneClient', () => {
     });
 
     expect(onCheckoutStart).toHaveBeenCalled();
-    expect(onCheckoutSuccess).toHaveBeenCalled();
+    // The mock provider returns a hosted-checkout URL: created, not paid.
+    expect(onCheckoutPending).toHaveBeenCalled();
+    expect(onCheckoutSuccess).not.toHaveBeenCalled();
   });
 });

@@ -65,6 +65,8 @@ function StatusDot() {
       preparing: styles.statusDotPreparing,
       prepared: styles.statusDotPrepared,
       submitting: styles.statusDotSubmitting,
+      redirecting: styles.statusDotSubmitting,
+      pending: styles.statusDotSubmitting,
       success: styles.statusDotReady,
       error: styles.statusDotError,
     }[checkout.status] ?? styles.statusDot;

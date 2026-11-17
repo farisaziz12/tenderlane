@@ -35,6 +35,11 @@ type HookEventMap = {
     route: SelectedPaymentRoute;
     result: CheckoutResult;
   };
+  onCheckoutPending: {
+    context: TenderlaneContext;
+    route: SelectedPaymentRoute;
+    result: CheckoutResult;
+  };
   onCheckoutError: {
     context: TenderlaneContext;
     route?: SelectedPaymentRoute;
@@ -67,15 +72,15 @@ export async function runMiddlewareHook<H extends MiddlewareHook>(
   hook: H,
   event: HookEventMap[H],
 ): Promise<void> {
-  for (const mw of middlewares) {
-    const fn = mw[hook] as ((event: HookEventMap[H]) => unknown) | undefined;
-    if (!fn) continue;
+  for (const middleware of middlewares) {
+    const handler = middleware[hook] as ((event: HookEventMap[H]) => unknown) | undefined;
+    if (!handler) continue;
     try {
-      await fn(event);
-    } catch (err) {
+      await handler.call(middleware, event);
+    } catch (error) {
       console.error(
-        `[tenderlane] Middleware "${mw.name ?? 'unnamed'}" error in ${hook}:`,
-        err,
+        `[tenderlane] Middleware "${middleware.name ?? 'unnamed'}" error in ${hook}:`,
+        error,
       );
     }
   }
