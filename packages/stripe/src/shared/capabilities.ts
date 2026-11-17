@@ -93,7 +93,8 @@ export const STRIPE_CAPABILITIES = {
     embedded: true,
     subscriptions: false,
     refunds: false,
-    webhooks: true,
+    // No webhook verification is implemented yet.
+    webhooks: false,
   },
 } as const satisfies ProviderCapabilities;
 

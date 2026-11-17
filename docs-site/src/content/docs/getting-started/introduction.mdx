@@ -46,13 +46,15 @@ Tenderlane follows a layered architecture inspired by TanStack libraries:
 
 | Package | What it does | Runtime dependencies |
 |---------|-------------|---------------------|
-| **@tenderlane/core** | Types, routing engine, middleware runner, error hierarchy, server handler | None |
+| **@tenderlane/core** | Types, routing engine, catalog, middleware runner, error hierarchy, server handler | None |
 | **@tenderlane/client** | Headless checkout state machine with `subscribe`/`getSnapshot` | `@tenderlane/core` |
 | **@tenderlane/react** | `TenderlaneProvider`, `useTenderlaneCheckout`, and other React hooks | `@tenderlane/client`, `react` |
 | **@tenderlane/stripe** | Stripe browser provider (lazy-loads Stripe.js) + server adapter | `@tenderlane/core`, `@stripe/stripe-js` (lazy), `stripe` (server only) |
+| **@tenderlane/polar** | Polar browser provider (plain `fetch`) + server adapter | `@tenderlane/core`, `@polar-sh/sdk` (server only) |
+| **tenderlane** | Umbrella package that re-exports all of the above through subpaths (`tenderlane/react`, `tenderlane/stripe/server`, ...) | The packages above |
 
 :::tip
-The `@tenderlane/core` package has **zero runtime dependencies** and never imports any provider SDK. All provider-specific code lives in provider packages like `@tenderlane/stripe`. This means your bundle only includes the providers you actually use.
+The `@tenderlane/core` package has **zero runtime dependencies** and never imports any provider SDK. All provider-specific code lives in provider packages like `@tenderlane/stripe` and `@tenderlane/polar`, and no provider is privileged in core. This means your bundle only includes the providers you actually use. See [Design principles](/docs/getting-started/design-principles).
 :::
 
 ## How Tenderlane compares to direct PSP usage
@@ -73,15 +75,18 @@ Tenderlane is in **alpha**. The following is implemented and tested:
 - Rules router with declarative, serializable conditions
 - Auto router interface (remote routing endpoint)
 - Headless checkout client with full state machine
-- React hooks and provider component
+- React hooks, provider component and `TenderlaneCheckoutForm`
 - Stripe Checkout redirect flow
-- Stripe Elements inline payment flow
+- Stripe PaymentIntent + Payment Element inline flow
+- Polar hosted checkout redirect flow (one product per checkout)
+- Catalogs: inline, remote, custom, Stripe-sourced and Polar-sourced
+- Server handler with server-side price resolution and request validation
 - Middleware lifecycle hooks
 - Typed error hierarchy
 - Full TypeScript type inference
 
-Not yet implemented: Vue/Solid/Svelte bindings, additional PSPs (Adyen, PayPal, etc.), webhooks, subscriptions, refunds, failover, ML-based routing, devtools.
+Not yet implemented: webhooks (the only authoritative signal that a payment completed, so you must wire your PSP's webhooks yourself), subscriptions, refunds, Vue/Solid/Svelte bindings, additional PSPs (Adyen, PayPal, etc.), failover, ML-based routing, devtools.
 
 ## Next steps
 
-Ready to get started? Head to [Installation](/getting-started/installation/) to set up your project, or jump straight to the [Quick Start](/getting-started/quick-start/) for a working example.
+Ready to get started? Head to [Installation](/docs/getting-started/installation) to set up your project, or jump straight to the [Quick Start](/docs/getting-started/quick-start) for a working example.

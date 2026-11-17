@@ -14,7 +14,8 @@
       "@tenderlane/client",
       "@tenderlane/react",
       "@tenderlane/stripe",
-      "@tenderlane/polar"
+      "@tenderlane/polar",
+      "@tenderlane/vue"
     ]
   ],
   "linked": [],

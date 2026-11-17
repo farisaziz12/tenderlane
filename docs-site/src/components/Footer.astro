@@ -1,4 +1,5 @@
 ---
+import { packageVersion } from '../lib/version';
 import Logo from './Logo.astro';
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 const link = (p: string) => `${base}${p}`;
@@ -21,6 +22,7 @@ const cols = [
       { l: 'Providers', h: link('/docs/concepts/providers') },
       { l: 'Catalog', h: link('/docs/concepts/catalog') },
       { l: 'State machine', h: link('/docs/concepts/state-machine') },
+      { l: 'Security model', h: link('/docs/concepts/security-model') },
     ],
   },
   {
@@ -61,7 +63,7 @@ const cols = [
         Reactive payment orchestration for modern web apps. MIT licensed, frontend-first, provider-agnostic.
       </p>
       <div class="footer-badges">
-        <span class="badge alpha"><span class="dot"></span>v0.4.0-alpha</span>
+        <span class="badge alpha"><span class="dot"></span>v{packageVersion}</span>
         <span class="badge"><span style="color:var(--text-2)">MIT</span></span>
       </div>
     </div>

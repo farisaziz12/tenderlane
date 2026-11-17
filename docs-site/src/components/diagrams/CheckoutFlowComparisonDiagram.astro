@@ -5,7 +5,8 @@
 //   - redirect (flow: 'checkout-session' or 'redirect') — submit() directly,
 //     browser is redirected to the PSP-hosted checkout page.
 //
-// Both lanes start at `ready` and end at `success`. The inline lane has the
+// Both lanes start at `ready`. Inline ends at `success` (payment confirmed on
+// the page); redirect ends at `redirecting` (payment happens on the PSP's page). The inline lane has the
 // extra `preparing` → `prepared` hop. Honors `prefers-reduced-motion`.
 
 const colW = 320;
@@ -27,7 +28,7 @@ const inlineSteps = [
 const redirectSteps = [
   { state: 'ready', kind: 'stable' as const },
   { state: 'submitting', kind: 'transient' as const, via: 'client.submit(input)' },
-  { state: 'success', kind: 'success' as const, via: 'window.location.href = url' },
+  { state: 'redirecting', kind: 'transient' as const, via: 'window.location.href = url' },
 ];
 
 function stepY(index: number): number {
@@ -59,7 +60,7 @@ const redirectPathSegments = redirectSteps
 
 <figure
   class="cf-diagram"
-  aria-label="Comparison of inline and redirect checkout flows. The inline flow (payment-intent) calls prepare() to create a server session, transitions through preparing and prepared, then submit() confirms via Stripe Elements. The redirect flow (checkout-session) calls submit() directly, and the browser is redirected to the PSP-hosted checkout page. Both flows end at success."
+  aria-label="Comparison of inline and redirect checkout flows. The inline flow (payment-intent) calls prepare() to create a server session, transitions through preparing and prepared, then submit() confirms via Stripe Elements. The redirect flow (checkout-session) calls submit() directly, and the browser is redirected to the PSP-hosted checkout page. The inline flow ends at success when the provider reports the payment complete. The redirect flow ends at redirecting: the payment has not happened yet."
 >
   <div class="cf-stage">
     <svg viewBox={`0 0 760 ${totalH}`} role="img" preserveAspectRatio="xMidYMid meet">
@@ -213,7 +214,7 @@ const redirectPathSegments = redirectSteps
     <span class="cf-legend-item"><span class="cf-swatch cf-swatch-stable"></span>stable</span>
     <span class="cf-legend-item"><span class="cf-swatch cf-swatch-transient"></span>transient</span>
     <span class="cf-legend-item"><span class="cf-swatch cf-swatch-success"></span>success</span>
-    <span class="cf-legend-item cf-legend-meta">inline adds prepare → prepared; redirect skips straight to submit</span>
+    <span class="cf-legend-item cf-legend-meta">inline adds prepare → prepared and can end in success; redirect ends in redirecting, not success</span>
   </figcaption>
 </figure>
 

@@ -1,4 +1,5 @@
 ---
+import { packageVersion } from '../lib/version';
 import Layout from './Layout.astro';
 import DocsSidebar from '../components/DocsSidebar.astro';
 import DocsTOC from '../components/DocsTOC.astro';
@@ -47,7 +48,7 @@ const hasToc = headings.some((h) => h.depth === 2 || h.depth === 3);
         <span>{breadcrumb.section}</span>
         <span>/</span>
         <span style="color:var(--text-1)">{breadcrumb.label}</span>
-        <span style="margin-left:auto">v0.4.0-alpha</span>
+        <span style="margin-left:auto">v{packageVersion}</span>
       </div>
       <article class="docs-article">
         <slot />
@@ -229,6 +230,11 @@ const hasToc = headings.some((h) => h.depth === 2 || h.depth === 3);
     padding: 0;
     border: none;
     font-size: inherit;
+    /* Inline code wraps (white-space: normal above). Fenced blocks must keep
+       their line breaks and indentation and scroll horizontally instead. */
+    white-space: pre;
+    overflow-wrap: normal;
+    word-break: normal;
   }
   .docs-article .code-figure {
     margin: 18px 0;

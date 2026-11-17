@@ -1,0 +1,59 @@
+{
+  "name": "@tenderlane/vue",
+  "version": "0.1.0-alpha.1",
+  "description": "Vue bindings for Tenderlane payment orchestration",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/farisaziz12/tenderlane.git",
+    "directory": "packages/vue"
+  },
+  "homepage": "https://github.com/farisaziz12/tenderlane#readme",
+  "bugs": "https://github.com/farisaziz12/tenderlane/issues",
+  "author": "Faris Aziz",
+  "keywords": [
+    "payments",
+    "checkout",
+    "vue",
+    "composables",
+    "tenderlane"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@tenderlane/client": "workspace:*",
+    "@tenderlane/core": "workspace:*"
+  },
+  "peerDependencies": {
+    "vue": ">=3.3.0"
+  },
+  "devDependencies": {
+    "tsup": "^8.3.0",
+    "typescript": "^5.7.0",
+    "vitest": "^2.1.0",
+    "vue": "^3.5.0"
+  },
+  "license": "MIT"
+}

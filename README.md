@@ -4,7 +4,7 @@
 
 Tenderlane is an isomorphic, framework-aware payment orchestration SDK. It lets frontend and backend applications choose the right payment provider, payment method, and payment UI based on reactive business context.
 
-> TanStack-style payment orchestration: headless core, reactive framework bindings, adapter-based provider integrations.
+> Headless core, thin framework bindings, adapter-based provider integrations. The layering is modelled on the TanStack libraries. Tenderlane is an independent project and is not affiliated with TanStack.
 
 ## Install
 
@@ -30,11 +30,11 @@ When your application state changes (country, currency, experiment variant, cart
 
 - Selected payment provider
 - Available payment methods
-- Payment flow (redirect, inline Elements, embedded)
+- Payment flow (hosted redirect or inline Payment Element)
 - Checkout component configuration
 - Submit behavior
 
-This happens **in the frontend**, with type-safe, serializable routing rules.
+This happens **in the frontend**, with type-safe, serializable routing rules. Prices do not: the browser sends SKUs and quantities, and the server decides the amount (see [Security model](#security-model)).
 
 ## Quick Start
 
@@ -74,15 +74,20 @@ function App() {
     >
       <TenderlaneCheckoutForm
         input={{
-          lineItems: [{ name: 'Pro Plan', quantity: 1, unitAmount: 2900, currency }],
-          successUrl: '/success',
-          cancelUrl: '/cancel',
+          // What is being bought. The server's catalog decides the price.
+          items: [{ sku: 'pro-plan', quantity: 1 }],
+          context: { country, currency },
+          successUrl: 'https://shop.example.com/success',
+          cancelUrl: 'https://shop.example.com/cancel',
         }}
         elements={{ stripe: StripePaymentElement }}
       >
-        {({ canSubmit, submit, status, error }) => (
+        {({ canSubmit, submit, retry, status, error }) => (
           <>
             {error && <p>{error.message}</p>}
+            {status === 'success' && <p>Payment complete.</p>}
+            {/* The inline payment form could not be created: offer to try again. */}
+            {status === 'error' && !canSubmit && <button onClick={retry}>Try again</button>}
             <button disabled={!canSubmit} onClick={submit}>
               {status === 'submitting' ? 'Processing...' : 'Pay'}
             </button>
@@ -96,25 +101,58 @@ function App() {
 
 When `country` or `currency` changes, Tenderlane re-evaluates routing rules, creates a new PaymentIntent if needed, and reactively updates the checkout UI.
 
+Checkout statuses: `evaluating`, `ready`, `preparing`, `prepared`, `submitting`, then one of `success` (the provider reported the payment complete), `redirecting` (a hosted checkout was created and the browser is leaving for it), `pending` (accepted but not complete yet) or `error`. After a failed submit the route is kept and `submit()` can be called again. One submit runs at a time. `reset()` re-evaluates the route and leaves the client `ready`.
+
 ### Server Endpoint
 
 ```ts
+import { createInlineCatalog } from 'tenderlane';
 import { createTenderlaneHandler } from 'tenderlane/server';
 import { stripeServerAdapter } from 'tenderlane/stripe/server';
 
+const catalog = createInlineCatalog({
+  'pro-plan': {
+    name: 'Pro Plan',
+    pricing: (context) => ({
+      amount: 2900,
+      currency: context.currency === 'chf' ? 'chf' : 'usd',
+    }),
+  },
+});
+
+// `routing` is the createRulesRouter(...) instance from the client example,
+// exported from a shared module.
 const handler = createTenderlaneHandler({
   providers: [
     stripeServerAdapter({ secretKey: process.env.STRIPE_SECRET_KEY! }),
   ],
+  catalog,
+  routing, // the same router the client uses: the server checks the provider against it
+  allowedRedirectOrigins: ['https://shop.example.com'],
+  onError: (error) => console.error(error),
 });
 
-// Next.js App Router
-export async function POST(request: Request) {
-  return handler.POST(request);
-}
+// Next.js App Router. The handler is `{ POST, resolve }`, not a function.
+export const POST = handler.POST;
 ```
 
 Uses the Web `Request`/`Response` standard. Works with Next.js, Deno, Bun, Cloudflare Workers.
+
+Handler options: `providers`, `catalog`, `catalogs`, `middleware`, `routing`, `resolveContext`, `providerOptions`, `allowedRedirectOrigins`, `allowLegacyLineItems`, `maxItems`, `maxQuantity`, `onError`.
+
+## Security model
+
+- The browser sends `{ items: [{ sku, quantity }], context, successUrl, ... }`. It never sends an amount. Any `unitAmount` in the body is stripped, and the server prices the items with its own catalog.
+- `providerOptions` in the request body is dropped. Configure provider options on the server with the handler's `providerOptions` option (keyed by provider ID).
+- Legacy `lineItems` (which carries amounts) is rejected unless `allowLegacyLineItems: true` is set and no catalog is configured.
+- `items` is validated: non-empty string `sku`, integer `quantity` from 1 to `maxQuantity` (default 10 000), at most `maxItems` entries (default 100). `successUrl` is required and `metadata` values must be strings.
+- The request's `context` is untrusted. If a price depends on it, set `resolveContext(request, clientContext)` to derive it on the server.
+- The request's `provider` is untrusted. Set `routing` to the client's router and the server rejects a provider the route did not select, and takes payment methods from the route.
+- Set `allowedRedirectOrigins` to restrict `successUrl` and `cancelUrl`.
+- 4xx bodies describe the problem. 5xx bodies are generic `{ error, code }`; the detail goes to `onError`.
+- **Webhooks are the only authoritative payment outcome, and Tenderlane does not handle them yet.** `success` on the client, or arriving at `successUrl`, is not proof of payment. Verify your PSP's webhooks with its own SDK and fulfil from those.
+
+Full page: [Security model](https://www.tenderlane.dev/docs/concepts/security-model).
 
 ## Subpath Exports
 
@@ -130,7 +168,7 @@ Uses the Web `Request`/`Response` standard. Works with Next.js, Deno, Bun, Cloud
 | `tenderlane/polar` | Polar.sh browser provider |
 | `tenderlane/polar/server` | Polar.sh server adapter (hosted Checkout) |
 
-All peer dependencies (react, stripe, @stripe/stripe-js, @polar-sh/sdk) are optional — only needed when importing the relevant subpath.
+All peer dependencies (react, stripe, @stripe/stripe-js, @stripe/react-stripe-js, @polar-sh/sdk) are optional and only needed when importing the relevant subpath.
 
 ## Routing
 
@@ -167,7 +205,7 @@ const routing = createRulesRouter({
 
 Condition operators: exact match, `{ in: [...] }`, `{ notIn: [...] }`, `{ gt, gte, lt, lte }`, nested objects.
 
-Provider, flow, and payment method fields are type-checked — typos are caught at compile time:
+Provider, flow, and payment method fields are type-checked, so typos are caught at compile time:
 
 ```ts
 // TS2820: Type '"stripee"' is not assignable to type 'KnownProviderId'.
@@ -192,10 +230,12 @@ const routing = createAutoRouter({
 
 | Flow | How it works |
 |------|-------------|
-| `checkout-session` | Server creates Stripe Checkout Session → browser redirects to Stripe-hosted page |
-| `payment-intent` | Server creates PaymentIntent → Stripe Elements renders inline → in-page confirmation |
+| `checkout-session` | Server creates a hosted checkout (Stripe Checkout Session or Polar checkout) → browser redirects to the provider's page. Client status ends at `redirecting` |
+| `payment-intent` | Server creates a Stripe PaymentIntent → Stripe Payment Element renders inline → in-page confirmation. Client status ends at `success` or `pending` |
 
-The `TenderlaneCheckoutForm` handles both automatically — it auto-prepares PaymentIntents for inline flows and renders the registered element component.
+The `TenderlaneCheckoutForm` handles both automatically. It auto-prepares PaymentIntents for inline flows and renders the registered element component.
+
+Polar sells one product with quantity 1 per checkout and always charges the Polar product's own price. A cart with several items or a quantity above 1 is rejected.
 
 ## Middleware
 
@@ -205,6 +245,11 @@ const analytics: TenderlaneMiddleware = {
   onRouteEvaluated({ context, route }) {
     track('route_selected', { provider: route.provider, country: context.country });
   },
+  // Hosted checkout created (browser is redirecting) or payment still processing.
+  onCheckoutPending({ result }) {
+    track('checkout_handed_off', { checkoutId: result.id });
+  },
+  // Only when the provider reported the payment complete (inline flows).
   onCheckoutSuccess({ result }) {
     track('checkout_completed', { paymentId: result.id });
   },
@@ -239,14 +284,18 @@ type Methods = InferPaymentMethods<typeof stripe>; // "card" | "paypal" | "link"
 
 ```
 tenderlane                    (single package, subpath exports)
-  ├── tenderlane              (core: types, routing, middleware, errors)
+  ├── tenderlane              (core: types, routing, catalog, middleware, errors)
   ├── tenderlane/client       (headless checkout state machine)
   ├── tenderlane/react        (React bindings via useSyncExternalStore)
   ├── tenderlane/server       (Web Request/Response handler)
   ├── tenderlane/stripe       (browser provider, lazy Stripe.js)
   ├── tenderlane/stripe/server (Checkout Sessions + PaymentIntents)
-  └── tenderlane/stripe/react  (StripePaymentElement, lazy-loaded)
+  ├── tenderlane/stripe/react  (StripePaymentElement, lazy-loaded)
+  ├── tenderlane/polar        (browser provider, fetch only)
+  └── tenderlane/polar/server  (hosted checkout, createPolarCatalog)
 ```
+
+The core has zero runtime dependencies and no privileged provider: Stripe and Polar are adapters built on the same public interfaces. See [Design principles](https://www.tenderlane.dev/docs/getting-started/design-principles).
 
 ## Catalog (provider-agnostic products)
 
@@ -290,7 +339,7 @@ const polarSourced = createPolarCatalog({
 });
 ```
 
-`createTenderlaneHandler` accepts a `catalogs: Record<ProviderId, Catalog>` map for per-provider dispatch — when routing picks Stripe, `catalogs.stripe` runs and the Stripe Price is canonical; when routing picks Polar, `catalogs.polar` runs and Polar's product is canonical. Top-level `catalog` is the fallback + the target for the `/resolve` route.
+`createTenderlaneHandler` accepts a `catalogs: Record<ProviderId, Catalog>` map for per-provider dispatch. When routing picks Stripe, `catalogs.stripe` runs and the Stripe Price is canonical; when routing picks Polar, `catalogs.polar` runs and Polar's product is canonical. Top-level `catalog` is the fallback and the target for `handler.resolve`. A failed Stripe or Polar lookup inside a PSP-sourced catalog is a `ProviderError` (5xx), not a `CatalogError`.
 
 **Price integrity**: `unitAmount` never crosses the wire from client to server. The wire payload is `{ items: [{ sku, quantity }], context, ... }`. The client says *what*; the server runs its own `catalog.resolve()` and decides *for how much*. Forged amounts are stripped before resolution.
 
@@ -302,14 +351,14 @@ const polarSourced = createPolarCatalog({
 - PSP-sourced catalogs: `createStripeCatalog` (calls `stripe.prices.retrieve`), `createPolarCatalog` (calls `polar.products.get`)
 - Per-provider catalog dispatch: `catalogs: Record<ProviderId, Catalog>` on `createTenderlaneHandler`
 - Server-canonical pricing (client never declares `unitAmount`)
-- Headless checkout client with state machine (idle → evaluating → ready → preparing → prepared → submitting → success/error)
+- Headless checkout client with state machine (evaluating → ready → preparing → prepared → submitting → success / redirecting / pending / error)
 - React provider, hooks, and `TenderlaneCheckoutForm` container
 - Stripe Checkout (redirect) and PaymentIntent (Elements) flows; prefers pre-created `priceId` when declared on the catalog, falls back to inline `price_data`
-- Polar.sh hosted Checkout (redirect-only); requires `providerRefs.polar.productId` on resolved items
+- Polar.sh hosted Checkout (redirect-only, one product with quantity 1 per checkout, no price override); requires `providerRefs.polar.productId` on resolved items
 - Lazy-loaded Stripe.js and Elements (zero bundle impact for redirect flows)
 - Polar browser bundle ships zero bytes of `@polar-sh/sdk`
-- Framework-agnostic server handler with built-in `/resolve` route for remote catalogs
-- Middleware lifecycle hooks (incl. `onCatalogResolved`)
+- Framework-agnostic server handler (`{ POST, resolve }`) with request validation, `resolveContext`, server-side `routing` check, redirect origin allow-list
+- Middleware lifecycle hooks (incl. `onCatalogResolved`, `onCheckoutPending`)
 - Typed errors (`CatalogError` carries the offending SKU + provider)
 - Type-safe provider/method/flow/country/currency fields
 
@@ -317,19 +366,25 @@ const polarSourced = createPolarCatalog({
 - Additional providers (Adyen, Revolut, Braintree, PayPal)
 - Polar iframe embedded flow (`@polar-sh/checkout`)
 - Vue, Solid, Svelte bindings
-- Webhook verification (Polar fulfillment is webhook-driven; wire `@polar-sh/sdk/webhooks` directly for now)
+- Webhook handling and verification (the only authoritative payment outcome; use `stripe.webhooks.constructEvent` or `@polar-sh/sdk/webhooks` directly for now)
 - Subscriptions, refunds
 - Provider failover
 - ML-based auto-routing
+- Devtools
 
 ## Development
 
 ```bash
 pnpm install
-pnpm build        # Build all packages
-pnpm test         # Run all tests (98 tests)
-pnpm dev          # Watch mode (all packages + example)
-pnpm docs:dev     # Starlight docs site at localhost:4321
+pnpm build          # Build all packages
+pnpm test           # Run all tests (Vitest, includes type tests)
+pnpm typecheck      # tsc --noEmit across all packages
+pnpm lint           # oxlint
+pnpm test:build     # publint on every package
+pnpm test:workspace # sherif (workspace consistency)
+pnpm check          # all of the above
+pnpm dev            # Watch mode (all packages + example)
+pnpm docs:dev       # Astro docs site at localhost:4321
 ```
 
 ## License

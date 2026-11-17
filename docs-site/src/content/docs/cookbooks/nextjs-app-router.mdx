@@ -18,9 +18,11 @@ app/
   checkout/
     page.tsx              # Checkout page (client component)
   success/
-    page.tsx              # Success page after payment
+    page.tsx              # Where Stripe sends the customer back (not proof of payment)
   cancel/
     page.tsx              # Cancel page (back to shopping)
+lib/
+  routing.ts              # Router shared by the checkout page and the API route
 .env.local                # Stripe API keys
 ```
 
@@ -29,6 +31,7 @@ app/
 ```bash title=".env.local"
 STRIPE_SECRET_KEY=sk_test_51ABC...
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_51ABC...
+APP_ORIGIN=http://localhost:3000
 ```
 
 Install the packages:
@@ -42,8 +45,19 @@ pnpm add @tenderlane/core @tenderlane/client @tenderlane/react @tenderlane/strip
 Create a single API route that handles all Tenderlane checkout requests. The handler is created lazily on the first request to avoid cold-start overhead during builds.
 
 ```ts title="app/api/checkout/route.ts"
+import { createInlineCatalog } from '@tenderlane/core';
 import { createTenderlaneHandler } from '@tenderlane/core/server';
 import { stripeServerAdapter } from '@tenderlane/stripe/server';
+import { router } from '@/lib/routing';
+
+// Server-side prices. The browser sends { sku, quantity } only.
+const catalog = createInlineCatalog({
+  widget: {
+    name: 'Widget',
+    description: 'A fine widget',
+    pricing: { amount: 2500, currency: 'usd' },
+  },
+});
 
 let handler: ReturnType<typeof createTenderlaneHandler> | null = null;
 
@@ -55,6 +69,22 @@ function getHandler() {
           secretKey: process.env.STRIPE_SECRET_KEY!,
         }),
       ],
+      catalog,
+      // successUrl and cancelUrl must be absolute URLs on one of these origins.
+      allowedRedirectOrigins: [process.env.APP_ORIGIN!],
+      // The same router the checkout page uses (move it to a shared module,
+      // e.g. lib/routing.ts). The server rejects a request whose provider is
+      // not the one this router selects, and takes payment methods from it.
+      routing: router,
+      // If pricing or routing depends on context, derive it here instead of
+      // trusting the browser. Falls back to the client's value in local dev,
+      // where there is no geo header.
+      resolveContext: (request, clientContext) => ({
+        ...clientContext,
+        country: request.headers.get('x-vercel-ip-country') ?? clientContext.country,
+      }),
+      // 5xx bodies are generic; the detail arrives here.
+      onError: (error) => console.error('[checkout]', error),
     });
   }
   return handler;
@@ -88,7 +118,9 @@ const stripe = stripeProvider({
   serverEndpoint: '/api/checkout',
 });
 
-// Create router once at module scope (pure function, no side effects)
+// Create router once at module scope (pure function, no side effects).
+// Shown inline for readability. Put it in lib/routing.ts as `export const router`
+// and import it here and in the API route, so both evaluate the same rules.
 const router = createRulesRouter({
   rules: [
     {
@@ -132,8 +164,10 @@ const analyticsMiddleware: TenderlaneMiddleware = {
   onRouteEvaluated({ context, route }) {
     console.log('[analytics] Route selected:', route.provider, route.flow, route.ruleId);
   },
-  onCheckoutSuccess({ result }) {
-    console.log('[analytics] Checkout succeeded:', result.id);
+  // A hosted checkout was created and the browser is about to leave.
+  // This is not a conversion: the customer has not paid yet.
+  onCheckoutPending({ result }) {
+    console.log('[analytics] Redirecting to hosted checkout:', result.id);
   },
   onCheckoutError({ error }) {
     console.error('[analytics] Checkout error:', error.code, error.message);
@@ -168,13 +202,13 @@ export default function CheckoutPage() {
           </select>
         </label>
 
-        <CheckoutForm />
+        <CheckoutForm country={country} />
       </main>
     </TenderlaneProvider>
   );
 }
 
-function CheckoutForm() {
+function CheckoutForm({ country }: { country: string }) {
   const checkout = useTenderlaneCheckout();
 
   if (checkout.status === 'evaluating') {
@@ -200,9 +234,9 @@ function CheckoutForm() {
         disabled={!checkout.canSubmit || checkout.status === 'submitting'}
         onClick={() =>
           checkout.submit({
-            lineItems: [
-              { name: 'Widget', description: 'A fine widget', quantity: 1, unitAmount: 2500 },
-            ],
+            items: [{ sku: 'widget', quantity: 1 }],
+            // Sent so the server can evaluate the same route.
+            context: { country, currency: 'usd', amount: 2500 },
             successUrl: `${window.location.origin}/success?session_id={CHECKOUT_SESSION_ID}`,
             cancelUrl: `${window.location.origin}/checkout`,
           })
@@ -219,7 +253,9 @@ function CheckoutForm() {
           marginTop: '1rem',
         }}
       >
-        {checkout.status === 'submitting' ? 'Redirecting...' : 'Pay $25.00'}
+        {checkout.status === 'submitting' || checkout.status === 'redirecting'
+          ? 'Redirecting...'
+          : 'Pay $25.00'}
       </button>
     </div>
   );
@@ -261,6 +297,8 @@ export default function CancelPage() {
   );
 }
 ```
+
+The success page is reached by a redirect, which anyone can trigger. Do not fulfil orders from it. Handle Stripe's `checkout.session.completed` webhook in a separate route with the `stripe` SDK. Tenderlane does not ship webhook helpers yet.
 
 ## 5. Context sync with application state
 
@@ -309,7 +347,7 @@ function CheckoutLayout({ children }: { children: React.ReactNode }) {
 ```
 
 :::tip
-When any of these values change (the user switches country, the cart updates, an experiment variant is assigned), `useMemo` produces a new config object, `TenderlaneProvider` detects the context change, and routing re-evaluates automatically. Your checkout UI updates without any manual state management.
+When any of these values change (the user switches country, the cart updates, an experiment variant is assigned), `useMemo` produces a new config object, `TenderlaneProvider` detects the context change, and routing re-evaluates automatically. Your checkout UI updates without any manual state management. A new object with the same contents is ignored, so an unstable `experiments` reference does not reset the checkout.
 :::
 
 ## 6. SSR considerations
@@ -340,6 +378,7 @@ services:
     environment:
       - STRIPE_SECRET_KEY=sk_live_...
       - NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_live_...
+      - APP_ORIGIN=https://shop.example.com
 ```
 
 ### Edge runtime

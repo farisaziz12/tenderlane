@@ -1,16 +1,24 @@
 ---
+import { packageVersion } from '../../lib/version';
 import Layout from '../../layouts/Layout.astro';
 import Icon from '../../components/Icons.astro';
+import { getCollection } from 'astro:content';
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 const link = (p: string) => `${base}${p}`;
 
+// Linked only once the page exists, so the landing page never has a dead link.
+const docsEntries = await getCollection('docs');
+const adapterGuideItems = docsEntries.some((entry) => entry.id === 'guides/writing-an-adapter')
+  ? [{ label: 'Writing an adapter', sub: 'add your own PSP', href: link('/docs/guides/writing-an-adapter') }]
+  : [];
+
 const packages = [
-  { l: '@tenderlane/core', v: 'v0.4.0', ok: true },
-  { l: '@tenderlane/client', v: 'v0.4.0', ok: true },
-  { l: '@tenderlane/react', v: 'v0.4.0', ok: true },
-  { l: '@tenderlane/stripe', v: 'v0.4.0', ok: true },
-  { l: '@tenderlane/polar', v: 'v0.4.0', ok: true },
-  { l: '@tenderlane/adyen', v: 'planned', planned: true },
+  { l: '@tenderlane/core', v: `v${packageVersion}`, ok: true },
+  { l: '@tenderlane/client', v: `v${packageVersion}`, ok: true },
+  { l: '@tenderlane/react', v: `v${packageVersion}`, ok: true },
+  { l: '@tenderlane/vue', v: 'unreleased', planned: true },
+  { l: '@tenderlane/stripe', v: `v${packageVersion}`, ok: true },
+  { l: '@tenderlane/polar', v: `v${packageVersion}`, ok: true },
 ];
 
 const paths = [
@@ -45,9 +53,11 @@ const sections = [
       { label: 'Routing', sub: 'first-match-wins', href: link('/docs/concepts/routing') },
       { label: 'Providers', sub: 'adapter contract', href: link('/docs/concepts/providers') },
       { label: 'Catalog', sub: 'provider-agnostic product+pricing', href: link('/docs/concepts/catalog') },
-      { label: 'State machine', sub: 'idle → ready → submitting', href: link('/docs/concepts/state-machine') },
-      { label: 'Middleware', sub: '3 lifecycle hooks', href: link('/docs/concepts/middleware') },
+      { label: 'State machine', sub: 'ready → submitting → outcome', href: link('/docs/concepts/state-machine') },
+      { label: 'Middleware', sub: '8 lifecycle hooks', href: link('/docs/concepts/middleware') },
       { label: 'Type safety', sub: 'phantom-type provider IDs', href: link('/docs/concepts/type-safety') },
+      { label: 'Security model', sub: 'what the server trusts', href: link('/docs/concepts/security-model') },
+      ...adapterGuideItems,
     ],
   },
   {
@@ -57,6 +67,7 @@ const sections = [
       { label: 'Introduction', sub: 'why this exists', href: link('/docs/getting-started/introduction') },
       { label: 'Installation', sub: 'pnpm add @tenderlane/*', href: link('/docs/getting-started/installation') },
       { label: 'Quick start', sub: 'first charge in 5 min', href: link('/docs/getting-started/quick-start') },
+      { label: 'Design principles', sub: 'what the design commits to', href: link('/docs/getting-started/design-principles') },
     ],
   },
   {

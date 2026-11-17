@@ -8,7 +8,8 @@
     "@tenderlane/polar": "0.1.0-alpha.0",
     "@tenderlane/react": "0.1.0-alpha.0",
     "@tenderlane/stripe": "0.1.0-alpha.0",
-    "tenderlane": "0.1.0-alpha.0"
+    "tenderlane": "0.1.0-alpha.0",
+    "@tenderlane/vue": "0.1.0-alpha.1"
   },
   "changesets": [
     "initial-release"

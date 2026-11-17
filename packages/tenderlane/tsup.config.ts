@@ -5,6 +5,7 @@ export default defineConfig({
     index: 'src/index.ts',
     client: 'src/client.ts',
     react: 'src/react.ts',
+    vue: 'src/vue.ts',
     server: 'src/server.ts',
     adapters: 'src/adapters.ts',
     stripe: 'src/stripe.ts',
@@ -23,6 +24,7 @@ export default defineConfig({
   external: [
     'react',
     'react-dom',
+    'vue',
     'stripe',
     '@stripe/stripe-js',
     '@stripe/react-stripe-js',
@@ -30,6 +32,7 @@ export default defineConfig({
     '@tenderlane/core',
     '@tenderlane/client',
     '@tenderlane/react',
+    '@tenderlane/vue',
     '@tenderlane/stripe',
     '@tenderlane/polar',
   ],

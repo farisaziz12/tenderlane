@@ -220,10 +220,11 @@ a {
 }
 
 @media (max-width: 900px) {
-  .nav-links,
-  .nav-search,
-  .nav-icon-link,
-  .nav-cta-secondary {
+  /* `.nav` prefix: these must beat `.btn { display: inline-flex }` below. */
+  .nav .nav-links,
+  .nav .nav-search,
+  .nav .nav-icon-link,
+  .nav .nav-cta-secondary {
     display: none;
   }
   .nav-toggle {
@@ -245,7 +246,7 @@ a {
     padding-top: 14px;
     padding-bottom: 14px;
   }
-  .nav-cta-primary {
+  .nav .nav-cta-primary {
     display: none;
   }
   .nav-right {

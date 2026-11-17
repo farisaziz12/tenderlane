@@ -25,6 +25,10 @@ jobs:
           node-version: 20
           cache: pnpm
 
+      # Before anything from the repository runs: config files are code, and a
+      # payload has been hidden in them before (tools/check-hidden-code.mjs).
+      - run: node tools/check-hidden-code.mjs
+
       - run: pnpm install --frozen-lockfile
 
       # Fails on eval(), unused code and other correctness rules (.oxlintrc.json).

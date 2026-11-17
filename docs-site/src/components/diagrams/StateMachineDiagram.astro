@@ -20,7 +20,7 @@ const halfW = W / 2;
 const halfH = H / 2;
 ---
 
-<figure class="sm-diagram" aria-label="Checkout client state machine. Idle transitions to evaluating, then ready, then preparing, then prepared, then submitting, then success. Any transient state can fall to error.">
+<figure class="sm-diagram" aria-label="Checkout client state machine. Idle transitions to evaluating, then ready, then preparing, then prepared, then submitting, then success. A submit can also end in redirecting (hosted checkout created) or pending (payment not complete yet). Any transient state can fall to error, and a failed submit can be retried. reset() re-evaluates the route.">
   <svg viewBox="0 0 760 340" role="img" preserveAspectRatio="xMidYMid meet">
     <defs>
       <marker id="sm-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
@@ -80,7 +80,7 @@ const halfH = H / 2;
       <text x="560" y="194" text-anchor="middle">submit()</text>
       <text x="490" y="72" text-anchor="middle">resolve</text>
       <text x="280" y="252" text-anchor="middle" class="sm-edge-label-err">any error</text>
-      <text x="280" y="78" text-anchor="middle">→ idle</text>
+      <text x="150" y="222" text-anchor="middle">reset()</text>
     </g>
 
     {/* Nodes */}
@@ -118,7 +118,7 @@ const halfH = H / 2;
     <span class="sm-legend-item"><span class="sm-legend-swatch sm-swatch-transient"></span>transient</span>
     <span class="sm-legend-item"><span class="sm-legend-swatch sm-swatch-success"></span>success</span>
     <span class="sm-legend-item"><span class="sm-legend-swatch sm-swatch-error"></span>error</span>
-    <span class="sm-legend-item sm-legend-meta">happy-path traversal loops · hover to pause</span>
+    <span class="sm-legend-item sm-legend-meta">inline happy path shown · redirect flows end in redirecting, unfinished payments in pending</span>
   </figcaption>
 </figure>
 

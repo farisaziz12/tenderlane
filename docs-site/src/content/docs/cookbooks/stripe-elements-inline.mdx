@@ -26,7 +26,7 @@ A checkout page that:
 
 ## Prerequisites
 
-Same as the [Stripe Checkout Redirect](/cookbooks/stripe-checkout-redirect/) cookbook, plus the Stripe React bindings:
+Same as the [Stripe Checkout Redirect](/docs/cookbooks/stripe-checkout-redirect) cookbook, plus the Stripe React bindings:
 
 ```bash
 pnpm add @tenderlane/core @tenderlane/client @tenderlane/react @tenderlane/stripe
@@ -36,11 +36,20 @@ pnpm add stripe  # server-side
 
 ## 1. Server endpoint
 
-The same server endpoint handles both checkout sessions and payment intents. The Stripe server adapter supports both actions.
+The same server endpoint handles both checkout sessions and payment intents. The Stripe server adapter supports both actions. The PaymentIntent amount is computed on the server from the catalog.
 
 ```ts title="app/api/checkout/route.ts"
+import { createInlineCatalog } from '@tenderlane/core';
 import { createTenderlaneHandler } from '@tenderlane/core/server';
 import { stripeServerAdapter } from '@tenderlane/stripe/server';
+
+const catalog = createInlineCatalog({
+  'premium-widget': {
+    name: 'Premium Widget',
+    description: 'A high-quality widget',
+    pricing: { amount: 2500, currency: 'usd' },
+  },
+});
 
 const handler = createTenderlaneHandler({
   providers: [
@@ -48,6 +57,7 @@ const handler = createTenderlaneHandler({
       secretKey: process.env.STRIPE_SECRET_KEY!,
     }),
   ],
+  catalog,
 });
 
 export const POST = handler.POST;
@@ -100,14 +110,7 @@ const router = createRulesRouter({
 });
 
 const checkoutInput = {
-  lineItems: [
-    {
-      name: 'Premium Widget',
-      description: 'A high-quality widget',
-      quantity: 1,
-      unitAmount: 2500,
-    },
-  ],
+  items: [{ sku: 'premium-widget', quantity: 1 }],
   successUrl: typeof window !== 'undefined'
     ? window.location.origin + '/success'
     : 'http://localhost:3000/success',
@@ -138,17 +141,26 @@ export default function CheckoutPage() {
           input={checkoutInput}
           elements={{ stripe: StripePaymentElement }}
         >
-          {({ status, canSubmit, error, checkoutResult, submit }) => (
+          {({ status, canSubmit, error, checkoutResult, submit, retry }) => (
             <div>
               {error && (
                 <div style={{ color: 'red', marginBottom: '1rem' }}>
                   {error.message}
+                  {/* canSubmit is false after an error only when the payment
+                      form could not be created. Offer to create it again. */}
+                  {!canSubmit && <button onClick={retry}>Try again</button>}
                 </div>
               )}
 
-              {checkoutResult && (
+              {status === 'success' && checkoutResult && (
                 <div style={{ color: 'green', marginBottom: '1rem' }}>
                   Payment succeeded! ID: {checkoutResult.id}
+                </div>
+              )}
+
+              {status === 'pending' && (
+                <div style={{ marginBottom: '1rem' }}>
+                  Payment is processing. We will confirm by email.
                 </div>
               )}
 
@@ -190,9 +202,11 @@ The `TenderlaneCheckoutForm` component handles the inline flow lifecycle automat
 
 2. **Element rendering**: When `prepared`, the form looks up the matching element component from the `elements` map (keyed by provider ID) and renders it with the `clientSecret` from the provider session.
 
-3. **Re-prepare on changes**: If the `input` prop changes (e.g., the user updates their cart), the form automatically creates a new PaymentIntent.
+3. **Re-prepare on changes**: If the `input` prop changes (e.g., the user updates their cart), or a context change dropped the session, the form automatically creates a new PaymentIntent. A parent re-render with an equal `context` object does not.
 
-4. **Children render prop**: Your custom UI receives the current state and a `submit` function. The inline payment element renders above the children automatically.
+4. **Retry**: If creating the PaymentIntent fails, the status is `error` with `canSubmit: false`. The form does not call a failing endpoint in a loop. Call `retry()` from the render prop to create the session again.
+
+5. **Children render prop**: Your custom UI receives `status`, `selectedProvider`, `canSubmit`, `error`, `checkoutResult`, `submit()` and `retry()`. The inline payment element renders above the children automatically.
 
 ```tsx
 <TenderlaneCheckoutForm
@@ -217,17 +231,18 @@ This means pages that use redirect flows (or non-Stripe providers) pay zero bund
 ## State flow for inline payments
 
 ```
-ready ──▶ preparing ──▶ prepared ──▶ submitting ──▶ success
-                                                      │
-             (auto)         (render          (user      ▼
-           prepare()     PaymentElement)   clicks Pay)  error
+ready ──▶ preparing ──▶ prepared ──▶ submitting ──▶ success | pending
+                            ▲             │
+                            └── error ◀───┘   (submit again)
 ```
 
-1. **ready** — Route evaluated, `flow: 'payment-intent'` selected
-2. **preparing** — `TenderlaneCheckoutForm` auto-calls `client.prepare(input)`, which sends `POST /api/checkout` with `action: 'create-payment-intent'`
-3. **prepared** — Server returns the `clientSecret`, `StripePaymentElement` renders the card form
-4. **submitting** — User fills the form and clicks Pay, `stripe.confirmPayment()` is called
-5. **success** or **error** — Payment confirmed inline (no redirect needed for simple card payments)
+1. **ready**: route evaluated, `flow: 'payment-intent'` selected
+2. **preparing**: `TenderlaneCheckoutForm` auto-calls `client.prepare(input)`, which sends `POST /api/checkout` with `action: 'create-payment-intent'`
+3. **prepared**: the server returns the `clientSecret`, and `StripePaymentElement` renders the payment form
+4. **submitting**: the user fills the form and clicks Pay, and `stripe.confirmPayment()` is called
+5. **success**: Stripe reported the PaymentIntent `succeeded`. **pending**: Stripe accepted it but it is not complete yet (still processing, for example). **error**: the confirmation failed, for example a declined card. The route and session are kept, `canSubmit` is `true` again, and the customer can fix the details and pay again without a reload.
+
+`success` here is what Stripe.js told the browser. Fulfil orders from the `payment_intent.succeeded` webhook on your server. Tenderlane does not ship webhook helpers yet.
 
 ## Test with Stripe test cards
 
@@ -235,7 +250,7 @@ ready ──▶ preparing ──▶ prepared ──▶ submitting ──▶ succ
 |-------------|--------|
 | `4242 4242 4242 4242` | Successful payment (no redirect) |
 | `4000 0025 0000 3155` | Requires authentication (shows 3D Secure modal) |
-| `4000 0000 0000 0002` | Card declined |
+| `4000 0000 0000 0002` | Card declined (status `error`, then retry with another card) |
 
 :::tip
 With inline Elements, successful test card payments complete without any page navigation. The `checkoutResult` is populated directly in the component state, and you can show a success message inline.

@@ -5,7 +5,7 @@ sidebar:
   order: 4
 ---
 
-Middleware lets you hook into every stage of the checkout lifecycle: context changes, route evaluations, session creation, checkout start, success, and errors. Use middleware for analytics, logging, error tracking, experiment exposure, or any side effect that should happen alongside the payment flow.
+Middleware lets you hook into every stage of the checkout lifecycle: context changes, route evaluations, catalog resolution, session creation, checkout start, completion, pending outcomes, and errors. Use middleware for analytics, logging, error tracking, experiment exposure, or any side effect that should happen alongside the payment flow.
 
 ## Defining middleware
 
@@ -26,11 +26,15 @@ const loggingMiddleware: TenderlaneMiddleware = {
   },
 
   onCheckoutStart({ context, route, input }) {
-    console.log('Checkout starting', { provider: route.provider, items: input.lineItems.length });
+    console.log('Checkout starting', { provider: route.provider, items: input.items?.length ?? 0 });
+  },
+
+  onCheckoutPending({ context, route, result }) {
+    console.log('Checkout handed to the provider', { provider: result.provider, sessionId: result.id });
   },
 
   onCheckoutSuccess({ context, route, result }) {
-    console.log('Checkout succeeded', { provider: result.provider, sessionId: result.id });
+    console.log('Payment complete', { provider: result.provider, sessionId: result.id });
   },
 
   onCheckoutError({ context, route, error }) {
@@ -38,6 +42,8 @@ const loggingMiddleware: TenderlaneMiddleware = {
   },
 };
 ```
+
+All hooks are optional. The full set is `onContextChange`, `onRouteEvaluated`, `onCatalogResolved`, `onSessionCreated`, `onCheckoutStart`, `onCheckoutSuccess`, `onCheckoutPending` and `onCheckoutError`. `onCatalogResolved` runs on the server; the rest run in the client.
 
 ## Registering middleware
 
@@ -86,7 +92,7 @@ onContextChange({ previousContext, nextContext }) {
 }
 ```
 
-**When it fires:** After `updateContext()` updates the internal state, before the router re-evaluates.
+**When it fires:** After `updateContext()` updates the internal state, before the router re-evaluates. It does not fire when the new context is structurally equal to the current one.
 
 ### `onRouteEvaluated`
 
@@ -124,17 +130,15 @@ onSessionCreated({ context, route, session }) {
 
 ### `onCheckoutStart`
 
-Fired when `client.submit()` is called, before the provider processes the payment. This is the right place to fire an "add to cart" or "begin checkout" analytics event.
+Fired when `client.submit()` is called, before the provider processes the payment. This is the right place to fire a "begin checkout" analytics event. The input carries SKUs and quantities, not amounts. For a display total use what you put in the context (`context.amount`), and for the charged total use `onCatalogResolved` on the server.
 
 ```ts
 onCheckoutStart({ context, route, input }) {
   analytics.track('checkout_started', {
     provider: route.provider,
     flow: route.flow,
-    itemCount: input.lineItems.length,
-    totalAmount: input.lineItems.reduce(
-      (sum, item) => sum + item.unitAmount * item.quantity, 0
-    ),
+    skus: input.items?.map((item) => item.sku),
+    displayAmount: context.amount,
   });
 }
 ```
@@ -143,7 +147,7 @@ onCheckoutStart({ context, route, input }) {
 
 ### `onCheckoutSuccess`
 
-Fired after the provider's `submit()` returns successfully. For redirect flows, this may fire just before the browser redirects to the provider's hosted page.
+Fired only when the provider reported the payment complete (`result.status === 'complete'`). In practice that is an inline payment confirmed on the page. It does **not** fire when a hosted checkout is created: that is `onCheckoutPending`.
 
 ```ts
 onCheckoutSuccess({ context, route, result }) {
@@ -156,6 +160,50 @@ onCheckoutSuccess({ context, route, result }) {
 ```
 
 **When it fires:** After the client enters `success` state.
+
+### `onCheckoutPending`
+
+Fired when the provider accepted the submission but the payment is not complete: a hosted checkout was created and the browser is about to redirect, or an inline payment is processing or waiting on the customer. This is not a conversion. Confirm the outcome on your server.
+
+```ts
+onCheckoutPending({ context, route, result }) {
+  analytics.track('checkout_handed_off', {
+    provider: result.provider,
+    sessionId: result.id,
+    redirecting: Boolean(result.url),
+  });
+}
+```
+
+**When it fires:** After the client enters `redirecting` (the result has a `url`) or `pending` (it does not).
+
+:::caution
+For redirect flows the browser navigates away right after this hook starts. An async call made here may not finish. Use `navigator.sendBeacon` or track the conversion from your server.
+:::
+
+### `onCatalogResolved` (server)
+
+Fired by the server handler after the catalog resolves `items` and before the provider adapter runs. Register it on `createTenderlaneHandler`, not on the client. The resolved items are the ones the PSP session is created from. The hook is read-only.
+
+```ts
+import { createTenderlaneHandler } from '@tenderlane/core/server';
+
+const handler = createTenderlaneHandler({
+  providers: [/* ... */],
+  catalog,
+  middleware: [
+    {
+      name: 'audit',
+      onCatalogResolved({ context, resolved }) {
+        const total = resolved.reduce(
+          (sum, item) => sum + item.unitAmount * item.quantity, 0
+        );
+        auditLog.write({ total, currency: resolved[0]?.currency, country: context.country });
+      },
+    },
+  ],
+});
+```
 
 ### `onCheckoutError`
 
@@ -185,9 +233,9 @@ Middleware hooks execute **sequentially** in the order they appear in the middle
 ```ts
 middleware: [first, second, third]
 // For each hook event:
-// 1. first.onRouteEvaluated()  — awaited
-// 2. second.onRouteEvaluated() — awaited
-// 3. third.onRouteEvaluated()  — awaited
+// 1. first.onRouteEvaluated()  (awaited)
+// 2. second.onRouteEvaluated() (awaited)
+// 3. third.onRouteEvaluated()  (awaited)
 ```
 
 ## Error handling
@@ -246,11 +294,15 @@ const observabilityMiddleware: TenderlaneMiddleware = {
   },
 
   onCheckoutStart({ input }) {
-    console.debug(`[tenderlane] Checkout starting with ${input.lineItems.length} items`);
+    console.debug(`[tenderlane] Checkout starting with ${input.items?.length ?? 0} items`);
+  },
+
+  onCheckoutPending({ result }) {
+    console.debug(`[tenderlane] Checkout handed to provider: ${result.id}`);
   },
 
   onCheckoutSuccess({ result }) {
-    console.debug(`[tenderlane] Checkout success: ${result.id}`);
+    console.debug(`[tenderlane] Payment complete: ${result.id}`);
     analytics.track('payment_completed', { sessionId: result.id });
   },
 
@@ -281,4 +333,4 @@ const experimentMiddleware: TenderlaneMiddleware = {
 };
 ```
 
-See the [Middleware Analytics](/cookbooks/middleware-analytics/) cookbook for more detailed examples.
+See the [Middleware Analytics](/docs/cookbooks/middleware-analytics) cookbook for more detailed examples.

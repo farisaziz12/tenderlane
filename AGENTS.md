@@ -11,6 +11,7 @@ Tenderlane follows a TanStack-inspired layered architecture:
     +--- @tenderlane/client   (headless checkout state machine)
     |        |
     |        +--- @tenderlane/react  (thin React bindings via useSyncExternalStore)
+    |        +--- @tenderlane/vue    (thin Vue plugin + composables; redirect flows only so far)
     |
     +--- @tenderlane/stripe   (browser provider + server adapter)
     |
@@ -87,7 +88,9 @@ The server handler accepts `catalogs: Record<ProviderId, Catalog>` for per-provi
 
 Implemented: rules router, auto router interface, headless client, React hooks, Stripe Checkout redirect flow, Stripe PaymentIntent + Payment Element inline flow, Polar redirect flow, catalogs, middleware lifecycle, typed errors, type inference.
 
-Not implemented: other PSPs (Adyen/Revolut/Braintree/PayPal), Vue/Solid/Svelte bindings, webhooks, subscriptions, refunds, failover, ML routing, devtools.
+Vue bindings exist for redirect flows (no inline payment element component).
+
+Not implemented: other PSPs (Adyen/Revolut/Braintree/PayPal), Solid/Svelte/Angular bindings, webhooks, subscriptions, refunds, failover, ML routing, devtools.
 
 ## In Design / Future Work
 
@@ -111,5 +114,7 @@ Every change goes through the same loop, whoever writes it.
 4. **Open a slim PR.** Use `.github/pull_request_template.md` (`open-pr` skill). Under 100 visible words; everything else goes in the collapsed block. `pr-rules` in CI enforces this.
 
 Skills live in `.claude/skills/`: `payment-review`, `open-pr`, `visual-evidence`.
+
+Config files are code. `pnpm test:hidden-code` (first step of `pnpm check` and of CI) fails on a source line too long to have been written by hand; main was once force-pushed with a payload hidden after thousands of spaces in `next.config.ts` and `astro.config.mjs`. Read the whole line before trusting a config diff.
 
 Never: put a PSP SDK import in `@tenderlane/core` or a browser entry, send or trust an amount from the client, skip or weaken a test to get green, or add a default or privileged provider to core types.

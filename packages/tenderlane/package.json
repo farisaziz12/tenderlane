@@ -44,6 +44,10 @@
     "./adapters": {
       "types": "./dist/adapters.d.ts",
       "import": "./dist/adapters.js"
+    },
+    "./vue": {
+      "types": "./dist/vue.d.ts",
+      "import": "./dist/vue.js"
     }
   },
   "main": "./dist/index.js",
@@ -75,14 +79,16 @@
     "@tenderlane/core": "workspace:*",
     "@tenderlane/polar": "workspace:*",
     "@tenderlane/react": "workspace:*",
-    "@tenderlane/stripe": "workspace:*"
+    "@tenderlane/stripe": "workspace:*",
+    "@tenderlane/vue": "workspace:*"
   },
   "peerDependencies": {
     "@polar-sh/sdk": ">=0.30.0",
     "@stripe/react-stripe-js": ">=2.0.0",
     "@stripe/stripe-js": ">=2.0.0",
     "react": ">=18.0.0",
-    "stripe": ">=14.0.0"
+    "stripe": ">=14.0.0",
+    "vue": ">=3.3.0"
   },
   "peerDependenciesMeta": {
     "react": {
@@ -98,6 +104,9 @@
       "optional": true
     },
     "@polar-sh/sdk": {
+      "optional": true
+    },
+    "vue": {
       "optional": true
     }
   },
