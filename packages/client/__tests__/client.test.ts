@@ -1,11 +1,10 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { createTenderlaneClient } from '../src/client.js';
 import type { TenderlaneClientConfig } from '../src/types.js';
 import type {
   BrowserPaymentProvider,
   ProviderCapabilities,
   Router,
-  TenderlaneContext,
   PaymentMethodDescriptor,
   CheckoutInput,
   SelectedPaymentRoute,

@@ -253,3 +253,74 @@ describe('request validation', () => {
     expect(onError).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('server-side routing', () => {
+  const routing = {
+    evaluate: (context: Record<string, unknown>) => ({
+      provider: context.country === 'CH' ? 'stripe' : 'polar',
+      flow: 'checkout-session' as const,
+      paymentMethods: ['card'],
+      source: 'rule' as const,
+    }),
+  };
+
+  function makeHandler() {
+    const stripe = captureAdapter('stripe');
+    const polar = captureAdapter('polar');
+    const cheap = createInlineCatalog({
+      pro: { name: 'Pro', pricing: { amount: 100, currency: 'usd' } },
+    });
+    const handler = createTenderlaneHandler({
+      providers: [stripe.adapter, polar.adapter],
+      catalogs: { stripe: catalog, polar: cheap },
+      routing,
+      resolveContext: () => ({ country: 'CH' }),
+    });
+    return { handler, stripe, polar };
+  }
+
+  it('rejects a provider the route does not select, so the cheaper catalog cannot be picked', async () => {
+    const { handler, polar } = makeHandler();
+
+    const response = await handler.POST(
+      post(checkout({ items: [{ sku: 'pro', quantity: 1 }] }, 'polar')),
+    );
+
+    expect(response.status).toBe(400);
+    expect(polar.handle).not.toHaveBeenCalled();
+  });
+
+  it('takes payment methods from the route, not from the body', async () => {
+    const { handler, stripe } = makeHandler();
+
+    const response = await handler.POST(
+      post({
+        ...checkout({ items: [{ sku: 'pro', quantity: 1 }] }, 'stripe'),
+        paymentMethods: ['klarna', 'twint'],
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(stripe.handle.mock.calls[0]![2]).toEqual({ paymentMethods: ['card'] });
+  });
+});
+
+describe('pass-through field validation', () => {
+  it.each([
+    ['metadata with a non-string value', { metadata: { userId: 42 } }],
+    ['metadata that is not an object', { metadata: 'x' }],
+    ['a missing successUrl', { successUrl: undefined }],
+    ['a non-string customerEmail', { customerEmail: { $ne: '' } }],
+    ['a non-string idempotencyKey', { idempotencyKey: 7 }],
+  ])('answers 400 for %s', async (_label, fields) => {
+    const { adapter, handle } = captureAdapter();
+    const handler = createTenderlaneHandler({ providers: [adapter], catalog });
+
+    const response = await handler.POST(
+      post(checkout({ items: [{ sku: 'pro', quantity: 1 }], ...fields })),
+    );
+
+    expect(response.status).toBe(400);
+    expect(handle).not.toHaveBeenCalled();
+  });
+});

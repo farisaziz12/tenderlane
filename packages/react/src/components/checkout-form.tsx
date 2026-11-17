@@ -28,6 +28,11 @@ export interface CheckoutFormRenderState {
   readonly error: TenderlaneClientState['error'];
   readonly checkoutResult: TenderlaneClientState['checkoutResult'];
   submit(): void;
+  /**
+   * Create the provider session again after it failed (status `error` with
+   * `canSubmit: false` on an inline flow). Does nothing when a session exists.
+   */
+  retry(): void;
 }
 
 export interface TenderlaneCheckoutFormProps {
@@ -102,7 +107,11 @@ export function TenderlaneCheckoutForm({
       return;
     }
 
-    if (status !== 'ready' && status !== 'prepared') {
+    // After a failed prepare the status is `error`. Prepare again only for a
+    // new route or input; the same key is retried by the user, through
+    // `retry()`, so a failing endpoint is not called in a loop.
+    const isRetryableError = status === 'error' && prepareKey !== lastPrepareKey.current;
+    if (status !== 'ready' && status !== 'prepared' && !isRetryableError) {
       return;
     }
 
@@ -117,7 +126,11 @@ export function TenderlaneCheckoutForm({
         return;
       }
 
-      if (snapshot.status !== 'ready' && snapshot.status !== 'prepared') {
+      if (
+        snapshot.status !== 'ready' &&
+        snapshot.status !== 'prepared' &&
+        !(snapshot.status === 'error' && snapshot.route !== null)
+      ) {
         // Route is still evaluating — the subscription will trigger a
         // re-render and this effect will run again when status settles
         return;
@@ -149,6 +162,13 @@ export function TenderlaneCheckoutForm({
     });
   }, [client]);
 
+  const handleRetry = useCallback(() => {
+    if (client.getSnapshot().providerSession !== null) return;
+    client.prepare(inputRef.current).catch(() => {
+      // Error is captured in client state
+    });
+  }, [client]);
+
   // Resolve the element component for the current provider
   const ElementComponent =
     isInlineFlow && selectedProvider && elements
@@ -167,6 +187,7 @@ export function TenderlaneCheckoutForm({
     error: checkout.error,
     checkoutResult: checkout.checkoutResult,
     submit: handleSubmit,
+    retry: handleRetry,
   };
 
   return (

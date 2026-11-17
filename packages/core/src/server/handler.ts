@@ -3,6 +3,7 @@ import type { CheckoutInput, ResolvedCheckoutInput } from '../types/checkout.js'
 import type { Catalog, ResolvedCatalogItem } from '../types/catalog.js';
 import type { TenderlaneContext } from '../types/context.js';
 import type { TenderlaneMiddleware } from '../types/middleware.js';
+import type { Router } from '../types/routing.js';
 import { resolveCatalogItems, wrapLegacyLineItems } from '../catalog/runner.js';
 import { runMiddlewareHook } from '../middleware/runner.js';
 import { CatalogError, TenderlaneError, ValidationError } from '../errors/errors.js';
@@ -32,6 +33,15 @@ interface ServerHandlerConfig {
   readonly catalogs?: Readonly<Record<string, Catalog>>;
   /** Middleware invoked at lifecycle points (currently `onCatalogResolved`). */
   readonly middleware?: readonly TenderlaneMiddleware[];
+  /**
+   * The same router the browser uses. When set, the server evaluates it
+   * against the resolved context and rejects a request whose `provider` is
+   * not the one the route selects, and it takes the allowed payment methods
+   * from the route instead of the request body. Without it, the browser
+   * decides which registered provider (and so which catalog) handles the
+   * checkout.
+   */
+  readonly routing?: Router;
   /**
    * Derive the context used for pricing on the server. The context in the
    * request body comes from the browser and can be forged, so a catalog whose
@@ -195,6 +205,33 @@ function validateItems(
   }
 }
 
+const OPTIONAL_STRING_FIELDS = [
+  'cancelUrl',
+  'customerEmail',
+  'clientReferenceId',
+  'idempotencyKey',
+] as const;
+
+/** Types of the pass-through fields, so a bad one is a 400 and not a PSP 500. */
+function validatePayloadFields(payload: Record<string, unknown>): void {
+  if (typeof payload.successUrl !== 'string' || payload.successUrl.length === 0) {
+    throw new ValidationError('`successUrl` must be a non-empty string.', { field: 'successUrl' });
+  }
+  for (const field of OPTIONAL_STRING_FIELDS) {
+    if (payload[field] !== undefined && typeof payload[field] !== 'string') {
+      throw new ValidationError(`\`${field}\` must be a string.`, { field });
+    }
+  }
+  if (payload.metadata !== undefined) {
+    const metadata = payload.metadata;
+    if (!isRecord(metadata) || Object.values(metadata).some((value) => typeof value !== 'string')) {
+      throw new ValidationError('`metadata` must be an object of string values.', {
+        field: 'metadata',
+      });
+    }
+  }
+}
+
 function validateRedirectUrl(
   value: unknown,
   field: string,
@@ -319,11 +356,24 @@ export function createTenderlaneHandler(config: ServerHandlerConfig) {
       }
 
       const payload = body.payload;
+      validatePayloadFields(payload);
       if (payload.items !== undefined) validateItems(payload.items, limits);
       validateRedirectUrl(payload.successUrl, 'successUrl', config.allowedRedirectOrigins);
       validateRedirectUrl(payload.cancelUrl, 'cancelUrl', config.allowedRedirectOrigins);
 
       const context = await resolveServerContext(request, payload.context);
+
+      // The browser names the provider; with a server router it has to be the
+      // one the route selects for the context the server believes.
+      const serverRoute = config.routing
+        ? await config.routing.evaluate(context as unknown as Record<string, unknown>)
+        : undefined;
+      if (serverRoute && serverRoute.provider !== body.provider) {
+        throw new ValidationError(
+          `Provider "${body.provider}" is not the route selected for this context.`,
+          { field: 'provider' },
+        );
+      }
 
       const resolved = await resolvePayloadItems(
         payload,
@@ -350,9 +400,11 @@ export function createTenderlaneHandler(config: ServerHandlerConfig) {
         ...(serverProviderOptions ? { providerOptions: serverProviderOptions } : {}),
       };
 
-      const paymentMethods = Array.isArray(body.paymentMethods)
-        ? body.paymentMethods.filter((method): method is string => typeof method === 'string')
-        : undefined;
+      const paymentMethods = serverRoute
+        ? serverRoute.paymentMethods
+        : Array.isArray(body.paymentMethods)
+          ? body.paymentMethods.filter((method): method is string => typeof method === 'string')
+          : undefined;
       const options = paymentMethods ? { paymentMethods } : undefined;
 
       const result = await adapter.handle(body.action, adapterPayload, options);

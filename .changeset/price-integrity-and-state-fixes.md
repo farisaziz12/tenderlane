@@ -17,6 +17,8 @@ Close price-integrity gaps and fix the checkout state machine.
 - `items[]` is validated: `sku` must be a non-empty string and `quantity` an integer from 1 to `maxQuantity` (default 10 000), with at most `maxItems` entries (default 100). Inherited property names such as `constructor` are no longer treated as SKUs.
 - Malformed JSON and non-object bodies return 400. 5xx responses carry a generic message and a `code`; the detail goes to the new `onError` hook.
 - New `allowedRedirectOrigins` option restricts `successUrl` and `cancelUrl`.
+- New `routing` option: the server evaluates the same router and rejects a request whose `provider` is not the selected route, and takes payment methods from the route instead of the body.
+- `successUrl`, `metadata` and the other pass-through fields are type-checked (400 instead of a PSP 500).
 
 **Client (`@tenderlane/client`)**
 
@@ -25,16 +27,21 @@ Close price-integrity gaps and fix the checkout state machine.
 - New statuses `redirecting` and `pending`. `success` and `onCheckoutSuccess` now mean the provider reported the payment complete; a created hosted checkout fires the new `onCheckoutPending` hook instead.
 - `updateContext()` ignores a structurally equal context, keeps the selected payment method when the new route still offers it, and discards a session that resolves after the context changed.
 - `reset()` re-evaluates the route, leaving the client `ready` instead of stranded in `idle`.
+- A context change or `reset()` during a submit is applied after the submit settles, so it cannot overwrite a completed payment or unmount an inline payment element mid-confirmation.
+- `prepare()` drops the previous provider session, so a failed re-prepare cannot leave an outdated session payable. A failed prepare can be retried.
+- `submit()` on an inline flow without a provider session throws `INVALID_STATE`. A `failed` or `expired` result is an error. `canSubmit` is false while evaluating and preparing.
 
 **React (`@tenderlane/react`)**
 
 - `TenderlaneCheckoutForm` creates the provider session under React StrictMode, and prepares again after a context change dropped the session.
 - A parent re-render with an equal `context` object no longer wipes the session and the selected payment method.
+- The render prop gets `retry()` to create the session again after a failed prepare; the form does not retry a failing endpoint on its own.
 - Returning from a hosted checkout through the back/forward cache resets a client left in `redirecting`.
 
 **Stripe (`@tenderlane/stripe`)**
 
 - `stripeServerAdapter` honours `apiVersion`.
+- A failed price lookup in `createStripeCatalog` (and product lookup in `createPolarCatalog`) is a `ProviderError` (5xx, generic body) instead of a 400 that echoed the price id.
 - A PaymentIntent for a cart with mixed currencies is rejected instead of being charged in the first item's currency.
 
 **Polar (`@tenderlane/polar`)**

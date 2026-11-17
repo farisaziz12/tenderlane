@@ -3,6 +3,7 @@
   "version": "0.1.0-alpha.1",
   "description": "Headless checkout client with reactive state machine for Tenderlane",
   "type": "module",
+  "sideEffects": false,
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",

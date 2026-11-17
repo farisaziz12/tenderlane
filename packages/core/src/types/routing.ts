@@ -1,4 +1,4 @@
-import type { PaymentFlow, PaymentMethodId, KnownPaymentMethodId, ProviderId, KnownProviderId, CountryCode, KnownCountryCode, CurrencyCode, KnownCurrencyCode, Locale, KnownLocale } from './capabilities.js';
+import type { PaymentFlow, PaymentMethodId, KnownPaymentMethodId, ProviderId, KnownProviderId, KnownCountryCode, KnownCurrencyCode, KnownLocale } from './capabilities.js';
 
 /**
  * Condition for matching string-valued context fields in a routing rule.

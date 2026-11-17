@@ -3,6 +3,7 @@
   "version": "0.1.0-alpha.1",
   "description": "Reactive payment orchestration for modern web apps",
   "type": "module",
+  "sideEffects": false,
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -66,18 +67,18 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@tenderlane/core": "workspace:*",
     "@tenderlane/client": "workspace:*",
+    "@tenderlane/core": "workspace:*",
+    "@tenderlane/polar": "workspace:*",
     "@tenderlane/react": "workspace:*",
-    "@tenderlane/stripe": "workspace:*",
-    "@tenderlane/polar": "workspace:*"
+    "@tenderlane/stripe": "workspace:*"
   },
   "peerDependencies": {
-    "react": ">=18.0.0",
-    "stripe": ">=14.0.0",
-    "@stripe/stripe-js": ">=2.0.0",
+    "@polar-sh/sdk": ">=0.30.0",
     "@stripe/react-stripe-js": ">=2.0.0",
-    "@polar-sh/sdk": ">=0.30.0"
+    "@stripe/stripe-js": ">=2.0.0",
+    "react": ">=18.0.0",
+    "stripe": ">=14.0.0"
   },
   "peerDependenciesMeta": {
     "react": {

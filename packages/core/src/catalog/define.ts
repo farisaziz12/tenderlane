@@ -6,7 +6,7 @@ import type {
 } from '../types/catalog.js';
 import type { MaybePromise, TenderlaneContext } from '../types/context.js';
 
-export interface DefineCatalogConfig<TSku extends string = string> {
+export interface DefineCatalogConfig<_TSku extends string = string> {
   resolve(
     items: readonly CatalogRequest[],
     context: TenderlaneContext,

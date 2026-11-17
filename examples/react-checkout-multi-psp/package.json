@@ -9,12 +9,12 @@
     "start": "next start"
   },
   "dependencies": {
-    "tenderlane": "workspace:*",
+    "@polar-sh/sdk": "^0.34.0",
     "next": "^15.3.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "stripe": "^17.0.0",
-    "@polar-sh/sdk": "^0.34.0"
+    "tenderlane": "workspace:*"
   },
   "devDependencies": {
     "@types/react": "^19.1.0",

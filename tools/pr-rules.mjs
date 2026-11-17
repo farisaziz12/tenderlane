@@ -50,7 +50,7 @@ export function checkPullRequest({ body, files, title, author }) {
   const text = body ?? '';
 
   // Release and dependency bots write their own descriptions.
-  if (author && /\[bot\]$/.test(author)) return { errors, warnings };
+  if (author?.endsWith('[bot]')) return { errors, warnings };
 
   for (const heading of REQUIRED_SECTIONS) {
     const content = section(text, heading);

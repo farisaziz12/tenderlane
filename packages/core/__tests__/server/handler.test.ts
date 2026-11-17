@@ -1,12 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { createTenderlaneHandler } from '../../src/server/handler.js';
-import type { ServerProviderAdapter, CheckoutInput, CheckoutResult } from '../../src/index.js';
+import type { ServerProviderAdapter, CheckoutResult } from '../../src/index.js';
 
 function createMockProvider(): ServerProviderAdapter<'mock'> {
   return {
     id: 'mock' as const,
     actions: ['checkout'] as const,
-    async handle(action: string, payload: CheckoutInput): Promise<CheckoutResult> {
+    async handle(): Promise<CheckoutResult> {
       return {
         provider: 'mock',
         id: 'session_123',

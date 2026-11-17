@@ -143,3 +143,84 @@ describe('TenderlaneProvider context sync', () => {
     expect(createSession).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('TenderlaneCheckoutForm after a failed prepare', () => {
+  it('does not loop on a failing endpoint, and retry() prepares again', async () => {
+    const { provider } = createProvider();
+    const createSession = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('503'))
+      .mockResolvedValueOnce({ flow: 'payment-intent', clientSecret: 'secret_ok' });
+    provider.createSession = createSession;
+    let retry!: () => void;
+
+    render(
+      <TenderlaneProvider config={{ context: { country: 'CH' }, providers: [provider], routing }}>
+        <TenderlaneCheckoutForm input={input} elements={{ mock: Element }}>
+          {(state) => {
+            retry = state.retry;
+            return <p data-testid="status">{state.status}</p>;
+          }}
+        </TenderlaneCheckoutForm>
+      </TenderlaneProvider>,
+    );
+    await settle();
+    await settle();
+
+    expect(createSession).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId('status').textContent).toBe('error');
+
+    act(() => retry());
+    await settle();
+
+    expect(createSession).toHaveBeenCalledTimes(2);
+    expect(screen.getByTestId('element').textContent).toBe('secret_ok');
+  });
+});
+
+describe('TenderlaneProvider back/forward cache', () => {
+  it('resets a client left in redirecting when the page is restored', async () => {
+    const { provider } = createProvider();
+    provider.createSession = undefined;
+    provider.submit = vi.fn(async () => ({
+      provider: 'mock',
+      id: 'cs_1',
+      status: 'open' as const,
+      url: 'https://checkout.example/cs_1',
+    }));
+    let checkout!: ReturnType<typeof useTenderlaneCheckout>;
+    function Child() {
+      checkout = useTenderlaneCheckout();
+      return null;
+    }
+    const redirectRouting: Router = {
+      evaluate: () => ({
+        provider: 'mock',
+        flow: 'checkout-session',
+        paymentMethods: [],
+        source: 'rule',
+      }),
+    };
+
+    render(
+      <TenderlaneProvider
+        config={{ context: { country: 'CH' }, providers: [provider], routing: redirectRouting }}
+      >
+        <Child />
+      </TenderlaneProvider>,
+    );
+    await act(async () => {
+      await checkout.submit(input);
+    });
+    expect(checkout.status).toBe('redirecting');
+
+    act(() => {
+      const event = new Event('pageshow');
+      Object.defineProperty(event, 'persisted', { value: true });
+      window.dispatchEvent(event);
+    });
+
+    expect(checkout.status).toBe('ready');
+    expect(checkout.canSubmit).toBe(true);
+  });
+});

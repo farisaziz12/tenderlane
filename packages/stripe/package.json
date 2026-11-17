@@ -3,6 +3,7 @@
   "version": "0.1.0-alpha.1",
   "description": "Stripe provider adapter for Tenderlane payment orchestration",
   "type": "module",
+  "sideEffects": false,
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -52,10 +53,10 @@
     "@tenderlane/core": "workspace:*"
   },
   "peerDependencies": {
-    "stripe": ">=14.0.0",
-    "@stripe/stripe-js": ">=2.0.0",
     "@stripe/react-stripe-js": ">=2.0.0",
-    "react": ">=18.0.0"
+    "@stripe/stripe-js": ">=2.0.0",
+    "react": ">=18.0.0",
+    "stripe": ">=14.0.0"
   },
   "peerDependenciesMeta": {
     "stripe": {
@@ -72,10 +73,10 @@
     }
   },
   "devDependencies": {
-    "@stripe/stripe-js": "^4.0.0",
     "@stripe/react-stripe-js": "^2.0.0",
-    "@types/react": "^18.3.0",
-    "react": "^18.3.0",
+    "@stripe/stripe-js": "^4.0.0",
+    "@types/react": "^19.1.0",
+    "react": "^19.1.0",
     "stripe": "^17.0.0",
     "tsup": "^8.3.0",
     "typescript": "^5.7.0",

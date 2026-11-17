@@ -11,7 +11,7 @@
     "build": "turbo run build",
     "test": "turbo run test",
     "typecheck": "turbo run typecheck",
-    "lint": "turbo run lint",
+    "lint": "oxlint --deny-warnings",
     "clean": "turbo run clean",
     "dev": "turbo run dev",
     "docs": "cd docs-site && pnpm build",
@@ -19,12 +19,19 @@
     "docs:serve": "cd docs-site && pnpm preview",
     "changeset": "changeset",
     "version-packages": "changeset version",
-    "release": "pnpm build && changeset publish"
+    "release": "pnpm build && changeset publish",
+    "lint:fix": "oxlint --fix",
+    "test:build": "pnpm -r --filter './packages/*' exec publint --strict",
+    "test:workspace": "sherif",
+    "check": "pnpm lint && pnpm test:workspace && pnpm build && pnpm typecheck && pnpm test && pnpm test:build"
   },
   "devDependencies": {
     "@changesets/changelog-github": "^0.7.0",
     "@changesets/cli": "^2.31.0",
+    "oxlint": "^1.94.0",
     "playwright": "^1.65.1",
+    "publint": "^0.3.25",
+    "sherif": "^1.13.0",
     "turbo": "^2.3.0",
     "typedoc": "^0.28.0",
     "typescript": "^5.7.0"

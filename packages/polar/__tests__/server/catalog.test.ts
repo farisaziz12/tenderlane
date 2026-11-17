@@ -120,7 +120,7 @@ describe('createPolarCatalog', () => {
     ).rejects.toBeInstanceOf(CatalogError);
   });
 
-  it('wraps Polar lookup failures in CatalogError', async () => {
+  it('reports a Polar lookup failure as a provider fault, not a client error', async () => {
     const client = {
       products: {
         get: vi.fn(async () => {
@@ -138,6 +138,6 @@ describe('createPolarCatalog', () => {
 
     await expect(
       catalog.resolve([{ sku: 'pro-plan', quantity: 1 }], {}),
-    ).rejects.toBeInstanceOf(CatalogError);
+    ).rejects.toMatchObject({ code: 'PROVIDER_ERROR' });
   });
 });

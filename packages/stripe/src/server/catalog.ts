@@ -4,7 +4,7 @@ import type {
   CatalogPhantomTypes,
   ResolvedCatalogItem,
 } from '@tenderlane/core';
-import { CatalogError } from '@tenderlane/core';
+import { CatalogError, ProviderError } from '@tenderlane/core';
 
 /**
  * Per-SKU declaration for the Stripe catalog. Today we accept a pre-created
@@ -90,9 +90,12 @@ export function createStripeCatalog<TSku extends string>(
             expand: ['product'],
           });
         } catch (error) {
-          throw new CatalogError(
+          // An outage or a misconfigured price id is the server's fault: a 5xx
+          // with a generic body, reported through the handler's `onError`.
+          throw new ProviderError(
             `Stripe price lookup failed for SKU '${item.sku}' (priceId=${skuConfig.priceId})`,
-            { sku: item.sku, provider: 'stripe', cause: error },
+            'stripe',
+            { cause: error },
           );
         }
 

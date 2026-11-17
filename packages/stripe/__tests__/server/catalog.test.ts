@@ -88,7 +88,7 @@ describe('createStripeCatalog', () => {
     expect(client.prices.retrieve).not.toHaveBeenCalled();
   });
 
-  it('wraps Stripe lookup failures in CatalogError', async () => {
+  it('reports a Stripe lookup failure as a provider fault, not a client error', async () => {
     const client = {
       prices: {
         retrieve: vi.fn(async () => {
@@ -105,7 +105,7 @@ describe('createStripeCatalog', () => {
 
     await expect(
       catalog.resolve([{ sku: 'pro-plan', quantity: 1 }], {}),
-    ).rejects.toBeInstanceOf(CatalogError);
+    ).rejects.toMatchObject({ code: 'PROVIDER_ERROR' });
   });
 
   it('rejects tiered/custom prices (no unit_amount)', async () => {

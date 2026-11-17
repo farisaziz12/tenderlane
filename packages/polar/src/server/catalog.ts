@@ -4,7 +4,7 @@ import type {
   CatalogPhantomTypes,
   ResolvedCatalogItem,
 } from '@tenderlane/core';
-import { CatalogError } from '@tenderlane/core';
+import { CatalogError, ProviderError } from '@tenderlane/core';
 
 /**
  * Per-SKU declaration for the Polar catalog. Polar is product-first: every
@@ -107,9 +107,12 @@ export function createPolarCatalog<TSku extends string>(
             id: skuConfig.productId,
           })) as unknown as PolarProductLike;
         } catch (error) {
-          throw new CatalogError(
+          // An outage or a misconfigured product id is the server's fault: a
+          // 5xx with a generic body, reported through the handler's `onError`.
+          throw new ProviderError(
             `Polar product lookup failed for SKU '${item.sku}' (productId=${skuConfig.productId})`,
-            { sku: item.sku, provider: 'polar', cause: error },
+            'polar',
+            { cause: error },
           );
         }
 

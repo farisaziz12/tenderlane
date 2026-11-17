@@ -18,6 +18,9 @@ import type {
   TenderlaneClient,
 } from './types.js';
 
+/** Flows whose submit confirms a provider session created by prepare(). */
+const INLINE_FLOWS: ReadonlySet<string> = new Set(['payment-intent', 'embedded-checkout']);
+
 /**
  * Create a headless Tenderlane checkout client.
  * Framework-agnostic; exposes subscribe/getSnapshot for useSyncExternalStore.
@@ -84,6 +87,11 @@ export function createTenderlaneClient(config: TenderlaneClientConfig): Tenderla
   // One submit at a time. Tracked apart from `status`, which a context change
   // during a submit moves back to `ready`.
   let submitInFlight = false;
+  // A context change or reset() that arrived during a submit. Applied once the
+  // submit settles, so its result cannot be overwritten or land on a reset
+  // client, and an inline payment element is not unmounted mid-confirmation.
+  let deferredEvaluation = false;
+  let deferredReset = false;
 
   /** A route is selected and nothing terminal has happened. `error` is retryable. */
   function canAct(): boolean {
@@ -169,9 +177,27 @@ export function createTenderlaneClient(config: TenderlaneClientConfig): Tenderla
     });
   }
 
+  function resetNow() {
+    evaluationVersion++;
+    setState({
+      status: 'idle',
+      route: null,
+      selectedProvider: null,
+      paymentMethods: [],
+      selectedPaymentMethod: null,
+      canSubmit: false,
+      error: null,
+      checkoutResult: null,
+      providerSession: null,
+    });
+    // Select a route again so the client is usable; `idle` is only ever
+    // observed by a listener between these two updates.
+    evaluate(state.context);
+  }
+
   function evaluate(context: TenderlaneContext) {
     const version = ++evaluationVersion;
-    setState({ status: 'evaluating', error: null, providerSession: null });
+    setState({ status: 'evaluating', error: null, providerSession: null, canSubmit: false });
 
     try {
       const result = routing.evaluate(context as unknown as Record<string, unknown>);
@@ -230,6 +256,10 @@ export function createTenderlaneClient(config: TenderlaneClientConfig): Tenderla
         nextContext: context,
       });
 
+      if (submitInFlight) {
+        deferredEvaluation = true;
+        return;
+      }
       evaluate(context);
     },
 
@@ -273,7 +303,9 @@ export function createTenderlaneClient(config: TenderlaneClientConfig): Tenderla
       const providerId = state.selectedProvider;
       const version = evaluationVersion;
 
-      setState({ status: 'preparing', error: null });
+      // The previous session was created for other input. Dropping it here
+      // means a failed re-prepare cannot leave it mounted and payable.
+      setState({ status: 'preparing', error: null, providerSession: null, canSubmit: false });
 
       try {
         const session = await provider.createSession(input, route);
@@ -341,6 +373,13 @@ export function createTenderlaneClient(config: TenderlaneClientConfig): Tenderla
       const context = state.context;
       const providerId = state.selectedProvider;
 
+      if (INLINE_FLOWS.has(route.flow) && provider.createSession && !state.providerSession) {
+        throw new TenderlaneError(
+          `Flow "${route.flow}" needs a provider session. Call prepare() before submit().`,
+          'INVALID_STATE',
+        );
+      }
+
       submitInFlight = true;
       setState({ status: 'submitting', error: null, canSubmit: false });
 
@@ -352,6 +391,10 @@ export function createTenderlaneClient(config: TenderlaneClientConfig): Tenderla
         });
 
         const result = await provider.submit(input, route);
+
+        if (result.status === 'failed' || result.status === 'expired') {
+          throw new ProviderError(`Checkout ${result.status}.`, providerId);
+        }
 
         // Only a completed payment is a success. A hosted checkout has merely
         // been created at this point, and an inline payment may still be
@@ -396,25 +439,28 @@ export function createTenderlaneClient(config: TenderlaneClientConfig): Tenderla
         throw tenderlaneError;
       } finally {
         submitInFlight = false;
+        const settled =
+          state.status === 'success' || state.status === 'redirecting' || state.status === 'pending';
+        const resetRequested = deferredReset;
+        const evaluationRequested = deferredEvaluation;
+        deferredReset = false;
+        deferredEvaluation = false;
+        if (resetRequested) {
+          resetNow();
+        } else if (evaluationRequested && !settled) {
+          // The submit failed and the context moved on meanwhile: select the
+          // route for the current context. The error was thrown to the caller.
+          evaluate(state.context);
+        }
       }
     },
 
     reset() {
-      evaluationVersion++;
-      setState({
-        status: 'idle',
-        route: null,
-        selectedProvider: null,
-        paymentMethods: [],
-        selectedPaymentMethod: null,
-        canSubmit: false,
-        error: null,
-        checkoutResult: null,
-        providerSession: null,
-      });
-      // Select a route again so the client is usable; `idle` is only ever
-      // observed by a listener between these two updates.
-      evaluate(state.context);
+      if (submitInFlight) {
+        deferredReset = true;
+        return;
+      }
+      resetNow();
     },
   };
 }
