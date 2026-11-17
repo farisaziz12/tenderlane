@@ -4,7 +4,7 @@ import type {
   CatalogPhantomTypes,
   ResolvedCatalogItem,
 } from '@tenderlane/core';
-import { CatalogError } from '@tenderlane/core';
+import { CatalogError, ProviderError } from '@tenderlane/core';
 
 /**
  * Per-SKU declaration for the Stripe catalog. Today we accept a pre-created
@@ -74,7 +74,9 @@ export function createStripeCatalog<TSku extends string>(
     async resolve(items) {
       const resolved: ResolvedCatalogItem[] = [];
       for (const item of items) {
-        const skuConfig = config.skus[item.sku as TSku];
+        const skuConfig = Object.hasOwn(config.skus, item.sku)
+          ? config.skus[item.sku as TSku]
+          : undefined;
         if (!skuConfig) {
           throw new CatalogError(
             `SKU not registered in Stripe catalog: '${item.sku}'`,
@@ -88,9 +90,12 @@ export function createStripeCatalog<TSku extends string>(
             expand: ['product'],
           });
         } catch (error) {
-          throw new CatalogError(
+          // An outage or a misconfigured price id is the server's fault: a 5xx
+          // with a generic body, reported through the handler's `onError`.
+          throw new ProviderError(
             `Stripe price lookup failed for SKU '${item.sku}' (priceId=${skuConfig.priceId})`,
-            { sku: item.sku, provider: 'stripe', cause: error },
+            'stripe',
+            { cause: error },
           );
         }
 

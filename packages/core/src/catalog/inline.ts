@@ -68,7 +68,9 @@ export function createInlineCatalog<TSku extends string>(
     async resolve(items, context) {
       const resolved: ResolvedCatalogItem[] = [];
       for (const item of items) {
-        const product = products[item.sku as TSku];
+        const product = Object.hasOwn(products, item.sku)
+          ? products[item.sku as TSku]
+          : undefined;
         if (!product) {
           throw new CatalogError(
             `SKU not found in inline catalog: '${item.sku}'`,

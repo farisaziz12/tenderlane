@@ -28,6 +28,11 @@ export interface CheckoutFormRenderState {
   readonly error: TenderlaneClientState['error'];
   readonly checkoutResult: TenderlaneClientState['checkoutResult'];
   submit(): void;
+  /**
+   * Create the provider session again after it failed (status `error` with
+   * `canSubmit: false` on an inline flow). Does nothing when a session exists.
+   */
+  retry(): void;
 }
 
 export interface TenderlaneCheckoutFormProps {
@@ -89,20 +94,26 @@ export function TenderlaneCheckoutForm({
   // effects before parent effects — without the defer, this effect would
   // call prepare() before TenderlaneProvider's effect has called
   // updateContext(), causing prepare() to use a stale route.
+  const hasProviderSession = checkout.providerSession !== null;
+
   useEffect(() => {
     if (!isInlineFlow || prepareKey === null) {
       return;
     }
 
-    if (prepareKey === lastPrepareKey.current) {
+    // Already prepared for this route and input, and the session is still there.
+    // A context change clears the session, so that case prepares again.
+    if (prepareKey === lastPrepareKey.current && hasProviderSession) {
       return;
     }
 
-    if (status !== 'ready' && status !== 'prepared') {
+    // After a failed prepare the status is `error`. Prepare again only for a
+    // new route or input; the same key is retried by the user, through
+    // `retry()`, so a failing endpoint is not called in a loop.
+    const isRetryableError = status === 'error' && prepareKey !== lastPrepareKey.current;
+    if (status !== 'ready' && status !== 'prepared' && !isRetryableError) {
       return;
     }
-
-    lastPrepareKey.current = prepareKey;
 
     const timeout = setTimeout(() => {
       // Read fresh state — parent effects have now run and route is current
@@ -115,11 +126,20 @@ export function TenderlaneCheckoutForm({
         return;
       }
 
-      if (snapshot.status !== 'ready' && snapshot.status !== 'prepared') {
+      if (
+        snapshot.status !== 'ready' &&
+        snapshot.status !== 'prepared' &&
+        !(snapshot.status === 'error' && snapshot.route !== null)
+      ) {
         // Route is still evaluating — the subscription will trigger a
         // re-render and this effect will run again when status settles
         return;
       }
+
+      // Recorded only once prepare() is really called. Recording it when the
+      // timer is scheduled loses the prepare whenever the effect is cleaned up
+      // first, which React StrictMode does on every mount.
+      lastPrepareKey.current = prepareKey;
 
       client.prepare(inputRef.current).catch(() => {
         // Error is captured in client state (status: 'error', error: ...)
@@ -127,7 +147,7 @@ export function TenderlaneCheckoutForm({
     }, 0);
 
     return () => clearTimeout(timeout);
-  }, [status, isInlineFlow, prepareKey, client]);
+  }, [status, isInlineFlow, prepareKey, hasProviderSession, client]);
 
   // Reset tracking when route changes away from inline
   useEffect(() => {
@@ -138,6 +158,13 @@ export function TenderlaneCheckoutForm({
 
   const handleSubmit = useCallback(() => {
     client.submit(inputRef.current).catch(() => {
+      // Error is captured in client state
+    });
+  }, [client]);
+
+  const handleRetry = useCallback(() => {
+    if (client.getSnapshot().providerSession !== null) return;
+    client.prepare(inputRef.current).catch(() => {
       // Error is captured in client state
     });
   }, [client]);
@@ -160,6 +187,7 @@ export function TenderlaneCheckoutForm({
     error: checkout.error,
     checkoutResult: checkout.checkoutResult,
     submit: handleSubmit,
+    retry: handleRetry,
   };
 
   return (

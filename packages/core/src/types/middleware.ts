@@ -43,7 +43,20 @@ export interface TenderlaneMiddleware<TContext extends TenderlaneContext = Tende
     input: CheckoutInput;
   }): MaybePromise<void>;
 
+  /** Fires only when the provider reported the payment complete. */
   onCheckoutSuccess?(event: {
+    context: TContext;
+    route: SelectedPaymentRoute;
+    result: CheckoutResult;
+  }): MaybePromise<void>;
+
+  /**
+   * Fires when the provider accepted the submission but the payment is not
+   * complete: a hosted checkout was created and the browser is redirecting,
+   * or an inline payment is processing or waiting on the customer. This is
+   * not a conversion; confirm the outcome on the server.
+   */
+  onCheckoutPending?(event: {
     context: TContext;
     route: SelectedPaymentRoute;
     result: CheckoutResult;

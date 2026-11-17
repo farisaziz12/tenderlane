@@ -20,6 +20,8 @@ import { previewCatalog } from '../../catalog';
  * config are present, so the demo still runs Stripe-only when Polar isn't
  * configured (or vice versa).
  */
+const SUPPORTED_CURRENCIES = ['usd', 'eur', 'gbp', 'chf'];
+
 function getHandler() {
   const providers: ServerProviderAdapter[] = [
     stripeServerAdapter({
@@ -80,6 +82,18 @@ function getHandler() {
     // this fallback is bypassed for those providers.
     catalog: previewCatalog,
     catalogs,
+    // The request's context is written by the browser. Pricing here depends
+    // on `currency`, so only the currencies this shop sells in are accepted;
+    // anything else is priced in USD. A real app would also derive the
+    // country from a geo header rather than trusting the body.
+    resolveContext: (_request, clientContext) => {
+      const currency = String(clientContext.currency ?? 'usd').toLowerCase();
+      return {
+        ...clientContext,
+        currency: SUPPORTED_CURRENCIES.includes(currency) ? currency : 'usd',
+      };
+    },
+    onError: (error) => console.error('[tenderlane:server]', error),
     middleware: [
       {
         name: 'server-debug',

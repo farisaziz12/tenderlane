@@ -3,7 +3,7 @@ import Section from '../Section.astro';
 
 const layers = [
   { l: 'core', desc: 'Types, rules router, auto router, middleware, errors, catalog, server handler. Zero runtime deps.', file: '@tenderlane/core' },
-  { l: 'client', desc: 'Framework-agnostic headless state machine. idle → ready → submitting → success.', file: '@tenderlane/client' },
+  { l: 'client', desc: 'Framework-agnostic headless state machine. ready → submitting → success, redirecting or pending.', file: '@tenderlane/client' },
   { l: 'bindings', desc: 'React provider + hooks via useSyncExternalStore. Vue/Svelte planned.', file: '@tenderlane/react' },
   { l: 'adapters', desc: 'Per-PSP. Stripe and Polar today. Browser SDK lazy-loaded only when the active route needs it.', file: '@tenderlane/stripe · @tenderlane/polar' },
 ];
@@ -68,14 +68,14 @@ const layers = [
           <text x="14" y="20" fill="var(--text-0)">client (state machine)</text>
           <text x="14" y="36" fill="var(--text-2)" font-size="9.5">framework-agnostic</text>
           <g transform="translate(14 56)" font-size="10">
-            {['idle', 'evaluating', 'ready', 'preparing', 'prepared', 'submitting', 'success / error'].map((s, i) => (
+            {['evaluating', 'ready', 'preparing', 'prepared', 'submitting', 'success / error', 'redirecting / pending'].map((s, i) => (
               <g transform={`translate(0 ${i * 22})`}>
                 <rect x="-2" y="-10" width="170" height="18" rx="3"
-                  fill={i === 2 ? 'color-mix(in oklab, var(--accent) 14%, transparent)' : 'transparent'}
-                  stroke={i === 2 ? 'var(--accent-soft)' : 'transparent'}
+                  fill={i === 1 ? 'color-mix(in oklab, var(--accent) 14%, transparent)' : 'transparent'}
+                  stroke={i === 1 ? 'var(--accent-soft)' : 'transparent'}
                 ></rect>
-                <circle cx="6" cy="-2" r="3" fill={i === 2 ? 'var(--accent)' : 'var(--line-3)'}></circle>
-                <text x="18" y="2" fill={i === 2 ? 'var(--accent)' : 'var(--text-1)'}>{s}</text>
+                <circle cx="6" cy="-2" r="3" fill={i === 1 ? 'var(--accent)' : 'var(--line-3)'}></circle>
+                <text x="18" y="2" fill={i === 1 ? 'var(--accent)' : 'var(--text-1)'}>{s}</text>
               </g>
             ))}
           </g>

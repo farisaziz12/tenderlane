@@ -3,6 +3,7 @@ import type {
   ResolvedCatalogItem,
   ResolvedCheckoutInput,
 } from '@tenderlane/core';
+import { CatalogError } from '@tenderlane/core';
 import type Stripe from 'stripe';
 
 /**
@@ -81,8 +82,8 @@ export function mapToStripeSessionParams(
     const stripeTypes = [
       ...new Set(
         paymentMethods
-          .map((m) => STRIPE_METHOD_TYPE_MAP[m])
-          .filter((t): t is string => t != null),
+          .map((method) => STRIPE_METHOD_TYPE_MAP[method])
+          .filter((type): type is string => type != null),
       ),
     ];
     if (stripeTypes.length > 0) {
@@ -102,7 +103,8 @@ export function mapToStripeSessionParams(
     params.metadata = input.metadata;
   }
 
-  // Merge provider-specific Stripe options (escape hatch)
+  // Merge provider-specific Stripe options (escape hatch). These come from the
+  // server handler's `providerOptions` config, never from the request body.
   if (input.providerOptions && typeof input.providerOptions === 'object') {
     const stripeOptions = input.providerOptions as Record<string, unknown>;
     Object.assign(params, stripeOptions);
@@ -152,7 +154,22 @@ export function mapToStripePaymentIntentParams(
     0,
   );
 
-  const currency = input.items[0]?.currency ?? 'usd';
+  const firstItem = input.items[0];
+  if (!firstItem) {
+    throw new CatalogError('A PaymentIntent needs at least one resolved item.', {
+      provider: 'stripe',
+    });
+  }
+  const currency = firstItem.currency;
+  const mismatched = input.items.find(
+    (item) => item.currency.toLowerCase() !== currency.toLowerCase(),
+  );
+  if (mismatched) {
+    throw new CatalogError(
+      `A PaymentIntent has one currency, but SKU '${firstItem.sku}' is ${currency} and SKU '${mismatched.sku}' is ${mismatched.currency}.`,
+      { sku: mismatched.sku, provider: 'stripe' },
+    );
+  }
 
   const params: Stripe.PaymentIntentCreateParams = {
     amount,

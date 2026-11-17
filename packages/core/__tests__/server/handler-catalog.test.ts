@@ -147,9 +147,12 @@ describe('createTenderlaneHandler — catalog resolution', () => {
     expect(event.context.currency).toBe('usd');
   });
 
-  it('still accepts legacy lineItems[] when no catalog is configured', async () => {
+  it('accepts legacy lineItems[] only with allowLegacyLineItems and no catalog', async () => {
     const { adapter, received } = captureAdapter();
-    const handler = createTenderlaneHandler({ providers: [adapter] });
+    const handler = createTenderlaneHandler({
+      providers: [adapter],
+      allowLegacyLineItems: true,
+    });
 
     const req = new Request('http://localhost', {
       method: 'POST',
@@ -190,7 +193,7 @@ describe('createTenderlaneHandler — catalog resolution', () => {
 
     expect(res.status).toBe(400);
     const body = await res.json();
-    expect(body.error).toContain('deprecated');
+    expect(body.error).toContain('rejected');
   });
 });
 

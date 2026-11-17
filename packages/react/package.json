@@ -3,6 +3,7 @@
   "version": "0.1.0-alpha.1",
   "description": "React bindings for Tenderlane payment orchestration",
   "type": "module",
+  "sideEffects": false,
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -42,18 +43,18 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@tenderlane/core": "workspace:*",
-    "@tenderlane/client": "workspace:*"
+    "@tenderlane/client": "workspace:*",
+    "@tenderlane/core": "workspace:*"
   },
   "peerDependencies": {
     "react": ">=18.0.0"
   },
   "devDependencies": {
     "@testing-library/react": "^16.0.0",
-    "@types/react": "^18.3.0",
+    "@types/react": "^19.1.0",
     "jsdom": "^25.0.0",
-    "react": "^18.3.0",
-    "react-dom": "^18.3.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
     "tsup": "^8.3.0",
     "typescript": "^5.7.0",
     "vitest": "^2.1.0"

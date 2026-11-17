@@ -9,7 +9,7 @@ import CatalogResolutionDiagram from '../../../components/diagrams/CatalogResolu
 
 A **catalog** is the provider-agnostic primitive that resolves what a customer is buying (`sku`, `quantity`) into canonical pricing the PSP can charge against. It's the same architectural slot as a router: the user supplies one catalog, every provider knows how to consume its output.
 
-The catalog is what makes Tenderlane work across PSPs with fundamentally different product models — Stripe's inline `price_data`, Polar's pre-created product IDs, your own database — without leaking those differences into the rest of the stack.
+The catalog is what makes Tenderlane work across PSPs with fundamentally different product models (Stripe's inline `price_data`, Polar's pre-created product IDs, your own database) without leaking those differences into the rest of the stack.
 
 ## The price-integrity contract
 
@@ -17,7 +17,7 @@ There is one rule that everything else follows from:
 
 > **`unitAmount` MUST never cross the wire from client to server.**
 
-The wire payload is `{ items: [{ sku, quantity }], context, ... }`. The client says *what* (SKU + quantity + context); the server runs its own `catalog.resolve()` and decides *for how much*. The server handler defensively strips any client-supplied `unitAmount` before resolution, even if a malicious client tries to forge one.
+The wire payload is `{ items: [{ sku, quantity }], context, ... }`. The client says *what* (SKU + quantity + context); the server runs its own `catalog.resolve()` and decides *for how much*. The server handler defensively strips any client-supplied `unitAmount` before resolution, even if a malicious client tries to forge one. It also drops client `providerOptions`, rejects legacy `lineItems`, and validates `items`. The [Security model](/docs/concepts/security-model) page lists everything the server does and does not trust.
 
 Client-side catalog resolution exists for **preview UX only** — running totals, currency-switcher demos, hover cards. If client and server disagree (stale code, coupon applied between view and submit, A/B variant flipped), the server wins, silently and always.
 
@@ -82,7 +82,11 @@ const catalog = createInlineCatalog({
 });
 ```
 
-The `pricing` field can be a static `{ amount, currency }` or a function of context — that's how the catalog stays reactive across currency switches, regional pricing, customer tiers.
+The `pricing` field can be a static `{ amount, currency }` or a function of context. That is how the catalog stays reactive across currency switches, regional pricing and customer tiers.
+
+:::caution
+The context a pricing function receives on the server is, by default, the context the browser sent. If a price depends on it (a cheaper region, a customer tier, an experiment), set the handler's `resolveContext` hook so the server derives those fields itself. See [Security model](/docs/concepts/security-model).
+:::
 
 ### 2. `createRemoteCatalog` — production default
 
@@ -96,7 +100,7 @@ const catalog = createRemoteCatalog({
 });
 ```
 
-The server handler exposes a built-in `/resolve` route that satisfies this contract — pair it with any server-side catalog.
+The server handler's `resolve` function satisfies this contract. Pair it with any server-side catalog.
 
 ### 3. `defineCatalog` — server-only custom resolver
 
@@ -214,9 +218,9 @@ The `/resolve` route always uses the top-level `catalog` (it has no provider con
 The `providerRefs` field on each resolved item carries native PSP IDs the adapter prefers over inline pricing:
 
 - **Stripe** uses `providerRefs.stripe.priceId` when present (emits `{ price, quantity }` against a pre-created Stripe Price). Falls back to inline `price_data` if absent.
-- **Polar** requires `providerRefs.polar.productId` — Polar is product-first and has no inline pricing fallback. Missing `productId` throws a typed `CatalogError`.
+- **Polar** requires `providerRefs.polar.productId`. Polar is product-first and has no inline pricing fallback, so a missing `productId` throws a typed `CatalogError`. Polar always charges the product's own price: the resolved `unitAmount` is for display and is not sent. A Polar checkout sells one product with quantity 1, so a cart with several items or a quantity above 1 is rejected.
 
-A single SKU can declare refs for multiple PSPs at once. If your routing rule sends EU customers to Polar and US customers to Stripe, the same catalog entry works for both — each adapter reads what it needs.
+A single SKU can declare refs for multiple PSPs at once. If your routing rule sends EU customers to Polar and US customers to Stripe, the same catalog entry works for both, and each adapter reads what it needs.
 
 ## Wiring it into the handler
 
@@ -239,19 +243,48 @@ const handler = createTenderlaneHandler({
   ],
 });
 
-// Next.js App Router
-export const POST = handler.POST;
-// app/api/tenderlane/resolve/route.ts — for createRemoteCatalog clients
-export const POST_RESOLVE = handler.resolve;
+export { handler };
 ```
 
-The `onCatalogResolved` middleware hook fires after resolution and before the provider adapter runs — useful for analytics, audit logging, or running-total tracking.
+`createTenderlaneHandler` returns `{ POST, resolve }`. Create it once in a shared module and export each function from its own route file:
+
+```ts title="app/api/tenderlane/route.ts"
+import { handler } from '@/lib/tenderlane-handler';
+
+export const POST = handler.POST;
+```
+
+```ts title="app/api/tenderlane/resolve/route.ts"
+import { handler } from '@/lib/tenderlane-handler';
+
+// Preview endpoint for createRemoteCatalog clients
+export const POST = handler.resolve;
+```
+
+The `onCatalogResolved` middleware hook fires after resolution and before the provider adapter runs. Use it for analytics, audit logging, or running-total tracking.
+
+### Handler options
+
+| Option | Purpose |
+|--------|---------|
+| `providers` | Server adapters, one per PSP |
+| `catalog` | Default catalog, and the one `/resolve` uses |
+| `catalogs` | Per-provider catalogs keyed by provider ID |
+| `middleware` | Server middleware (`onCatalogResolved`) |
+| `resolveContext(request, clientContext)` | Derive the pricing context on the server instead of trusting the browser's |
+| `routing` | The same router the client uses. The server rejects a request whose `provider` is not the route it selects, and takes payment methods from the route |
+| `providerOptions` | Provider-specific options merged into the PSP request, keyed by provider ID. Server configuration only; `providerOptions` in a request body is always dropped |
+| `allowedRedirectOrigins` | Origins `successUrl` and `cancelUrl` may point to. Other URLs get a 400 |
+| `maxItems` | Most entries accepted in `items`. Default 100 |
+| `maxQuantity` | Largest `quantity` for one item. Default 10 000 |
+| `allowLegacyLineItems` | Accept the deprecated `lineItems` shape. Off by default, ignored when any catalog is configured |
+| `onError(error)` | Called with every error that produces a 5xx response |
 
 ## Legacy `lineItems` shim
 
-For backwards compatibility, `CheckoutInput.lineItems` continues to work when **no catalog is configured**. The server handler wraps the legacy shape into resolved items automatically.
+`CheckoutInput.lineItems` is the pre-catalog shape. It carries `unitAmount` from the browser, so it has no price integrity: whoever sends the request sets the price.
 
-If a catalog is configured and a caller posts `lineItems`, the handler returns 400 with a `CATALOG_ERROR` asking them to migrate to `items[]`. This is intentional: mixing legacy line items with a real catalog would silently bypass the price-integrity contract.
+The handler **rejects it by default** with a 400 `CATALOG_ERROR`. It is accepted only when you set `allowLegacyLineItems: true` **and** no catalog (`catalog` or `catalogs`) is configured. Do not enable it for anything that takes real money. Migrate to `items: [{ sku, quantity }]` and a catalog.
 
 ## Error handling
 
@@ -261,7 +294,7 @@ If a catalog is configured and a caller posts `lineItems`, the handler returns 4
 import { CatalogError } from 'tenderlane';
 
 try {
-  await client.submit({ items: [{ sku: 'unknown-plan', quantity: 1 }], ... });
+  await catalog.resolve([{ sku: 'unknown-plan', quantity: 1 }], context);
 } catch (error) {
   if (error instanceof CatalogError) {
     console.error(`Catalog rejected SKU "${error.sku}":`, error.message);
@@ -269,4 +302,14 @@ try {
 }
 ```
 
-The server handler maps `CatalogError` to HTTP 400; other errors map to 500. The `/resolve` route uses the same mapping.
+On the server, the handler maps errors to responses like this. The `/resolve` route uses the same mapping.
+
+| Error | Status | Body |
+|-------|:------:|------|
+| `CatalogError` (unknown SKU, missing provider ref, rejected `lineItems`) | 400 | `{ error: <message>, code: 'CATALOG_ERROR' }` |
+| `ValidationError` (bad JSON, bad `items`, missing `successUrl`, non-string `metadata` values, redirect URL not allowed, provider not the one `routing` selects) | 400 | `{ error: <message>, code: 'VALIDATION_ERROR' }` |
+| Anything else (PSP failure, failed Stripe or Polar lookup inside a PSP-sourced catalog, bug) | 500 | `{ error: 'Checkout request failed.', code }` |
+
+A 5xx body is deliberately generic, because provider and runtime error text can contain internals. The detail goes to the `onError` hook, so log it there.
+
+In the browser, a failed request surfaces from `client.submit()` as a `ProviderError`, not a `CatalogError`: the built-in providers wrap any non-2xx response.

@@ -16,8 +16,8 @@ import type { TenderlaneError } from '@tenderlane/core';
  *
  * Transitions:
  * ```
- * idle → evaluating → ready → preparing → prepared → submitting → success
- *                   ↘ error                                      ↘ error
+ * idle → evaluating → ready → preparing → prepared → submitting → success | redirecting | pending
+ *                   ↘ error                                      ↘ error → (submit again)
  * ```
  *
  * - `idle` — Initial state before the first route evaluation, or after {@link TenderlaneClient.reset}.
@@ -26,8 +26,10 @@ import type { TenderlaneError } from '@tenderlane/core';
  * - `preparing` — A provider session is being created (e.g. PaymentIntent for inline flows).
  * - `prepared` — The provider session is ready. {@link TenderlaneClientState.providerSession} is populated.
  * - `submitting` — The provider's `submit()` call is in progress.
- * - `success` — Checkout completed successfully. {@link TenderlaneClientState.checkoutResult} is populated.
- * - `error` — Any failure during evaluation, preparation, or submission. {@link TenderlaneClientState.error} is populated.
+ * - `redirecting` — A hosted checkout was created and the browser is leaving for it. The payment has not happened yet.
+ * - `pending` — The provider accepted the submission but the payment is not complete (processing, or waiting on the customer). Confirm the outcome on the server.
+ * - `success` — The provider reported the payment complete. {@link TenderlaneClientState.checkoutResult} is populated.
+ * - `error` — Any failure during evaluation, preparation, or submission. {@link TenderlaneClientState.error} is populated. After a failed submit the route is kept and `submit()` may be called again.
  */
 export type ClientStatus =
   | 'idle'
@@ -36,6 +38,8 @@ export type ClientStatus =
   | 'preparing'
   | 'prepared'
   | 'submitting'
+  | 'redirecting'
+  | 'pending'
   | 'success'
   | 'error';
 
@@ -148,8 +152,8 @@ export interface TenderlaneClient {
   submit(input: CheckoutInput): Promise<CheckoutResult>;
 
   /**
-   * Reset the client back to the `idle` state, clearing the route,
-   * provider, payment methods, errors, and checkout result.
+   * Clear the error, checkout result and provider session, then evaluate the
+   * route again for the current context, leaving the client ready to use.
    */
   reset(): void;
 }

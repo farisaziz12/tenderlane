@@ -50,15 +50,20 @@ const loggingMiddleware: TenderlaneMiddleware = {
   onCheckoutStart({ route, input }) {
     console.log('[tenderlane] Checkout started:', {
       provider: route.provider,
-      itemCount: input.lineItems.length,
-      totalAmount: input.lineItems.reduce(
-        (sum, item) => sum + item.unitAmount * item.quantity, 0
-      ),
+      skus: input.items?.map((item) => `${item.sku} x${item.quantity}`),
+    });
+  },
+
+  onCheckoutPending({ route, result }) {
+    console.log('[tenderlane] Checkout handed to provider (not paid yet):', {
+      provider: result.provider,
+      sessionId: result.id,
+      redirecting: Boolean(result.url),
     });
   },
 
   onCheckoutSuccess({ route, result }) {
-    console.log('[tenderlane] Checkout succeeded:', {
+    console.log('[tenderlane] Payment complete:', {
       provider: result.provider,
       sessionId: result.id,
       status: result.status,
@@ -111,13 +116,23 @@ export function createAnalyticsMiddleware(analytics: AnalyticsClient): Tenderlan
         flow: route.flow,
         country: context.country,
         currency: context.currency,
-        itemCount: input.lineItems.length,
-        totalAmount: input.lineItems.reduce(
-          (sum, item) => sum + item.unitAmount * item.quantity, 0
-        ),
+        itemCount: input.items?.length ?? 0,
+        skus: input.items?.map((item) => item.sku),
+        displayAmount: context.amount,
       });
     },
 
+    // Hosted checkout created, or payment still processing. Not a purchase.
+    onCheckoutPending({ context, route, result }) {
+      analytics.track('checkout_handed_off', {
+        provider: result.provider,
+        sessionId: result.id,
+        flow: route.flow,
+        country: context.country,
+      });
+    },
+
+    // Only fires when the provider reported the payment complete (inline flows).
     onCheckoutSuccess({ context, route, result }) {
       analytics.track('checkout_completed', {
         provider: result.provider,
@@ -264,6 +279,14 @@ export function createTimingMiddleware(
       }
     },
 
+    onCheckoutPending() {
+      if (checkoutStartTime !== null) {
+        const duration = performance.now() - checkoutStartTime;
+        onTiming('checkout_handoff_ms', duration);
+        checkoutStartTime = null;
+      }
+    },
+
     onCheckoutError() {
       if (checkoutStartTime !== null) {
         const duration = performance.now() - checkoutStartTime;
@@ -309,5 +332,11 @@ Middleware errors are non-fatal. If your analytics service is down, the checkout
 | `onRouteEvaluated` | After routing selects a provider | Track which routes are used, experiment exposure |
 | `onSessionCreated` | After PaymentIntent/session is created | Track inline flow preparation |
 | `onCheckoutStart` | User clicks Pay | "Begin checkout" event |
-| `onCheckoutSuccess` | Payment completed | "Purchase" conversion event |
+| `onCheckoutPending` | Hosted checkout created (browser is redirecting), or inline payment still processing | "Handed off to provider" funnel step. Not a purchase |
+| `onCheckoutSuccess` | Provider reported the payment complete (inline flows) | Client-side "payment confirmed" event |
 | `onCheckoutError` | Any failure | Error rate monitoring |
+| `onCatalogResolved` | Server only: after the catalog resolves items | Audit the amounts actually charged |
+
+:::caution
+Client-side events are not a reliable record of revenue. A redirect flow never fires `onCheckoutSuccess`, and a browser can close before any event is sent. Record purchases from your PSP's webhooks on the server. Tenderlane does not ship webhook helpers yet.
+:::

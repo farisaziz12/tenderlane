@@ -62,9 +62,7 @@ describe('polarServerAdapter', () => {
     expect(checkoutsCreate).toHaveBeenCalledTimes(1);
     const call = checkoutsCreate.mock.calls[0]![0];
     expect(call.products).toEqual(['polar_prod_pro']);
-    expect(call.prices).toEqual({
-      polar_prod_pro: { amount: 2900, price_currency: 'usd' },
-    });
+    expect(call).not.toHaveProperty('prices');
 
     expect(result).toMatchObject({
       provider: 'polar',

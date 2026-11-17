@@ -55,18 +55,30 @@ Never commit your secret key to version control. Add `.env.local` to your `.giti
 
 ## 4. Create the server endpoint
 
-The server endpoint receives checkout requests from the Tenderlane browser provider and creates Stripe Checkout Sessions.
+The server endpoint receives checkout requests from the Tenderlane browser provider, looks up the price of each SKU in a catalog, and creates Stripe Checkout Sessions.
 
 ```ts title="app/api/checkout/route.ts"
+import { createInlineCatalog } from '@tenderlane/core';
 import { createTenderlaneHandler } from '@tenderlane/core/server';
 import { stripeServerAdapter } from '@tenderlane/stripe/server';
 
-const stripeAdapter = stripeServerAdapter({
-  secretKey: process.env.STRIPE_SECRET_KEY!,
+// The server owns the price. The browser sends { sku, quantity } only.
+const catalog = createInlineCatalog({
+  'premium-widget': {
+    name: 'Premium Widget',
+    description: 'A high-quality widget',
+    pricing: { amount: 4999, currency: 'usd' },
+  },
 });
 
 const handler = createTenderlaneHandler({
-  providers: [stripeAdapter],
+  providers: [
+    stripeServerAdapter({ secretKey: process.env.STRIPE_SECRET_KEY! }),
+  ],
+  catalog,
+  // Reject successUrl / cancelUrl that point anywhere else.
+  allowedRedirectOrigins: [process.env.APP_ORIGIN ?? 'http://localhost:3000'],
+  onError: (error) => console.error('[checkout]', error),
 });
 
 export const POST = handler.POST;
@@ -74,10 +86,14 @@ export const POST = handler.POST;
 
 This is the entire server-side setup. Here is what happens when a request arrives:
 
-1. `createTenderlaneHandler` parses the request body: `{ provider, action, payload }`
-2. It dispatches to the Stripe adapter based on `provider: 'stripe'`
-3. The adapter maps `CheckoutInput` to Stripe's `checkout.sessions.create()` parameters
-4. It returns a normalized `CheckoutResult` with the redirect URL
+1. `handler.POST` parses the request body: `{ provider, action, payload }`
+2. It validates `payload.items` and the redirect URLs, and drops any `unitAmount` or `providerOptions` the browser sent
+3. It resolves the items against the catalog to get name, amount and currency
+4. It dispatches to the Stripe adapter based on `provider: 'stripe'`
+5. The adapter maps the resolved items to Stripe's `checkout.sessions.create()` parameters
+6. It returns a normalized `CheckoutResult` with the redirect URL
+
+If your prices already live in Stripe, use `createStripeCatalog` from `@tenderlane/stripe/server` instead of an inline catalog. It maps each SKU to a Stripe `priceId` and reads the amount from Stripe at resolve time. See [Catalog](/docs/concepts/catalog).
 
 ## 5. Build the checkout page
 
@@ -192,16 +208,15 @@ function CheckoutForm() {
     return <p>Loading payment options...</p>;
   }
 
-  if (checkout.error) {
-    return (
-      <div style={{ color: 'red', padding: '1rem', border: '1px solid red', borderRadius: 4 }}>
-        <strong>Error:</strong> {checkout.error.message}
-      </div>
-    );
-  }
-
   return (
     <div>
+      {/* Keep the form on screen after an error: submit() can be retried. */}
+      {checkout.error && (
+        <div style={{ color: 'red', padding: '1rem', border: '1px solid red', borderRadius: 4 }}>
+          <strong>Error:</strong> {checkout.error.message}
+        </div>
+      )}
+
       <h2>Order Summary</h2>
       <table style={{ width: '100%', marginBottom: '1rem' }}>
         <tbody>
@@ -229,14 +244,7 @@ function CheckoutForm() {
         disabled={!checkout.canSubmit || checkout.status === 'submitting'}
         onClick={() =>
           checkout.submit({
-            lineItems: [
-              {
-                name: 'Premium Widget',
-                description: 'A high-quality widget',
-                quantity: 1,
-                unitAmount: 4999,
-              },
-            ],
+            items: [{ sku: 'premium-widget', quantity: 1 }],
             successUrl: window.location.origin + '/success?session_id={CHECKOUT_SESSION_ID}',
             cancelUrl: window.location.origin + '/checkout',
             customerEmail: 'test@example.com',
@@ -253,12 +261,18 @@ function CheckoutForm() {
           cursor: checkout.canSubmit ? 'pointer' : 'not-allowed',
         }}
       >
-        {checkout.status === 'submitting' ? 'Redirecting to Stripe...' : 'Pay $49.99'}
+        {checkout.status === 'submitting' || checkout.status === 'redirecting'
+          ? 'Redirecting to Stripe...'
+          : 'Pay $49.99'}
       </button>
     </div>
   );
 }
 ```
+
+The page shows `$49.99` as display text. The amount charged is whatever the server's catalog resolves, so keep the two in sync (or render the price from a client-side catalog, see [Catalog](/docs/concepts/catalog)).
+
+After the session is created the client status is `redirecting`, not `success`: the customer has not paid yet.
 
 ## 6. Create success and cancel pages
 
@@ -272,6 +286,10 @@ export default function SuccessPage() {
   );
 }
 ```
+
+:::caution
+Reaching the success page does not prove payment. Anyone can open that URL. Fulfil orders from Stripe's `checkout.session.completed` webhook, verified on your server with the `stripe` SDK. Tenderlane does not ship webhook helpers yet.
+:::
 
 ## 7. Test with Stripe test cards
 
@@ -293,7 +311,7 @@ Use any future expiry date (e.g., `12/34`) and any 3-digit CVC.
 
 ## 8. Verify in Stripe Dashboard
 
-Go to the [Stripe Dashboard > Payments](https://dashboard.stripe.com/test/payments) to see your test payment. You will see the checkout session with the line items, customer email, and metadata you specified.
+Go to the [Stripe Dashboard > Payments](https://dashboard.stripe.com/test/payments) to see your test payment. You will see the checkout session with the line items resolved by your catalog and the customer email you specified.
 
 ## How it works under the hood
 
@@ -304,7 +322,9 @@ Browser                          Server                         Stripe
   │  ──▶ POST /api/checkout        │                              │
   │      {provider: "stripe",     │                              │
   │       action: "checkout",      │                              │
-  │       payload: {lineItems...}} │                              │
+  │       payload: {items: [...]}} │                              │
+  │                                │                              │
+  │                                │  catalog.resolve(items)      │
   │                                │                              │
   │                                │  stripe.checkout.sessions    │
   │                                │  .create({...})              │
@@ -324,6 +344,6 @@ Browser                          Server                         Stripe
 
 ## Next steps
 
-- Add [middleware for analytics](/cookbooks/middleware-analytics/) to track checkout events
-- Try the [Stripe Elements inline flow](/cookbooks/stripe-elements-inline/) for an embedded card form
-- Implement [country-based routing](/cookbooks/country-based-routing/) with region-specific payment methods
+- Add [middleware for analytics](/docs/cookbooks/middleware-analytics) to track checkout events
+- Try the [Stripe Elements inline flow](/docs/cookbooks/stripe-elements-inline) for an embedded card form
+- Implement [country-based routing](/docs/cookbooks/country-based-routing) with region-specific payment methods

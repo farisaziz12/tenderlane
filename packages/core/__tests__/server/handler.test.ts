@@ -1,12 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { createTenderlaneHandler } from '../../src/server/handler.js';
-import type { ServerProviderAdapter, CheckoutInput, CheckoutResult } from '../../src/index.js';
+import type { ServerProviderAdapter, CheckoutResult } from '../../src/index.js';
 
 function createMockProvider(): ServerProviderAdapter<'mock'> {
   return {
     id: 'mock' as const,
     actions: ['checkout'] as const,
-    async handle(action: string, payload: CheckoutInput): Promise<CheckoutResult> {
+    async handle(): Promise<CheckoutResult> {
       return {
         provider: 'mock',
         id: 'session_123',
@@ -19,7 +19,10 @@ function createMockProvider(): ServerProviderAdapter<'mock'> {
 
 describe('createTenderlaneHandler', () => {
   it('routes to the correct provider', async () => {
-    const handler = createTenderlaneHandler({ providers: [createMockProvider()] });
+    const handler = createTenderlaneHandler({
+      providers: [createMockProvider()],
+      allowLegacyLineItems: true,
+    });
 
     const req = new Request('http://localhost/api/payments', {
       method: 'POST',
@@ -107,7 +110,10 @@ describe('createTenderlaneHandler', () => {
       },
     };
 
-    const handler = createTenderlaneHandler({ providers: [errorProvider] });
+    const handler = createTenderlaneHandler({
+      providers: [errorProvider],
+      allowLegacyLineItems: true,
+    });
 
     const req = new Request('http://localhost/api/payments', {
       method: 'POST',
@@ -126,6 +132,8 @@ describe('createTenderlaneHandler', () => {
     const res = await handler.POST(req);
     expect(res.status).toBe(500);
     const body = await res.json();
-    expect(body.error).toBe('Stripe API down');
+    // The provider's message can hold internals; the response stays generic.
+    expect(body.error).toBe('Checkout request failed.');
+    expect(JSON.stringify(body)).not.toContain('Stripe API down');
   });
 });

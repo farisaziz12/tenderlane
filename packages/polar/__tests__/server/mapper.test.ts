@@ -28,29 +28,8 @@ describe('mapToPolarCheckoutParams', () => {
 
     expect(params.products).toEqual(['polar_prod_pro']);
     expect(params.success_url).toBe('https://example.com/success');
-    expect(params.prices).toEqual({
-      polar_prod_pro: { amount: 2900, price_currency: 'usd' },
-    });
-  });
-
-  it('omits prices when unitAmount is 0 (fall back to Polar product default)', () => {
-    const input: ResolvedCheckoutInput = {
-      ...baseInput,
-      items: [
-        {
-          sku: 'pro-plan',
-          name: 'Pro Plan',
-          quantity: 1,
-          unitAmount: 0,
-          currency: 'usd',
-          providerRefs: { polar: { productId: 'polar_prod_pro' } },
-        },
-      ],
-    };
-
-    const params = mapToPolarCheckoutParams(input);
-    expect(params.prices).toBeUndefined();
-    expect(params.products).toEqual(['polar_prod_pro']);
+    // The Polar product's own price is charged; no amount is sent.
+    expect(params).not.toHaveProperty('prices');
   });
 
   it('throws CatalogError with the offending SKU when providerRefs.polar.productId is missing', () => {
@@ -97,14 +76,14 @@ describe('mapToPolarCheckoutParams', () => {
     expect(() => mapToPolarCheckoutParams(input)).toThrow(CatalogError);
   });
 
-  it('lists products in the order they were requested', () => {
+  it('rejects a multi-item cart instead of offering the items as a choice', () => {
     const input: ResolvedCheckoutInput = {
       ...baseInput,
       items: [
         {
           sku: 'seat',
           name: 'Seat',
-          quantity: 3,
+          quantity: 1,
           unitAmount: 500,
           currency: 'usd',
           providerRefs: { polar: { productId: 'polar_prod_seat' } },
@@ -120,8 +99,18 @@ describe('mapToPolarCheckoutParams', () => {
       ],
     };
 
-    const params = mapToPolarCheckoutParams(input);
-    expect(params.products).toEqual(['polar_prod_seat', 'polar_prod_pro']);
+    // Polar's `products` is the list a customer picks one from, not a cart.
+    expect(() => mapToPolarCheckoutParams(input)).toThrow(/sells one product/);
+  });
+
+  it('rejects a quantity above 1 instead of silently charging for one', () => {
+    const input: ResolvedCheckoutInput = {
+      ...baseInput,
+      items: [{ ...baseInput.items[0]!, quantity: 3 }],
+    };
+
+    expect(() => mapToPolarCheckoutParams(input)).toThrow(CatalogError);
+    expect(() => mapToPolarCheckoutParams(input)).toThrow(/quantity 3/);
   });
 
   it('forwards customerEmail and metadata when provided', () => {

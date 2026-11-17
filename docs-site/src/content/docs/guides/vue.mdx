@@ -1,0 +1,77 @@
+---
+title: "Vue"
+description: "Use Tenderlane from Vue with a plugin and composables over the same headless client."
+sidebar:
+  order: 2
+---
+
+`@tenderlane/vue` is a thin binding over `@tenderlane/client`, the same client the React package wraps. Routing, catalogs, providers and the server handler are unchanged.
+
+:::caution
+`@tenderlane/vue` is in the repository but not yet published to npm. It covers redirect flows. There is no Vue component for inline payment elements yet.
+:::
+
+## Install the plugin
+
+```ts title="main.ts"
+import { createApp } from 'vue';
+import { createTenderlane } from '@tenderlane/vue';
+import { createRulesRouter } from '@tenderlane/core';
+import { stripeProvider } from '@tenderlane/stripe';
+import App from './App.vue';
+
+const tenderlane = createTenderlane({
+  context: { country: 'CH', currency: 'chf' },
+  providers: [
+    stripeProvider({ publishableKey: 'pk_test_...', serverEndpoint: '/api/payments' }),
+  ],
+  routing: createRulesRouter({
+    rules: [],
+    fallback: { provider: 'stripe', flow: 'checkout-session' },
+  }),
+});
+
+createApp(App).use(tenderlane).mount('#app');
+```
+
+To scope a client to part of the tree, call `provideTenderlane(config)` in a component's `setup` instead.
+
+## Build the checkout
+
+```vue title="Checkout.vue"
+<script setup lang="ts">
+import { useTenderlaneCheckout, useTenderlaneContext } from '@tenderlane/vue';
+
+const props = defineProps<{ country: 'CH' | 'DE' | 'US' }>();
+
+// When the prop changes, the route is evaluated again.
+useTenderlaneContext(() => ({ country: props.country }));
+
+const checkout = useTenderlaneCheckout();
+
+const input = {
+  items: [{ sku: 'pro-plan', quantity: 1 }],
+  context: { country: props.country },
+  successUrl: `${location.origin}/success`,
+  cancelUrl: `${location.origin}/cancel`,
+};
+</script>
+
+<template>
+  <p v-if="checkout.error.value">{{ checkout.error.value.message }}</p>
+  <button :disabled="!checkout.canSubmit.value" @click="checkout.submit(input)">
+    Pay with {{ checkout.selectedProvider.value }}
+  </button>
+</template>
+```
+
+## Composables
+
+| Composable | Returns |
+|---|---|
+| `useTenderlaneCheckout()` | Computed refs for `status`, `selectedProvider`, `selectedRoute`, `paymentMethods`, `selectedPaymentMethod`, `canSubmit`, `error`, `checkoutResult`, `providerSession`, plus `selectPaymentMethod`, `prepare`, `submit`, `reset`. |
+| `useTenderlaneState()` | The whole client state as a shallow ref. |
+| `useTenderlaneContext(source)` | Nothing. Watches a ref or getter and calls `updateContext`. |
+| `useTenderlane()` | The raw client. |
+
+The statuses and their meaning are the same as in React. See the [state machine](/docs/concepts/state-machine).

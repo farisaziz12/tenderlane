@@ -88,4 +88,5 @@ export {
   ValidationError,
   UnsupportedCapabilityError,
   CatalogError,
+  hasErrorCode,
 } from './errors/errors.js';

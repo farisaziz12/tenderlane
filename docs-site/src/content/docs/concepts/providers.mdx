@@ -7,7 +7,7 @@ sidebar:
 
 import ServerHandlerFlowDiagram from '../../../components/diagrams/ServerHandlerFlowDiagram.astro';
 
-A **provider** in Tenderlane is an adapter that bridges the gap between Tenderlane's normalized API and a specific payment service provider (PSP) like Stripe, Adyen, or PayPal. Each provider has two sides: a **browser adapter** that runs in the frontend, and a **server adapter** that runs on your backend.
+A **provider** in Tenderlane is an adapter that bridges the gap between Tenderlane's normalized API and a specific payment service provider (PSP). Two ship today: Stripe and Polar. Core knows nothing about either; both are built on the same public interfaces you would use for your own adapter. Each provider has two sides: a **browser adapter** that runs in the frontend, and a **server adapter** that runs on your backend.
 
 ## Browser payment provider
 
@@ -65,11 +65,13 @@ interface ServerProviderAdapter<TProviderId extends string = string> {
   readonly actions: readonly string[];
   handle(
     action: string,
-    payload: CheckoutInput,
+    payload: ResolvedCheckoutInput,
     options?: Record<string, unknown>,
   ): Promise<CheckoutResult>;
 }
 ```
+
+The adapter receives a `ResolvedCheckoutInput`, not what the browser sent. Its `items` are `ResolvedCatalogItem[]` produced by the server's catalog, and they are the only place an adapter reads prices from. Its `providerOptions` come from the handler's server configuration.
 
 The server adapter is registered with `createTenderlaneHandler`, which dispatches incoming requests to the right adapter based on the `provider` field.
 
@@ -81,12 +83,17 @@ const handler = createTenderlaneHandler({
   providers: [
     stripeServerAdapter({ secretKey: process.env.STRIPE_SECRET_KEY! }),
   ],
+  catalog, // required: see the Catalog page
 });
+
+export const POST = handler.POST;
 ```
+
+`createTenderlaneHandler` returns an object with two Web-standard request handlers, `{ POST, resolve }`. It is not itself callable.
 
 ### Request lifecycle
 
-A single `POST` to the handler runs through six steps. The defensive `stripClientAmounts()` call and the per-provider catalog dispatch are the load-bearing pieces — they're why the server can trust the resolved amounts no matter what the client sent.
+A single `POST` to the handler: parse the JSON body, strip any `unitAmount`, check `provider` and `action`, validate `items` and the redirect URLs, derive the context (`resolveContext`), resolve the items with the provider's catalog, run `onCatalogResolved`, drop client `providerOptions`, and call the adapter. The amount stripping and the catalog dispatch are the load-bearing pieces: they are why the adapter can trust the resolved amounts no matter what the client sent.
 
 <ServerHandlerFlowDiagram />
 
@@ -96,6 +103,36 @@ A single `POST` to the handler runs through six steps. The defensive `stripClien
 |--------|-------------|----------|
 | `'checkout'` | Creates a Stripe Checkout Session | Redirect flow (`checkout-session`) |
 | `'create-payment-intent'` | Creates a Stripe PaymentIntent | Inline flow (`payment-intent`) |
+
+`stripeServerAdapter({ secretKey, apiVersion? })` honours `apiVersion`. A PaymentIntent has one currency, so a cart whose items resolve to different currencies is rejected.
+
+### Polar
+
+```ts
+// Browser
+import { polarProvider } from '@tenderlane/polar';
+
+const polar = polarProvider({
+  organizationId: 'org_...',
+  serverEndpoint: '/api/checkout',
+});
+
+// Server
+import { polarServerAdapter } from '@tenderlane/polar/server';
+
+polarServerAdapter({
+  accessToken: process.env.POLAR_ACCESS_TOKEN!,
+  organizationId: process.env.POLAR_ORGANIZATION_ID!,
+  server: 'sandbox', // or 'production'
+});
+```
+
+The Polar adapter has one action, `'checkout'`, which creates a hosted checkout (flow `checkout-session`, redirect only). Polar constraints the adapter enforces:
+
+- **One product, quantity 1, per checkout.** Polar's `products` field is a list the customer picks one from, not a cart, and there is no quantity. A cart with several items or a quantity above 1 is rejected with a `CatalogError`.
+- **No price override.** Polar charges the product's own price. The resolved `unitAmount` is for display.
+- Every resolved item needs `providerRefs.polar.productId`.
+- `cancelUrl` is not sent; Polar has no equivalent.
 
 ## Capabilities
 
@@ -137,7 +174,7 @@ const STRIPE_CAPABILITIES = {
     embedded: true,
     subscriptions: false,  // Not yet implemented
     refunds: false,         // Not yet implemented
-    webhooks: true,
+    webhooks: true,         // Stripe has them; Tenderlane ships no webhook helpers yet
   },
 };
 ```
@@ -149,10 +186,12 @@ Tenderlane supports several payment flows:
 | Flow | Description | Example |
 |------|-------------|---------|
 | `'checkout-session'` | Redirect to a provider-hosted checkout page | Stripe Checkout |
-| `'payment-intent'` | Inline card form on your page | Stripe Elements |
-| `'embedded-checkout'` | Embedded checkout widget | Stripe Embedded Checkout |
-| `'redirect'` | Generic redirect to a provider URL | PayPal redirect |
-| `'custom'` | Custom flow defined by your provider adapter | Any bespoke flow |
+| `'payment-intent'` | Inline payment form on your page | Stripe Payment Element |
+| `'embedded-checkout'` | Embedded checkout widget | No built-in adapter implements it |
+| `'redirect'` | Generic redirect to a provider URL | Your own adapter |
+| `'custom'` | Custom flow defined by your provider adapter | Your own adapter |
+
+The built-in Stripe adapter implements `checkout-session` and `payment-intent`. The built-in Polar adapter implements `checkout-session`.
 
 ### Payment method descriptors
 
@@ -193,7 +232,7 @@ const stripe = stripeProvider({ publishableKey: '...', serverEndpoint: '...' });
 // typeof stripe.capabilities.paymentMethods === readonly ['card', 'paypal', 'link', ...]
 ```
 
-See [Type Safety](/concepts/type-safety/) for more on how to use the inference utilities.
+See [Type Safety](/docs/concepts/type-safety) for more on how to use the inference utilities.
 
 ## Building a custom provider
 
@@ -212,6 +251,7 @@ import type {
   CheckoutResult,
   SelectedPaymentRoute,
 } from '@tenderlane/core';
+import { ProviderError } from '@tenderlane/core';
 
 interface AcmeProviderOptions {
   readonly apiKey: string;
@@ -261,6 +301,10 @@ export function acmeProvider(
         }),
       });
 
+      if (!response.ok) {
+        throw new ProviderError(`Acme checkout failed (${response.status})`, 'acme');
+      }
+
       const result = await response.json() as CheckoutResult;
 
       if (result.url && typeof window !== 'undefined') {
@@ -276,7 +320,7 @@ export function acmeProvider(
 ### Server adapter
 
 ```ts
-import type { ServerProviderAdapter, CheckoutInput, CheckoutResult } from '@tenderlane/core';
+import type { ServerProviderAdapter, ResolvedCheckoutInput, CheckoutResult } from '@tenderlane/core';
 import { ProviderError } from '@tenderlane/core';
 
 export function acmeServerAdapter(config: {
@@ -288,7 +332,7 @@ export function acmeServerAdapter(config: {
 
     async handle(
       action: string,
-      payload: CheckoutInput,
+      payload: ResolvedCheckoutInput,
       _options?: Record<string, unknown>,
     ): Promise<CheckoutResult> {
       if (action !== 'create-checkout') {
@@ -298,7 +342,8 @@ export function acmeServerAdapter(config: {
         );
       }
 
-      // Call the Acme PSP API with config.secretKey
+      // payload.items are server-resolved: sku, quantity, name, unitAmount, currency.
+      // Call the Acme PSP API with config.secretKey.
       const session = await createAcmeSession(config.secretKey, payload);
 
       return {
@@ -328,5 +373,6 @@ const config = {
 // Server
 const handler = createTenderlaneHandler({
   providers: [acmeServerAdapter({ secretKey: '...' })],
+  catalog,
 });
 ```

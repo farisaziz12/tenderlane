@@ -208,3 +208,24 @@ describe('mapToStripeSessionParams (resolved items)', () => {
     expect(params.payment_method_types).toEqual(['cashapp']);
   });
 });
+
+describe('mapToStripePaymentIntentParams currency', () => {
+  it('rejects a cart that mixes currencies instead of charging it all in the first one', async () => {
+    const { mapToStripePaymentIntentParams } = await import('../../src/server/mapper.js');
+    const input: ResolvedCheckoutInput = {
+      ...baseInput,
+      items: [
+        { sku: 'a', name: 'A', quantity: 1, unitAmount: 1000, currency: 'usd' },
+        { sku: 'b', name: 'B', quantity: 1, unitAmount: 1000, currency: 'jpy' },
+      ],
+    };
+
+    expect(() => mapToStripePaymentIntentParams(input)).toThrow(/one currency/);
+  });
+
+  it('rejects an empty cart', async () => {
+    const { mapToStripePaymentIntentParams } = await import('../../src/server/mapper.js');
+
+    expect(() => mapToStripePaymentIntentParams({ ...baseInput, items: [] })).toThrow();
+  });
+});

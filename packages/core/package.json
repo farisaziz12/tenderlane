@@ -3,6 +3,7 @@
   "version": "0.1.0-alpha.1",
   "description": "Core types, routing engine, middleware, and server handler for Tenderlane",
   "type": "module",
+  "sideEffects": false,
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -11,6 +12,10 @@
     "./server": {
       "types": "./dist/server/index.d.ts",
       "import": "./dist/server/index.js"
+    },
+    "./adapters": {
+      "types": "./dist/adapters/index.d.ts",
+      "import": "./dist/adapters/index.js"
     }
   },
   "main": "./dist/index.js",

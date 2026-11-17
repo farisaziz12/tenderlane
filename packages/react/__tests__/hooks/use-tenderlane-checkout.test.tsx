@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import React from 'react';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { TenderlaneProvider } from '../../src/provider.js';

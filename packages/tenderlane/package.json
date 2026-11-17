@@ -3,6 +3,7 @@
   "version": "0.1.0-alpha.1",
   "description": "Reactive payment orchestration for modern web apps",
   "type": "module",
+  "sideEffects": false,
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -39,6 +40,14 @@
     "./polar/server": {
       "types": "./dist/polar-server.d.ts",
       "import": "./dist/polar-server.js"
+    },
+    "./adapters": {
+      "types": "./dist/adapters.d.ts",
+      "import": "./dist/adapters.js"
+    },
+    "./vue": {
+      "types": "./dist/vue.d.ts",
+      "import": "./dist/vue.js"
     }
   },
   "main": "./dist/index.js",
@@ -66,18 +75,20 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@tenderlane/core": "workspace:*",
     "@tenderlane/client": "workspace:*",
+    "@tenderlane/core": "workspace:*",
+    "@tenderlane/polar": "workspace:*",
     "@tenderlane/react": "workspace:*",
     "@tenderlane/stripe": "workspace:*",
-    "@tenderlane/polar": "workspace:*"
+    "@tenderlane/vue": "workspace:*"
   },
   "peerDependencies": {
+    "@polar-sh/sdk": ">=0.30.0",
+    "@stripe/react-stripe-js": ">=2.0.0",
+    "@stripe/stripe-js": ">=2.0.0",
     "react": ">=18.0.0",
     "stripe": ">=14.0.0",
-    "@stripe/stripe-js": ">=2.0.0",
-    "@stripe/react-stripe-js": ">=2.0.0",
-    "@polar-sh/sdk": ">=0.30.0"
+    "vue": ">=3.3.0"
   },
   "peerDependenciesMeta": {
     "react": {
@@ -93,6 +104,9 @@
       "optional": true
     },
     "@polar-sh/sdk": {
+      "optional": true
+    },
+    "vue": {
       "optional": true
     }
   },

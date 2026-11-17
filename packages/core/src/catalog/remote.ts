@@ -66,7 +66,7 @@ export function createRemoteCatalog<TSku extends string = string>(
           method: 'POST',
           headers: {
             'content-type': 'application/json',
-            ...(config.headers ?? {}),
+            ...config.headers,
           },
           body: JSON.stringify({ items, context }),
           signal: controller?.signal,

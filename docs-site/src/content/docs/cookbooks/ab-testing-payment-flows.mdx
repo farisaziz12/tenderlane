@@ -137,7 +137,8 @@ export default function CheckoutPage({ userId }: { userId: string }) {
   );
 
   const checkoutInput = {
-    lineItems: [{ name: 'Widget', quantity: 1, unitAmount: 2500 }],
+    items: [{ sku: 'widget', quantity: 1 }],
+    metadata: { checkoutFlow: variant }, // comes back on the Stripe webhook event
     successUrl: window.location.origin + '/success',
     cancelUrl: window.location.origin + '/checkout',
   };
@@ -158,7 +159,7 @@ export default function CheckoutPage({ userId }: { userId: string }) {
             <div>
               {error && <p style={{ color: 'red' }}>{error.message}</p>}
 
-              {checkoutResult && (
+              {status === 'success' && (
                 <p style={{ color: 'green' }}>Payment succeeded!</p>
               )}
 
@@ -181,6 +182,8 @@ export default function CheckoutPage({ userId }: { userId: string }) {
 :::note
 The `TenderlaneCheckoutForm` component handles both redirect and inline flows automatically. When the experiment variant is `control` (redirect flow), it renders only the pay button. When the variant is `treatment` (inline flow), it auto-prepares the PaymentIntent and renders the `StripePaymentElement`.
 :::
+
+The server endpoint is the same for both variants. It needs a catalog that knows the `widget` SKU, as in the [Stripe Checkout Redirect](/docs/cookbooks/stripe-checkout-redirect) cookbook.
 
 ## How it works
 
@@ -266,24 +269,45 @@ const router = createRulesRouter({
 
 ## Tracking conversions
 
-Use the `onCheckoutSuccess` middleware hook to track conversions per experiment variant:
+The two variants end in different client states, so you cannot compare them with a client hook alone:
+
+- **Inline variant** (`payment-intent`): the payment is confirmed on the page, the client reaches `success`, and `onCheckoutSuccess` fires.
+- **Redirect variant** (`checkout-session`): the client reaches `redirecting` and `onCheckoutPending` fires. The customer pays on Stripe's page, so `onCheckoutSuccess` never fires for this variant.
+
+Counting `onCheckoutSuccess` would show zero conversions for the redirect variant. Measure conversions for both variants from the same server-side source: Stripe's webhooks (`checkout.session.completed` and `payment_intent.succeeded`). Pass the variant in `metadata` on the checkout input so it comes back on the webhook event. Tenderlane does not ship webhook helpers yet.
+
+The client hooks are still useful for the funnel steps before payment:
 
 ```ts
-const conversionTrackingMiddleware: TenderlaneMiddleware = {
-  name: 'conversion-tracking',
+import type { TenderlaneContext, TenderlaneMiddleware } from '@tenderlane/core';
 
+function trackExperimentStep(
+  step: 'handed_off' | 'paid_inline',
+  context: TenderlaneContext,
+  ruleId: string | undefined,
+  sessionId: string,
+) {
+  for (const [experimentName, variant] of Object.entries(context.experiment ?? {})) {
+    analytics.track(`experiment_${step}`, {
+      experiment: experimentName,
+      variant: String(variant),
+      ruleId,
+      sessionId,
+    });
+  }
+}
+
+const funnelTrackingMiddleware: TenderlaneMiddleware = {
+  name: 'funnel-tracking',
+
+  // Redirect variant: hosted checkout created, customer has not paid yet.
+  onCheckoutPending({ context, route, result }) {
+    trackExperimentStep('handed_off', context, route.ruleId, result.id);
+  },
+
+  // Inline variant: Stripe.js reported the payment complete.
   onCheckoutSuccess({ context, route, result }) {
-    if (context.experiment) {
-      for (const [experimentName, variant] of Object.entries(context.experiment)) {
-        analytics.track('experiment_conversion', {
-          experiment: experimentName,
-          variant: String(variant),
-          provider: result.provider,
-          ruleId: route.ruleId,
-          sessionId: result.id,
-        });
-      }
-    }
+    trackExperimentStep('paid_inline', context, route.ruleId, result.id);
   },
 };
 ```
