@@ -26,7 +26,12 @@ jobs:
       - uses: actions/github-script@v7
         with:
           script: |
-            const { checkPullRequest } = await import(`${process.env.GITHUB_WORKSPACE}/tools/pr-rules.mjs`);
+            const rules = `${process.env.GITHUB_WORKSPACE}/tools/pr-rules.mjs`;
+            if (!require('node:fs').existsSync(rules)) {
+              core.notice('The base branch has no tools/pr-rules.mjs yet; nothing to check against.');
+              return;
+            }
+            const { checkPullRequest } = await import(rules);
             const { owner, repo } = context.repo;
             const pull = context.payload.pull_request;
             const files = await github.paginate(github.rest.pulls.listFiles, {
