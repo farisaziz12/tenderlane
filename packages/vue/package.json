@@ -1,6 +1,6 @@
 {
   "name": "@tenderlane/vue",
-  "version": "0.1.0-alpha.1",
+  "version": "0.1.0-alpha.2",
   "description": "Vue bindings for Tenderlane payment orchestration",
   "type": "module",
   "sideEffects": false,
