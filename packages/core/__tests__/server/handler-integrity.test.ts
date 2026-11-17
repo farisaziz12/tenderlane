@@ -324,3 +324,25 @@ describe('pass-through field validation', () => {
     expect(handle).not.toHaveBeenCalled();
   });
 });
+
+describe('errors from another copy of core', () => {
+  it('answers 400 for a catalog error that is not an instance of this CatalogError', async () => {
+    // What an adapter package throws when it resolved a different copy of core.
+    class ForeignCatalogError extends Error {
+      readonly code = 'CATALOG_ERROR';
+    }
+    const adapter: ServerProviderAdapter = {
+      id: 'mock',
+      actions: ['checkout'],
+      async handle() {
+        throw new ForeignCatalogError('A Polar checkout has no quantity.');
+      },
+    };
+    const handler = createTenderlaneHandler({ providers: [adapter], catalog });
+
+    const response = await handler.POST(post(checkout({ items: [{ sku: 'pro', quantity: 1 }] })));
+
+    expect(response.status).toBe(400);
+    expect((await response.json()).error).toContain('no quantity');
+  });
+});

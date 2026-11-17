@@ -1,4 +1,4 @@
-import type { PaymentFlow, PaymentMethodId, KnownPaymentMethodId, ProviderId, KnownProviderId, KnownCountryCode, KnownCurrencyCode, KnownLocale } from './capabilities.js';
+import type { PaymentFlow, PaymentMethodId, ProviderId, KnownCountryCode, KnownCurrencyCode, KnownLocale } from './capabilities.js';
 
 /**
  * Condition for matching string-valued context fields in a routing rule.
@@ -117,9 +117,13 @@ export interface RoutingRule {
  * };
  */
 export interface RouteTarget {
-  readonly provider: KnownProviderId;
+  /**
+   * Any registered provider id. Well-known ids autocomplete, but core has no
+   * privileged list: a community or in-house adapter is targeted the same way.
+   */
+  readonly provider: ProviderId;
   readonly flow: PaymentFlow;
-  readonly paymentMethods?: KnownPaymentMethodId[];
+  readonly paymentMethods?: PaymentMethodId[];
   readonly providerOptions?: Record<string, unknown>;
 }
 

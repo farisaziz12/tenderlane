@@ -51,6 +51,34 @@ importers:
         specifier: ^5.0.0
         version: 5.1.0
 
+  e2e:
+    dependencies:
+      '@tenderlane/client':
+        specifier: workspace:*
+        version: link:../packages/client
+      '@tenderlane/core':
+        specifier: workspace:*
+        version: link:../packages/core
+      '@tenderlane/polar':
+        specifier: workspace:*
+        version: link:../packages/polar
+      '@tenderlane/stripe':
+        specifier: workspace:*
+        version: link:../packages/stripe
+    devDependencies:
+      '@polar-sh/sdk':
+        specifier: ^0.34.0
+        version: 0.34.17
+      stripe:
+        specifier: ^17.0.0
+        version: 17.7.0
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.0
+        version: 2.1.9(@types/node@25.6.2)(jsdom@25.0.1)
+
   examples/react-checkout-multi-psp:
     dependencies:
       '@polar-sh/sdk':

@@ -30,13 +30,19 @@ pnpm install
 pnpm build        # Build all packages (Turborepo, tsup)
 pnpm test         # Run all tests (Vitest, includes type tests)
 pnpm typecheck    # tsc --noEmit across all packages
+pnpm lint         # oxlint, warnings are errors
+pnpm test:build   # publint --strict on every package
+pnpm check        # all of the above plus the workspace check
 ```
-
-`pnpm lint` currently runs nothing (no package defines a `lint` script). Do not report it as a passing check.
 
 Build order is managed by Turborepo via `turbo.json`. Core builds first, then client+stripe in parallel, then react.
 
 ## Key Patterns
+
+### Provider neutrality
+Core has no privileged provider. Types that name a provider accept any string (`ProviderId`, with autocomplete for well-known ids); the first-party adapters use only what `@tenderlane/core/adapters` exports (`defineBrowserProvider`, `defineServerAdapter`, `requestProviderAction`), which is the same surface a community adapter gets. `e2e/` keeps that honest: it runs one checkout through Stripe, Polar and a third adapter written from that entry point alone, against mocked PSP SDKs.
+
+Errors that cross a package boundary are matched by `code` (`hasErrorCode`), not `instanceof`.
 
 ### Phantom Type Metadata (`~types`)
 Provider adapters carry a `'~types'` property for compile-time type inference without runtime cost. This is the TanStack pattern for preserving literal types through generic boundaries.
@@ -99,7 +105,7 @@ Not yet built:
 
 Every change goes through the same loop, whoever writes it.
 
-1. **Verify.** Run `pnpm build && pnpm test && pnpm typecheck` and report what they printed. A change to `packages/*/src` needs a test that fails without it, and a changeset (`pnpm changeset`).
+1. **Verify.** Run `pnpm check` and report what it printed. A change to `packages/*/src` needs a test that fails without it, and a changeset (`pnpm changeset`).
 2. **Review locally before pushing.** Start a reviewer subagent with a fresh context: give it `git diff origin/main...HEAD` and the `payment-review` skill, not your reasoning. It reports correctness and security problems first, each with `file:line` and a concrete failure (input, state, wrong result), tagged Important, Nit or Pre-existing. Fix every Important finding everywhere its kind occurs, then re-review only what changed. At most three rounds; record the counts in the PR.
 3. **Show it.** A change under `docs-site/` or `examples/` needs before and after screenshots, and a recording for an interactive flow (`visual-evidence` skill, `tools/shot.mjs`). A library change shows one concrete input and output, a type error, or a failing-then-passing test.
 4. **Open a slim PR.** Use `.github/pull_request_template.md` (`open-pr` skill). Under 100 visible words; everything else goes in the collapsed block. `pr-rules` in CI enforces this.

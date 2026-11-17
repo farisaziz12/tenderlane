@@ -6,6 +6,7 @@ export default defineConfig({
     client: 'src/client.ts',
     react: 'src/react.ts',
     server: 'src/server.ts',
+    adapters: 'src/adapters.ts',
     stripe: 'src/stripe.ts',
     'stripe-server': 'src/stripe-server.ts',
     'stripe-react': 'src/stripe-react.ts',

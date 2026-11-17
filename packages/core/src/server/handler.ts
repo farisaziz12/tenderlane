@@ -6,7 +6,7 @@ import type { TenderlaneMiddleware } from '../types/middleware.js';
 import type { Router } from '../types/routing.js';
 import { resolveCatalogItems, wrapLegacyLineItems } from '../catalog/runner.js';
 import { runMiddlewareHook } from '../middleware/runner.js';
-import { CatalogError, TenderlaneError, ValidationError } from '../errors/errors.js';
+import { CatalogError, ValidationError, hasErrorCode } from '../errors/errors.js';
 
 const DEFAULT_MAX_ITEMS = 100;
 const DEFAULT_MAX_QUANTITY = 10_000;
@@ -313,11 +313,15 @@ export function createTenderlaneHandler(config: ServerHandlerConfig) {
    * generic message: provider and runtime error text can hold internals.
    */
   function errorResponse(error: unknown): Response {
-    if (error instanceof CatalogError || error instanceof ValidationError) {
+    // Matched by `code`, not `instanceof`: adapters may carry their own copy
+    // of the error classes.
+    if (hasErrorCode(error, 'CATALOG_ERROR') || hasErrorCode(error, 'VALIDATION_ERROR')) {
       return Response.json({ error: error.message, code: error.code }, { status: 400 });
     }
     config.onError?.(error);
-    const code = error instanceof TenderlaneError ? error.code : 'INTERNAL_ERROR';
+    const candidate = (error as { code?: unknown } | null)?.code;
+    const code =
+      typeof candidate === 'string' && /^[A-Z_]+$/.test(candidate) ? candidate : 'INTERNAL_ERROR';
     return Response.json({ error: 'Checkout request failed.', code }, { status: 500 });
   }
 

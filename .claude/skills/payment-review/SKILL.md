@@ -51,4 +51,4 @@ Review the diff against the whole repository, not only the changed lines. Work t
 - ESM only, `.js` import extensions, full variable names (no `ctx`, `err`, `mw`, `params`).
 - Does a change to `packages/*/src` come with a test that fails without it, and a changeset?
 
-Run `pnpm build`, `pnpm test` and `pnpm typecheck` before you conclude, and report what they actually printed.
+Run `pnpm check` before you conclude, and report what they actually printed.

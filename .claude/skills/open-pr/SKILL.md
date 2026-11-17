@@ -9,7 +9,7 @@ Only open a PR when the user asked for one.
 
 ## Before you write it
 
-1. `pnpm build && pnpm test && pnpm typecheck` on the commit you will push. Keep the output.
+1. `pnpm check` on the commit you will push. Keep the output.
 2. A fresh-context reviewer has run the `payment-review` skill over `git diff origin/main...HEAD`, at most three fix-and-review rounds. Keep the counts.
 3. A change to `packages/*/src` has a changeset.
 4. A change under `docs-site/` or `examples/` has before and after captures (`visual-evidence` skill).
@@ -27,5 +27,4 @@ Fill `.github/pull_request_template.md`. Do not add headings.
 ## Do not
 
 - Paste full test logs, restate the diff, or list files changed.
-- Claim `pnpm lint` passed while it runs nothing.
 - Use after-only screenshots, or code and terminal screenshots as visual evidence.

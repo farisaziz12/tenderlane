@@ -40,6 +40,10 @@
     "./polar/server": {
       "types": "./dist/polar-server.d.ts",
       "import": "./dist/polar-server.js"
+    },
+    "./adapters": {
+      "types": "./dist/adapters.d.ts",
+      "import": "./dist/adapters.js"
     }
   },
   "main": "./dist/index.js",

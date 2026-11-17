@@ -154,3 +154,20 @@ export class CatalogError extends TenderlaneError {
     this.sku = options?.sku;
   }
 }
+
+/**
+ * Whether a value is a Tenderlane error with the given `code`.
+ *
+ * Prefer this to `instanceof` wherever an error can cross a package boundary:
+ * two copies of `@tenderlane/core` in one process (a duplicated install, or
+ * separately bundled entry points) have distinct classes, and `instanceof`
+ * is false between them. The `code` is the stable contract.
+ */
+export function hasErrorCode(error: unknown, code: string): error is TenderlaneError {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    (error as { code?: unknown }).code === code &&
+    typeof (error as { message?: unknown }).message === 'string'
+  );
+}
