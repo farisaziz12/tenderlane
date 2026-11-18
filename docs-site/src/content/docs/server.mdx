@@ -37,13 +37,14 @@ interface CheckoutInput {
 | `provider` | Must be a registered adapter. With `routing` set, must be the provider the server's own evaluation selects, or the request is rejected with 400. |
 | `paymentMethods` | Ignored when `routing` is set; the route's methods are used. |
 | `context` | Passed to `resolveContext`, whose return value is what pricing and routing use. Without `resolveContext` it is used as sent. |
-| `successUrl`, `cancelUrl` | With `allowedRedirectOrigins` set, must be absolute URLs on one of those origins. |
+| `successUrl`, `cancelUrl` | Must be absolute URLs on an origin in `allowedRedirectOrigins`, which defaults to the origin of the request. Otherwise the endpoint could mint a real checkout that returns the customer to someone else's site. |
+| `customerEmail`, `clientReferenceId`, `metadata`, `idempotencyKey` | Type-checked and forwarded to the provider as sent. They are browser input: do not fulfil an order from `clientReferenceId` or `metadata` without checking them against your own records. |
 | Anything else in the body | Dropped. The adapter payload is built field by field from validated values. |
 
 The response is `{ provider, id, status, url?, clientSecret? }`. An adapter result is passed through a validator that copies only those fields, so the rest of a PSP response (customer details, amounts, internal ids) never reaches the browser. The browser validates the same shape before acting on it, and only follows an absolute `http(s)` URL.
 
 :::caution
-Three options default to the permissive choice so that a first setup works. Set them before real use: `routing` (otherwise the browser picks the provider), `resolveContext` (otherwise a forged context can select a cheaper regional price) and `allowedRedirectOrigins` (otherwise the success URL can point anywhere).
+Two options default to the permissive choice so that a first setup works. Set them before real use: `routing` (otherwise the browser picks the provider) and `resolveContext` (otherwise a forged context can select a cheaper regional price). Set `allowedRedirectOrigins` explicitly when a proxy changes the host the handler sees.
 :::
 
 ## Catalogs
@@ -69,8 +70,8 @@ Whatever the browser displayed, `POST` resolves again and charges that.
 
 | Status | When | Body |
 | --- | --- | --- |
-| 400 | Invalid body, unknown provider or action, wrong provider for the route, unknown SKU, cart the provider cannot represent | `{ error, code }` with the specific message; `code` is `VALIDATION_ERROR` or `CATALOG_ERROR` |
-| 500 | The PSP call failed, or anything unexpected | `{ error: 'Checkout request failed.', code }`. The detail goes to `onError`, not to the browser. |
+| 400 | Invalid body, unknown provider or action, wrong provider for the route, redirect URL on another origin, unknown SKU, cart the provider cannot represent | `{ error, code }` with the specific message; `code` is `VALIDATION_ERROR` or `CATALOG_ERROR` |
+| 500 | The PSP call failed, no catalog is configured, or anything unexpected | `{ error: 'Checkout request failed.', code }`. The detail goes to `onError`, not to the browser. |
 
 ## What the handler does not do
 

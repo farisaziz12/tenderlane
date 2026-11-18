@@ -62,8 +62,8 @@ describe('createTenderlaneHandler — catalog resolution', () => {
         payload: {
           items: [{ sku: 'pro-plan', quantity: 2 }],
           context: { currency: 'usd' },
-          successUrl: '/s',
-          cancelUrl: '/c',
+          successUrl: 'http://localhost/s',
+          cancelUrl: 'http://localhost/c',
         },
       }),
     });
@@ -99,8 +99,8 @@ describe('createTenderlaneHandler — catalog resolution', () => {
         action: 'checkout',
         payload: {
           items: [{ sku: 'pro-plan', quantity: 1, unitAmount: 1 }],
-          successUrl: '/s',
-          cancelUrl: '/c',
+          successUrl: 'http://localhost/s',
+          cancelUrl: 'http://localhost/c',
         },
       }),
     });
@@ -134,8 +134,8 @@ describe('createTenderlaneHandler — catalog resolution', () => {
         payload: {
           items: [{ sku: 'pro-plan', quantity: 1 }],
           context: { currency: 'usd' },
-          successUrl: '/s',
-          cancelUrl: '/c',
+          successUrl: 'http://localhost/s',
+          cancelUrl: 'http://localhost/c',
         },
       }),
     });
@@ -159,8 +159,8 @@ describe('createTenderlaneHandler — catalog resolution', () => {
         action: 'checkout',
         payload: {
           lineItems: [{ name: 'Legacy Item', quantity: 1, unitAmount: 1500 }],
-          successUrl: '/s',
-          cancelUrl: '/c',
+          successUrl: 'http://localhost/s',
+          cancelUrl: 'http://localhost/c',
         },
       }),
     });
@@ -210,8 +210,8 @@ describe('createTenderlaneHandler — per-provider catalogs', () => {
           action: 'checkout',
           payload: {
             items: [{ sku: 'pro-plan', quantity: 1 }],
-            successUrl: '/s',
-            cancelUrl: '/c',
+            successUrl: 'http://localhost/s',
+            cancelUrl: 'http://localhost/c',
           },
         }),
       }),
@@ -227,8 +227,8 @@ describe('createTenderlaneHandler — per-provider catalogs', () => {
           action: 'checkout',
           payload: {
             items: [{ sku: 'pro-plan', quantity: 1 }],
-            successUrl: '/s',
-            cancelUrl: '/c',
+            successUrl: 'http://localhost/s',
+            cancelUrl: 'http://localhost/c',
           },
         }),
       }),
@@ -256,8 +256,8 @@ describe('createTenderlaneHandler — per-provider catalogs', () => {
           action: 'checkout',
           payload: {
             items: [{ sku: 'pro-plan', quantity: 1 }],
-            successUrl: '/s',
-            cancelUrl: '/c',
+            successUrl: 'http://localhost/s',
+            cancelUrl: 'http://localhost/c',
           },
         }),
       }),
@@ -317,7 +317,7 @@ describe('createTenderlaneHandler — resolve route', () => {
     expect(body.items[0]?.unitAmount).toBe(2900);
   });
 
-  it('returns 400 when no catalog is configured', async () => {
+  it('answers 500 when no catalog is configured: a server fault, not a bad request', async () => {
     const { adapter } = captureAdapter();
     const handler = createTenderlaneHandler({ providers: [adapter] });
 
@@ -329,9 +329,9 @@ describe('createTenderlaneHandler — resolve route', () => {
     });
     const res = await handler.resolve(req);
 
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(500);
     const body = await res.json();
-    expect(body.error).toContain('none is configured');
+    expect(body.code).toBe('CONFIGURATION_ERROR');
   });
 
   it('returns 400 when items[] is missing', async () => {

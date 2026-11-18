@@ -205,7 +205,7 @@ describe('the same checkout through each provider', () => {
     expect(result).toMatchObject({ provider: 'polar', id: 'polar_co_1' });
     expect(psp.polarCheckouts.mock.calls[0]![0]).toEqual({
       products: ['polar_prod_pro'],
-      success_url: 'https://shop.example/success',
+      successUrl: 'https://shop.example/success',
     });
     expect(psp.stripeSessions).not.toHaveBeenCalled();
   });

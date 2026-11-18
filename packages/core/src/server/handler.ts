@@ -7,7 +7,7 @@ import type { Router } from '../types/routing.js';
 import { resolveCatalogItems } from '../catalog/runner.js';
 import { parseCheckoutResult } from '../adapters/index.js';
 import { runMiddlewareHook } from '../middleware/runner.js';
-import { CatalogError, ValidationError, hasErrorCode } from '../errors/errors.js';
+import { ConfigurationError, ValidationError, hasErrorCode } from '../errors/errors.js';
 
 const DEFAULT_MAX_ITEMS = 100;
 const DEFAULT_MAX_QUANTITY = 10_000;
@@ -61,9 +61,13 @@ export interface TenderlaneHandlerConfig<
   >;
   /**
    * Origins that `successUrl` and `cancelUrl` may point to, for example
-   * `['https://shop.example.com']`. When set, a request whose URLs are
-   * relative or point elsewhere is rejected with 400. When omitted, the URLs
-   * are passed to the PSP as sent.
+   * `['https://shop.example.com']`. A request whose URLs are relative or
+   * point elsewhere is rejected with 400, so the endpoint cannot be used to
+   * mint a genuine checkout that returns the customer to someone else's site.
+   *
+   * Defaults to the origin of the request itself. Set it explicitly when the
+   * checkout returns to another origin, or when a proxy rewrites the host the
+   * handler sees.
    */
   readonly allowedRedirectOrigins?: readonly string[];
   /** Most entries accepted in `items[]`. Default 100. */
@@ -98,7 +102,9 @@ function stripClientAmounts(value: unknown): unknown {
   if (typeof value !== 'object' || value === null) return value;
   const sanitized: Record<string, unknown> = {};
   for (const [key, nested] of Object.entries(value)) {
-    if (key === 'unitAmount') continue;
+    // `__proto__` from JSON.parse is an own key; assigning it would set the
+    // copy's prototype and smuggle fields past every own-property check.
+    if (key === 'unitAmount' || key === '__proto__') continue;
     sanitized[key] = stripClientAmounts(nested);
   }
   return sanitized;
@@ -189,9 +195,8 @@ function parseMetadata(value: unknown): Record<string, string> | undefined {
 function validateRedirectUrl(
   value: string,
   field: string,
-  allowedOrigins: readonly string[] | undefined,
+  allowedOrigins: readonly string[],
 ): void {
-  if (!allowedOrigins) return;
   let origin: string | undefined;
   try {
     origin = new URL(value).origin;
@@ -199,9 +204,10 @@ function validateRedirectUrl(
     origin = undefined;
   }
   if (!origin || !allowedOrigins.includes(origin)) {
-    throw new ValidationError(`\`${field}\` must be an absolute URL on an allowed origin.`, {
-      field,
-    });
+    throw new ValidationError(
+      `\`${field}\` must be an absolute URL on an allowed origin (${allowedOrigins.join(', ')}).`,
+      { field },
+    );
   }
 }
 
@@ -213,7 +219,8 @@ function validateRedirectUrl(
  * `POST` is the trust boundary of a Tenderlane checkout. For every request it:
  *
  * 1. parses the body and removes any client-supplied `unitAmount`,
- * 2. validates `items`, the redirect URLs and the pass-through fields,
+ * 2. validates `items`, the pass-through fields, and that the redirect URLs
+ *    stay on an allowed origin,
  * 3. derives the server's context (`resolveContext`),
  * 4. checks the named provider against the server's `routing`, when given,
  * 5. prices the items with the server's catalog,
@@ -309,8 +316,9 @@ export function createTenderlaneHandler<
       const items = parseItems(payload.items, limits);
       const successUrl = requiredString(payload, 'successUrl');
       const cancelUrl = requiredString(payload, 'cancelUrl');
-      validateRedirectUrl(successUrl, 'successUrl', config.allowedRedirectOrigins);
-      validateRedirectUrl(cancelUrl, 'cancelUrl', config.allowedRedirectOrigins);
+      const redirectOrigins = config.allowedRedirectOrigins ?? [new URL(request.url).origin];
+      validateRedirectUrl(successUrl, 'successUrl', redirectOrigins);
+      validateRedirectUrl(cancelUrl, 'cancelUrl', redirectOrigins);
       const customerEmail = optionalString(payload, 'customerEmail');
       const clientReferenceId = optionalString(payload, 'clientReferenceId');
       const idempotencyKey = optionalString(payload, 'idempotencyKey');
@@ -376,7 +384,7 @@ export function createTenderlaneHandler<
       const items = parseItems(body.items, limits);
 
       if (!defaultCatalog) {
-        throw new CatalogError(
+        throw new ConfigurationError(
           'The resolve route prices with the top-level `catalog`, and none is configured.',
         );
       }

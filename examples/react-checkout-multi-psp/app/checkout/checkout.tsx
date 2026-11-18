@@ -87,8 +87,13 @@ export function Checkout({ configured }: { configured: Configured }) {
     [context, origin],
   );
 
+  // Display only. Polar charges the price of its own product, which this
+  // page does not know; the server's Polar catalog reads it at checkout.
   const price = priceFor(context);
-  const displayPrice = formatAmount(price.amount, price.currency);
+  const pricedByProvider = providerFor(country) === 'polar';
+  const displayPrice = pricedByProvider
+    ? 'set by Polar'
+    : formatAmount(price.amount, price.currency);
 
   return (
     <TenderlaneProvider config={{ context, providers, routing }}>
@@ -126,7 +131,11 @@ export function Checkout({ configured }: { configured: Configured }) {
               {({ status, selectedProvider, canSubmit, error, submit, retry }) => (
                 <>
                   <button className="button" type="button" disabled={!canSubmit} onClick={submit}>
-                    {status === 'submitting' ? 'Processing…' : `Pay ${displayPrice}`}
+                    {status === 'submitting'
+                      ? 'Processing…'
+                      : pricedByProvider
+                      ? 'Pay'
+                      : `Pay ${displayPrice}`}
                   </button>
                   {statusMessage(status, selectedProvider) && (
                     <p className="hint" role="status">
@@ -148,8 +157,8 @@ export function Checkout({ configured }: { configured: Configured }) {
             </TenderlaneCheckoutForm>
           ) : (
             <p className="hint" role="status">
-              This route uses {providerFor(country)}, and its test keys are not set, so it cannot
-              be paid here. Add them to <span className="mono">.env.local</span> (see{' '}
+              This route uses {providerFor(country)}, and its test keys are not set, so it cannot be
+              paid here. Add them to <span className="mono">.env.local</span> (see{' '}
               <span className="mono">.env.example</span>) and restart.
             </p>
           )}

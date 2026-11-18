@@ -1,14 +1,29 @@
 import { formatAmount } from '../../checkout/catalog';
 
-/** Only same-site paths are followed, so the page cannot be used as an open redirect. */
-function localPath(value: string | undefined, fallback: string): string {
-  if (!value) return fallback;
-  try {
-    const url = new URL(value, 'http://localhost');
-    return `${url.pathname}${url.search}`;
-  } catch {
-    return fallback;
+const PLACEHOLDER_ORIGIN = 'http://demo-psp.invalid';
+
+/**
+ * Reduce a return URL to a path on this site, so the page cannot be used as
+ * an open redirect. Anything that does not resolve to a same-site path
+ * (`//evil.example`, a path that starts with a second slash) is replaced.
+ */
+function localPath(
+  value: string | undefined,
+  fallback: string,
+  extra: Record<string, string> = {},
+): string {
+  let path = fallback;
+  if (value) {
+    try {
+      const target = new URL(value, PLACEHOLDER_ORIGIN);
+      if (!target.pathname.startsWith('//')) path = `${target.pathname}${target.search}`;
+    } catch {
+      // Keep the fallback.
+    }
   }
+  const url = new URL(path, PLACEHOLDER_ORIGIN);
+  for (const [key, entry] of Object.entries(extra)) url.searchParams.set(key, entry);
+  return `${url.pathname}${url.search}`;
 }
 
 export default async function DemoPspCheckout({
@@ -18,7 +33,10 @@ export default async function DemoPspCheckout({
 }) {
   const query = await searchParams;
   const amount = Number(query.amount);
-  const success = `${localPath(query.success, '/success')}?provider=demo&session=${encodeURIComponent(query.session ?? '')}`;
+  const success = localPath(query.success, '/success', {
+    provider: 'demo',
+    session: query.session ?? '',
+  });
   const cancel = localPath(query.cancel, '/cancel');
 
   return (

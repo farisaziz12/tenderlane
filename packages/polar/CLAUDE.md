@@ -18,6 +18,6 @@ src/
 - Polar is product-first: every item needs `providerRefs.polar.productId`. `unitAmount` is never sent to Polar; the product's own price applies.
 - One product, quantity one, per checkout. The mapper throws a `CatalogError` for anything else instead of approximating.
 - Sandbox and production are different hosts with separate tokens (`server: 'sandbox' | 'production'`).
-- The two `as unknown as` casts at the SDK boundary in `server/` exist because the mapper keeps its own request and response shapes instead of the SDK's generated types.
+- The mapper's request and response types are `Pick`s of the SDK's `CheckoutCreate` and `Checkout`. Do not cast at the SDK boundary: a cast hid `success_url` (dropped by the SDK, which takes `successUrl`) behind mocked tests.
 
 Tests mock the Polar SDK. Nothing here is verified against the live API in CI.

@@ -138,7 +138,16 @@ export function createTenderlaneClient<const TProviders extends readonly AnyBrow
   }
 
   function applyRoute(context: TenderlaneContext, route: SelectedPaymentRoute) {
-    const paymentMethods = offeredMethods(requireProvider(route.provider), context, route);
+    const provider = requireProvider(route.provider);
+    // Caught here, where it becomes a visible `error` state, and not later as
+    // a checkout that can be neither prepared nor submitted.
+    if (!provider.capabilities.flows.includes(route.flow)) {
+      throw new UnsupportedCapabilityError(
+        `The router selected flow "${route.flow}" for provider "${route.provider}", which supports: ${provider.capabilities.flows.join(', ')}.`,
+        route.provider,
+      );
+    }
+    const paymentMethods = offeredMethods(provider, context, route);
     // Keep the customer's choice when the new route still offers it.
     const previousMethod = state.selectedPaymentMethod;
     const selectedPaymentMethod =
@@ -265,10 +274,15 @@ export function createTenderlaneClient<const TProviders extends readonly AnyBrow
         nextContext: context,
       });
 
-      if (submitInFlight) {
+      const settled =
+        state.status === 'success' || state.status === 'redirecting' || state.status === 'pending';
+      if (submitInFlight || settled) {
+        // Recorded, not acted on. During a submit the new route is selected
+        // if the submit fails. A settled checkout stays settled until
+        // reset(): re-routing it would offer the customer a second payment.
         state = { ...state, context };
         for (const listener of listeners) listener();
-        deferredEvaluation = true;
+        deferredEvaluation = submitInFlight;
         return;
       }
       evaluate(context);
@@ -421,6 +435,8 @@ export function createTenderlaneClient<const TProviders extends readonly AnyBrow
         deferredReset = false;
         deferredEvaluation = false;
         if (resetRequested) {
+          // An explicit reset() wins, whatever the outcome: the result was
+          // already returned to the caller of submit().
           resetNow();
         } else if (evaluationRequested && failed) {
           // The submit failed and the context moved on meanwhile: select the

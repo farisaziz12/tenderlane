@@ -15,7 +15,11 @@ import type {
 
 /** Fields every state carries. */
 interface StateBase {
-  /** The context the current route was (or is being) selected for. */
+  /**
+   * The latest context. The route was selected for it, except after a context
+   * change during a submit or on a settled checkout, which is recorded here
+   * but not routed until the submit fails or `reset()` is called.
+   */
   readonly context: TenderlaneContext;
   /** Payment methods offered by the selected route. Empty without a route. */
   readonly paymentMethods: readonly PaymentMethodDescriptor[];
@@ -150,8 +154,9 @@ export interface TenderlaneClient {
 
   /**
    * Replace the context and select a route for it. A structurally equal
-   * context is ignored. During a submit the new route is applied once the
-   * submit settles.
+   * context is ignored. During a submit, and once a checkout has settled
+   * (`success`, `redirecting`, `pending`), the context is recorded but the
+   * route is left alone; call `reset()` to start a new checkout.
    */
   updateContext(context: TenderlaneContext): void;
 

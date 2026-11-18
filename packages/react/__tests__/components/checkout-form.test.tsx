@@ -31,7 +31,7 @@ function createProvider() {
     '~types': {} as never,
     id: 'mock',
     capabilities: {
-      flows: ['inline'],
+      flows: ['hosted', 'inline'],
       paymentMethods: ['card', 'twint'],
     } as ProviderCapabilities,
     getAvailablePaymentMethods: () => [

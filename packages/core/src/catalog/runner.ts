@@ -4,7 +4,7 @@ import type {
   ResolvedCatalogItem,
 } from '../types/catalog.js';
 import type { TenderlaneContext } from '../types/context.js';
-import { CatalogError } from '../errors/errors.js';
+import { ConfigurationError } from '../errors/errors.js';
 
 /**
  * Resolve a list of `{ sku, quantity }` requests via the supplied catalog.
@@ -20,7 +20,7 @@ export async function resolveCatalogItems(
   context: TenderlaneContext,
 ): Promise<readonly ResolvedCatalogItem[]> {
   if (!catalog) {
-    throw new CatalogError(
+    throw new ConfigurationError(
       'No catalog configured. Pass `catalog` or `catalogs` to createTenderlaneHandler().',
     );
   }

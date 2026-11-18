@@ -27,7 +27,7 @@ describe('mapToPolarCheckoutParams', () => {
     const params = mapToPolarCheckoutParams(baseInput);
 
     expect(params.products).toEqual(['polar_prod_pro']);
-    expect(params.success_url).toBe('https://example.com/success');
+    expect(params.successUrl).toBe('https://example.com/success');
     // The Polar product's own price is charged; no amount is sent.
     expect(params).not.toHaveProperty('prices');
   });
@@ -121,7 +121,7 @@ describe('mapToPolarCheckoutParams', () => {
     };
 
     const params = mapToPolarCheckoutParams(input);
-    expect(params.customer_email).toBe('buyer@example.com');
+    expect(params.customerEmail).toBe('buyer@example.com');
     expect(params.metadata).toEqual({ orderId: 'order_123', region: 'us-east' });
   });
 });

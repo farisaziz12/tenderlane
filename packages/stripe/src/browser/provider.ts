@@ -15,7 +15,7 @@ import {
 import type { StripePhantomTypes } from '../shared/metadata.js';
 import type { StripeProviderOptions } from './types.js';
 // Types only: @stripe/stripe-js itself is loaded on demand.
-import type { Stripe, StripeElements } from '@stripe/stripe-js';
+import type { PaymentIntent, Stripe, StripeElements } from '@stripe/stripe-js';
 
 /**
  * The Stripe browser provider, plus the two methods `StripePaymentElement`
@@ -42,6 +42,8 @@ export function stripeProvider(options: StripeProviderOptions): StripeBrowserPro
 
   let stripeInstance: Stripe | null = null;
   let elementsInstance: StripeElements | null = null;
+  // The secret of the PaymentIntent the mounted element belongs to.
+  let currentClientSecret: string | null = null;
 
   async function getStripeInstance(): Promise<Stripe> {
     if (!stripeInstance) {
@@ -88,6 +90,15 @@ export function stripeProvider(options: StripeProviderOptions): StripeBrowserPro
     });
 
     if (error) {
+      // A card or validation error is Stripe's definite answer. Any other
+      // error (a dropped connection, a timeout) leaves the outcome unknown:
+      // the confirmation may have reached Stripe. Ask before reporting a
+      // failure the customer would answer by paying again.
+      const definite = error.type === 'card_error' || error.type === 'validation_error';
+      const actual = definite ? undefined : await lookUpPaymentIntent(stripe);
+      if (actual && (actual.status === 'succeeded' || actual.status === 'processing')) {
+        return toResult(actual);
+      }
       throw new ProviderError(error.message ?? 'Payment confirmation failed', 'stripe', {
         providerCode: error.code,
       });
@@ -96,6 +107,10 @@ export function stripeProvider(options: StripeProviderOptions): StripeBrowserPro
       throw new ProviderError('Stripe returned neither a PaymentIntent nor an error.', 'stripe');
     }
 
+    return toResult(paymentIntent);
+  }
+
+  function toResult(paymentIntent: PaymentIntent): CheckoutResult {
     return {
       provider: 'stripe',
       id: paymentIntent.id,
@@ -103,6 +118,16 @@ export function stripeProvider(options: StripeProviderOptions): StripeBrowserPro
       // not a completed payment.
       status: paymentIntent.status === 'succeeded' ? 'complete' : 'open',
     };
+  }
+
+  async function lookUpPaymentIntent(stripe: Stripe): Promise<PaymentIntent | undefined> {
+    if (!currentClientSecret) return undefined;
+    try {
+      const { paymentIntent } = await stripe.retrievePaymentIntent(currentClientSecret);
+      return paymentIntent;
+    } catch {
+      return undefined;
+    }
   }
 
   return {
@@ -132,6 +157,7 @@ export function stripeProvider(options: StripeProviderOptions): StripeBrowserPro
           'stripe',
         );
       }
+      currentClientSecret = result.clientSecret;
       return { flow: route.flow, clientSecret: result.clientSecret, sessionId: result.id };
     },
 

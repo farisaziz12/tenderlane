@@ -9,7 +9,6 @@ import type { PolarServerConfig } from './types.js';
 import {
   mapToPolarCheckoutParams,
   mapFromPolarCheckout,
-  type PolarCheckoutResponse,
 } from './mapper.js';
 
 /**
@@ -52,13 +51,7 @@ export function polarServerAdapter(
     ): Promise<CheckoutResult> {
       try {
         if (action === 'checkout') {
-          const params = mapToPolarCheckoutParams(payload);
-          // `@polar-sh/sdk`'s checkouts.create accepts the same body shape we
-          // built locally; cast through unknown to avoid coupling our mapper
-          // to the SDK's request type.
-          const checkout = (await polar.checkouts.create(
-            params as unknown as Parameters<typeof polar.checkouts.create>[0],
-          )) as unknown as PolarCheckoutResponse;
+          const checkout = await polar.checkouts.create(mapToPolarCheckoutParams(payload));
           return mapFromPolarCheckout(checkout);
         }
 

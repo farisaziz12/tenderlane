@@ -423,3 +423,50 @@ describe('races found in review', () => {
     expect(client.getSnapshot().canSubmit).toBe(true);
   });
 });
+
+describe('review regressions', () => {
+  it('reports a route whose flow the provider does not support, instead of a dead checkout', () => {
+    const hostedOnly = createProvider({
+      capabilities: { flows: ['hosted'], paymentMethods: ['card'] },
+      createSession: undefined,
+    });
+    const client = createTenderlaneClient({
+      context: {},
+      providers: [hostedOnly],
+      routing: {
+        evaluate: () => ({ provider: 'mock', flow: 'inline', paymentMethods: [], source: 'fallback' }),
+      },
+    });
+
+    const state = client.getSnapshot();
+    expect(state.status).toBe('error');
+    expect(state.error?.code).toBe('UNSUPPORTED_CAPABILITY');
+    expect(state.canSubmit).toBe(false);
+  });
+
+  it('keeps a settled checkout settled when the context changes', async () => {
+    const provider = createProvider();
+    const client = createTenderlaneClient({
+      context: { country: 'CH' },
+      providers: [provider],
+      routing: {
+        evaluate: () => ({ provider: 'mock', flow: 'inline', paymentMethods: [], source: 'fallback' }),
+      },
+    });
+    await client.prepare(input);
+    await client.submit(input);
+    expect(client.getSnapshot().status).toBe('success');
+
+    client.updateContext({ country: 'DE' });
+
+    expect(client.getSnapshot()).toMatchObject({
+      status: 'success',
+      canSubmit: false,
+      context: { country: 'DE' },
+    });
+    expect(client.getSnapshot().checkoutResult).not.toBeNull();
+
+    client.reset();
+    expect(client.getSnapshot()).toMatchObject({ status: 'ready', checkoutResult: null });
+  });
+});

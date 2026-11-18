@@ -25,11 +25,11 @@ src/
 
 Order of operations in `POST`, each step covered by `__tests__/server/`:
 
-1. Parse JSON; delete every `unitAmount` key at any depth.
-2. Validate `provider`, `action`, `items`, `successUrl`, `cancelUrl`, optional strings, `metadata`.
+1. Parse JSON; delete every `unitAmount` and `__proto__` key at any depth.
+2. Validate `provider`, `action`, `items`, `successUrl`, `cancelUrl` (absolute, on `allowedRedirectOrigins`, default the request's origin), optional strings, `metadata`.
 3. `resolveContext(request, clientContext)`.
 4. With `routing`: evaluate it, reject a provider mismatch, take payment methods from the route.
-5. `catalogs[provider] ?? catalog` resolves the items. No catalog is a `CatalogError`.
+5. `catalogs[provider] ?? catalog` resolves the items. No catalog is a `ConfigurationError` (500).
 6. `onCatalogResolved` middleware.
 7. Build the adapter payload field by field from validated values. Nothing else from the body is forwarded.
 8. `adapter.handle(...)`, then `parseCheckoutResult`: only `{ provider, id, status, url?, clientSecret? }` is returned.

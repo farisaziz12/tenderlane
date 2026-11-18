@@ -30,7 +30,7 @@ function captureAdapter(id = 'mock') {
 }
 
 function post(body: unknown, headers: Record<string, string> = {}): Request {
-  return new Request('http://localhost/api/payments', {
+  return new Request('https://shop.example/api/payments', {
     method: 'POST',
     headers,
     body: typeof body === 'string' ? body : JSON.stringify(body),
@@ -227,7 +227,7 @@ describe('request validation', () => {
     const foreign = await handler.POST(
       post(checkout({ items, successUrl: 'https://evil.example/s' })),
     );
-    const relative = await handler.POST(post(checkout({ items, cancelUrl: '/cancel' })));
+    const relative = await handler.POST(post(checkout({ items, cancelUrl: 'http://localhost/cancel' })));
 
     expect(allowed.status).toBe(200);
     expect(foreign.status).toBe(400);
@@ -344,5 +344,51 @@ describe('errors from another copy of core', () => {
 
     expect(response.status).toBe(400);
     expect((await response.json()).error).toContain('no quantity');
+  });
+});
+
+describe('defaults that protect an unconfigured handler', () => {
+  it('rejects a redirect URL on another origin when allowedRedirectOrigins is not set', async () => {
+    const { adapter, handle } = captureAdapter();
+    const handler = createTenderlaneHandler({ providers: [adapter], catalog });
+    const items = [{ sku: 'pro', quantity: 1 }];
+
+    const sameOrigin = await handler.POST(post(checkout({ items })));
+    const foreign = await handler.POST(
+      post(checkout({ items, successUrl: 'https://evil.example/thanks' })),
+    );
+
+    expect(sameOrigin.status).toBe(200);
+    expect(foreign.status).toBe(400);
+    expect((await foreign.json()).error).toContain('https://shop.example');
+    expect(handle).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not let a __proto__ key supply fields the body does not own', async () => {
+    const { adapter, handle } = captureAdapter();
+    const resolveContext = vi.fn((_request: Request, context: Record<string, unknown>) => context);
+    const handler = createTenderlaneHandler({ providers: [adapter], catalog, resolveContext });
+
+    // Written as text: an object literal would set the prototype instead of
+    // creating the own "__proto__" key that JSON.parse produces.
+    const smuggledContext = await handler.POST(
+      post(
+        `{"provider":"mock","action":"checkout","payload":{"items":[{"sku":"pro","quantity":1}],
+          "successUrl":"https://shop.example/s","cancelUrl":"https://shop.example/c",
+          "context":{"__proto__":{"country":"IN"}}}}`,
+      ),
+    );
+    const smuggledPayload = await handler.POST(
+      post(
+        `{"provider":"mock","action":"checkout","payload":{"__proto__":{"items":[{"sku":"pro","quantity":1}],
+          "successUrl":"https://shop.example/s","cancelUrl":"https://shop.example/c"}}}`,
+      ),
+    );
+
+    expect(smuggledContext.status).toBe(200);
+    expect(resolveContext.mock.calls[0]?.[1].country).toBeUndefined();
+    expect(handle.mock.calls[0]?.[1].items[0]?.unitAmount).toBe(2900);
+    expect(smuggledPayload.status).toBe(400);
+    expect(handle).toHaveBeenCalledTimes(1);
   });
 });

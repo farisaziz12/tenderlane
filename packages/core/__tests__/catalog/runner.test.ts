@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { resolveCatalogItems } from '../../src/catalog/runner.js';
 import { createInlineCatalog } from '../../src/catalog/inline.js';
 import { defineCatalog } from '../../src/catalog/define.js';
-import { CatalogError } from '../../src/errors/errors.js';
+import { ConfigurationError } from '../../src/errors/errors.js';
 
 describe('resolveCatalogItems', () => {
   it('delegates to the supplied catalog', async () => {
@@ -17,10 +17,10 @@ describe('resolveCatalogItems', () => {
     expect(resolved[0]?.unitAmount).toBe(2900);
   });
 
-  it('throws CatalogError if no catalog is configured', async () => {
+  it('throws ConfigurationError if no catalog is configured', async () => {
     await expect(
       resolveCatalogItems(undefined, [{ sku: 'pro-plan', quantity: 1 }], {}),
-    ).rejects.toThrow(CatalogError);
+    ).rejects.toThrow(ConfigurationError);
   });
 });
 

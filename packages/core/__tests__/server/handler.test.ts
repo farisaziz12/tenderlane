@@ -37,8 +37,8 @@ describe('createTenderlaneHandler', () => {
         action: 'checkout',
         payload: {
           items: [{ sku: 'widget', quantity: 1 }],
-          successUrl: '/success',
-          cancelUrl: '/cancel',
+          successUrl: 'http://localhost/success',
+          cancelUrl: 'http://localhost/cancel',
         },
       }),
     });
@@ -128,8 +128,8 @@ describe('createTenderlaneHandler', () => {
         action: 'checkout',
         payload: {
           items: [{ sku: 'widget', quantity: 1 }],
-          successUrl: '/success',
-          cancelUrl: '/cancel',
+          successUrl: 'http://localhost/success',
+          cancelUrl: 'http://localhost/cancel',
         },
       }),
     });

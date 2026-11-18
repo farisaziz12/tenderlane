@@ -165,6 +165,20 @@ export function parseCheckoutResult(value: unknown, provider: string): CheckoutR
   };
 }
 
+/** The handler answers errors as `{ error, code }`; show the message, not the JSON. */
+function readErrorMessage(body: string): string {
+  try {
+    const parsed: unknown = JSON.parse(body);
+    if (typeof parsed === 'object' && parsed !== null && 'error' in parsed) {
+      const message = parsed.error;
+      if (typeof message === 'string') return message;
+    }
+  } catch {
+    // Not JSON: fall through to the raw text.
+  }
+  return body;
+}
+
 export interface ProviderActionRequest {
   /** URL of the app's Tenderlane handler (`createTenderlaneHandler().POST`). */
   readonly endpoint: string;
@@ -204,7 +218,7 @@ export async function requestProviderAction(
   if (!response.ok) {
     const body = await response.text().catch(() => '');
     throw new ProviderError(
-      `${request.provider} ${request.action} failed (${response.status}): ${body}`,
+      `${request.provider} ${request.action} failed (${response.status}): ${readErrorMessage(body)}`,
       request.provider,
       { cause: new Error(body) },
     );

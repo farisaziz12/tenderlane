@@ -26,7 +26,14 @@ Narrow the alpha to what is demonstrated, and tighten the types and the wire for
 - `TenderlaneClientState` is a discriminated union on `status`. `canSubmit` is false on an inline route until its session exists.
 - `Router.evaluate` takes a `TenderlaneContext`.
 - The inline client secret travels as `CheckoutResult.clientSecret`.
-- The handler requires `items` and `cancelUrl`, builds the adapter payload from validated fields only, and answers 400 with a `code` for every request error.
+- The handler requires `items` and `cancelUrl`, builds the adapter payload from validated fields only, and answers 400 with a `code` for every request error. `allowedRedirectOrigins` defaults to the request's own origin (it used to allow any URL). A missing catalog is a 500 `CONFIGURATION_ERROR`, not a 400.
+- A route whose flow the provider does not declare is an `error` state (`UNSUPPORTED_CAPABILITY`) at routing time. A settled checkout no longer re-routes on a context change.
+
+**Fixed**
+
+- Polar: `successUrl` and `customerEmail` were sent as `success_url` and `customer_email`, which the SDK drops, so customers were not returned to the app. The mapper is now typed against the SDK.
+- Stripe inline: a connection error during confirmation no longer reports a failure when the PaymentIntent succeeded or is processing.
+- A `__proto__` key in the request body could supply fields through the prototype.
 
 **Added**
 

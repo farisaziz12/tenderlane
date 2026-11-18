@@ -28,12 +28,14 @@ order: 7
 
 - **Payment confirmation.** Verify the provider's webhook signature and fulfil from the webhook. Do not fulfil from the `success` status or from a visit to the success URL.
 - **Authentication, CSRF protection and rate limiting** on the endpoint.
-- **`routing`, `resolveContext` and `allowedRedirectOrigins`** on the handler. They are optional so that a first setup works; without them the browser has more say than it should. See [Server and price integrity](/docs/server).
+- **`routing` and `resolveContext`** on the handler. They are optional so that a first setup works; without them the browser has more say than it should. See [Server and price integrity](/docs/server).
 - **Idempotency keys** if a checkout can be retried across page loads.
 - **Tax, currency conversion and rounding.** Amounts are integers in minor units and are passed through untouched.
 
 ## Sharp edges
 
+- **Malformed pass-through values become a 500.** A `customerEmail` the PSP rejects is reported as a provider failure, not a 400.
+- **Adapters ignore fields their PSP has no place for.** Polar ignores `cancelUrl`, `clientReferenceId`, `idempotencyKey` and `providerOptions`; Stripe's inline flow ignores `clientReferenceId`.
 - **Catalogs are not cached.** `createStripeCatalog` and `createPolarCatalog` call the PSP once per item on every request.
 - **`createStripeCatalog` takes price ids only**, not lookup keys.
 - **Provider type checks need a literal provider list.** A provider array built at runtime widens to `string` and skips the check that routing targets a registered provider.
