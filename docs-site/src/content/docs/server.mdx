@@ -75,7 +75,17 @@ Two things are needed to connect a payment to an order, and neither may come fro
 
 **`onCheckoutCreated`** runs after the provider created the checkout and before the response is sent. `result.id` is the provider's id for it (a Stripe `cs_…` or `pi_…`, a Polar checkout id), and `items` are the prices the server charged. Store your order under that id. If the hook throws, the request fails with 500 and the checkout is never handed to the customer.
 
-**`handler.retrieve(provider, id)`** asks the provider for the checkout's current state with the secret key and returns `{ provider, id, status, amountTotal?, currency? }`. `status: 'complete'` means the provider's own record says the payment went through. For Stripe Checkout that requires `payment_status: 'paid'`, not only that the customer finished the page; for Polar it requires `succeeded`.
+**`handler.retrieve(provider, id)`** asks the provider for the checkout's current state with the secret key and returns `{ provider, id, status, amountTotal?, currency?, paymentMethod? }`.
+
+| `status` | Meaning | Stripe | Polar |
+| --- | --- | --- | --- |
+| `open` | Waiting on the customer. Nothing was submitted for payment. | Session not finished; PaymentIntent needs a method, confirmation or authentication | `open` |
+| `processing` | The customer did their part; the provider is waiting for the money. It can still fail. | Session finished with `payment_status: 'unpaid'`; PaymentIntent `processing` | `confirmed` |
+| `complete` | The provider's own record says the payment went through. | `payment_status: 'paid'`; PaymentIntent `succeeded` | `succeeded` |
+| `expired` | Expired or cancelled. | Session `expired`; PaymentIntent `canceled` | `expired` |
+| `failed` | The attempt failed. | | `failed` |
+
+`processing` lasts seconds for most methods and several business days for bank debits such as SEPA. `paymentMethod` (reported by Stripe once the customer has chosen one) tells you which case you are in. Whether to fulfil on `processing` or wait for `complete` is your decision; Tenderlane only keeps the two apart.
 
 To get the id back on return, put the literal `{CHECKOUT_ID}` in `successUrl`: `https://shop.example/success?checkout={CHECKOUT_ID}`. Stripe's adapter translates it to Stripe's own placeholder; Polar uses the same one natively.
 

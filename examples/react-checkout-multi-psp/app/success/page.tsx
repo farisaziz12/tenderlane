@@ -34,14 +34,19 @@ export default async function SuccessPage({
 
   const details = await handler.retrieve(order.provider, order.checkoutId).catch(() => null);
   const paid = details?.status === 'complete';
+  const processing = details?.status === 'processing';
 
   return (
     <main className="page narrow">
-      <h1>{paid ? 'Payment confirmed' : 'Payment not confirmed yet'}</h1>
+      <h1>
+        {paid ? 'Payment confirmed' : processing ? 'Payment processing' : 'Payment not confirmed yet'}
+      </h1>
       <p className="lede">
         {paid
           ? `${order.provider} reports this checkout as paid. The page asked the provider from the server; it did not take the browser's word for it.`
-          : `${order.provider} does not report this checkout as paid${details ? ` (status: ${details.status})` : ''}. Some payment methods take time to settle.`}
+          : processing
+            ? `${order.provider} has the payment and is waiting for the money. Bank debits can take several days and can still fail, so this shop would not ship yet.`
+            : `${order.provider} does not report this checkout as paid${details ? ` (status: ${details.status})` : ''}.`}
       </p>
       <section className="panel">
         <dl>
@@ -53,6 +58,12 @@ export default async function SuccessPage({
           <dd>{order.checkoutId}</dd>
           <dt>status</dt>
           <dd data-testid="provider-status">{details?.status ?? 'lookup failed'}</dd>
+          {details?.paymentMethod && (
+            <>
+              <dt>method</dt>
+              <dd>{details.paymentMethod}</dd>
+            </>
+          )}
           {details?.amountTotal !== undefined && details.currency && (
             <>
               <dt>charged</dt>

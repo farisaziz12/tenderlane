@@ -21,7 +21,7 @@ Narrow the alpha to what is demonstrated, and tighten the types and the wire for
 **Changed**
 
 - Flows are `'hosted'` and `'inline'` (were `'checkout-session'` and `'payment-intent'`; `'embedded-checkout'`, `'redirect'` and `'custom'` had no implementation).
-- `CheckoutStatus` is `'open' | 'complete' | 'expired' | 'failed'`.
+- `CheckoutStatus` is `'open' | 'processing' | 'complete' | 'expired' | 'failed'`. `open` is waiting on the customer; `processing` is waiting for the money.
 - `createRulesRouter` infers the provider ids its rules target. `createTenderlaneClient`, `TenderlaneProvider` and `createTenderlaneHandler` reject, at compile time, a router that targets a provider that is not registered; the handler also checks the keys of `catalogs` and `providerOptions`.
 - `TenderlaneClientState` is a discriminated union on `status`. `canSubmit` is false on an inline route until its session exists.
 - `Router.evaluate` takes a `TenderlaneContext`.
@@ -39,6 +39,7 @@ Narrow the alpha to what is demonstrated, and tighten the types and the wire for
 
 - `onCheckoutCreated` on the handler: record the order under the provider's checkout id with the server's prices. Fails closed.
 - `handler.retrieve(provider, id)` and `ServerProviderAdapter.retrieve`: ask the provider whether a checkout was paid. Implemented for Stripe (Checkout Session and PaymentIntent) and Polar. `{CHECKOUT_ID}` in `successUrl` is replaced with the checkout id.
-- Stripe: a Checkout Session with `payment_status: 'unpaid'` is no longer `complete`. Polar: `confirmed` is no longer `complete`.
+- Stripe: a finished Checkout Session with `payment_status: 'unpaid'` is `processing`, not `complete`. Polar: `confirmed` is `processing`, not `complete`.
+- `CheckoutDetails.paymentMethod`: the method the customer used, where the provider reports it (Stripe).
 - `parseCheckoutResult` in `@tenderlane/core/adapters`. The handler passes every adapter result through it, and `requestProviderAction` validates the response, including that `url` is an absolute http(s) URL.
 - `StripePaymentElement` accepts the generic provider prop, so `elements={{ stripe: StripePaymentElement }}` needs no cast. It imports `@stripe/react-stripe-js` directly; lazy-load `@tenderlane/stripe/react` to keep it out of the first bundle.

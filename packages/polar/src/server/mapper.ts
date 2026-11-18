@@ -117,8 +117,9 @@ export function mapPolarStatus(
   status: PolarCheckoutResponse['status'],
 ): CheckoutResult['status'] {
   switch (status) {
-    // `confirmed` means the customer pressed Pay and the payment is still
-    // processing. Only `succeeded` is a completed payment.
+    // The customer pressed Pay and the payment is still going through.
+    case 'confirmed':
+      return 'processing';
     case 'succeeded':
       return 'complete';
     case 'expired':

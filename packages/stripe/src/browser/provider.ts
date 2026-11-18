@@ -114,9 +114,13 @@ export function stripeProvider(options: StripeProviderOptions): StripeBrowserPro
     return {
       provider: 'stripe',
       id: paymentIntent.id,
-      // Anything short of `succeeded` (processing, requires_action, ...) is
-      // not a completed payment.
-      status: paymentIntent.status === 'succeeded' ? 'complete' : 'open',
+      // Anything short of `succeeded` is not a completed payment.
+      status:
+        paymentIntent.status === 'succeeded'
+          ? 'complete'
+          : paymentIntent.status === 'processing'
+            ? 'processing'
+            : 'open',
     };
   }
 

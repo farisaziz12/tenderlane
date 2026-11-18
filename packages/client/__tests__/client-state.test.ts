@@ -469,4 +469,27 @@ describe('review regressions', () => {
     client.reset();
     expect(client.getSnapshot()).toMatchObject({ status: 'ready', checkoutResult: null });
   });
+
+  it('treats a processing payment as pending, not as success', async () => {
+    const provider = createProvider({
+      submit: vi.fn(
+        async (): Promise<CheckoutResult> => ({ provider: 'mock', id: 'pi_123', status: 'processing' }),
+      ),
+    });
+    const client = createTenderlaneClient({
+      context: {},
+      providers: [provider],
+      routing: {
+        evaluate: () => ({ provider: 'mock', flow: 'inline', paymentMethods: [], source: 'fallback' }),
+      },
+    });
+    await client.prepare(input);
+    await client.submit(input);
+
+    expect(client.getSnapshot()).toMatchObject({
+      status: 'pending',
+      canSubmit: false,
+      checkoutResult: { status: 'processing' },
+    });
+  });
 });

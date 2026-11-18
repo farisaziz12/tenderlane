@@ -25,7 +25,7 @@ idle ─► evaluating ─► ready ─(inline: preparing ─► prepared)─►
 | `prepared` | Inline flow: the session exists; the payment element can mount. | `route`, `providerSession` |
 | `submitting` | `submit()` is in flight. | `route` |
 | `redirecting` | A hosted checkout was created and the browser is leaving for it. Nothing is paid yet. | `route`, `checkoutResult` |
-| `pending` | The provider accepted the payment and has not completed it (processing, or waiting on the customer). | `route`, `checkoutResult` |
+| `pending` | The provider accepted the submission and has not completed the payment. `checkoutResult.status` says why: `processing` (waiting for the money) or `open` (waiting on the customer). | `route`, `checkoutResult` |
 | `success` | The provider's browser SDK reported the payment complete. | `route`, `checkoutResult` |
 | `error` | Routing, preparing or submitting failed. | `error` |
 

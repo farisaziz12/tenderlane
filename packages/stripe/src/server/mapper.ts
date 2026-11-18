@@ -135,8 +135,25 @@ export function mapFromStripeSession(session: Stripe.Checkout.Session): Checkout
  */
 function mapStripeStatus(session: Stripe.Checkout.Session): CheckoutResult['status'] {
   if (session.status === 'expired') return 'expired';
-  if (session.status === 'complete' && session.payment_status === 'paid') return 'complete';
+  if (session.status !== 'complete') return 'open';
+  if (session.payment_status === 'paid') return 'complete';
+  // Finished by the customer and waiting for the money (a bank debit).
+  if (session.payment_status === 'unpaid') return 'processing';
+  // `no_payment_required`: a setup or a trial. Nothing is being charged.
   return 'open';
+}
+
+const TENDERLANE_METHOD_BY_STRIPE_TYPE: Readonly<Record<string, string>> = { cashapp: 'cash_app' };
+
+/** The method the customer paid with, when Stripe returned it expanded. */
+function usedPaymentMethod(
+  paymentIntent: string | Stripe.PaymentIntent | null | undefined,
+): { paymentMethod: string } | Record<string, never> {
+  // An id instead of an object means the field was not expanded.
+  if (!paymentIntent || typeof paymentIntent === 'string') return {};
+  const method = paymentIntent.payment_method;
+  if (!method || typeof method === 'string') return {};
+  return { paymentMethod: TENDERLANE_METHOD_BY_STRIPE_TYPE[method.type] ?? method.type };
 }
 
 /** What `retrieve()` reports for a hosted checkout. */
@@ -147,6 +164,7 @@ export function mapStripeSessionDetails(session: Stripe.Checkout.Session): Check
     status: mapStripeStatus(session),
     ...(session.amount_total !== null ? { amountTotal: session.amount_total } : {}),
     ...(session.currency ? { currency: session.currency } : {}),
+    ...usedPaymentMethod(session.payment_intent),
   };
 }
 
@@ -158,6 +176,7 @@ export function mapStripePaymentIntentDetails(paymentIntent: Stripe.PaymentInten
     status: mapPaymentIntentStatus(paymentIntent.status),
     amountTotal: paymentIntent.amount,
     currency: paymentIntent.currency,
+    ...usedPaymentMethod(paymentIntent),
   };
 }
 
@@ -245,6 +264,10 @@ function mapPaymentIntentStatus(status: Stripe.PaymentIntent.Status): CheckoutRe
       return 'complete';
     case 'canceled':
       return 'expired';
+    case 'processing':
+      return 'processing';
+    // requires_payment_method, requires_confirmation, requires_action,
+    // requires_capture: something is still needed before money moves.
     default:
       return 'open';
   }

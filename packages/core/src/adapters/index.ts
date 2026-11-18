@@ -119,7 +119,13 @@ export function defineServerAdapter<
   return adapter as ServerProviderAdapter<TProviderId>;
 }
 
-const CHECKOUT_STATUSES: readonly CheckoutStatus[] = ['open', 'complete', 'expired', 'failed'];
+const CHECKOUT_STATUSES: readonly CheckoutStatus[] = [
+  'open',
+  'processing',
+  'complete',
+  'expired',
+  'failed',
+];
 
 function isHttpUrl(value: string): boolean {
   try {
@@ -201,7 +207,7 @@ export function parseCheckoutDetails(value: unknown, provider: string): Checkout
   const invalid = (detail: string) =>
     new ProviderError(`Invalid checkout details from "${provider}": ${detail}.`, provider);
 
-  const { amountTotal, currency } = candidate;
+  const { amountTotal, currency, paymentMethod } = candidate;
   if (
     amountTotal !== undefined &&
     (typeof amountTotal !== 'number' || !Number.isSafeInteger(amountTotal) || amountTotal < 0)
@@ -211,6 +217,9 @@ export function parseCheckoutDetails(value: unknown, provider: string): Checkout
   if (currency !== undefined && typeof currency !== 'string') {
     throw invalid('`currency` is not a string');
   }
+  if (paymentMethod !== undefined && typeof paymentMethod !== 'string') {
+    throw invalid('`paymentMethod` is not a string');
+  }
 
   return {
     provider: result.provider,
@@ -218,6 +227,7 @@ export function parseCheckoutDetails(value: unknown, provider: string): Checkout
     status: result.status,
     ...(amountTotal !== undefined ? { amountTotal } : {}),
     ...(currency !== undefined ? { currency: currency.toLowerCase() } : {}),
+    ...(paymentMethod !== undefined ? { paymentMethod } : {}),
   };
 }
 

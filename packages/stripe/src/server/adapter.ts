@@ -103,10 +103,16 @@ export function stripeServerAdapter(
         // The id says which object it is: `handle` returned a Checkout
         // Session id for the hosted flow and a PaymentIntent id for inline.
         if (id.startsWith('cs_')) {
-          return mapStripeSessionDetails(await stripe.checkout.sessions.retrieve(id));
+          return mapStripeSessionDetails(
+            await stripe.checkout.sessions.retrieve(id, {
+              expand: ['payment_intent.payment_method'],
+            }),
+          );
         }
         if (id.startsWith('pi_')) {
-          return mapStripePaymentIntentDetails(await stripe.paymentIntents.retrieve(id));
+          return mapStripePaymentIntentDetails(
+            await stripe.paymentIntents.retrieve(id, { expand: ['payment_method'] }),
+          );
         }
         throw new ProviderError(
           `"${id}" is neither a Checkout Session id nor a PaymentIntent id.`,

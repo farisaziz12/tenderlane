@@ -58,6 +58,12 @@ describe('parseCheckoutDetails', () => {
     ).toEqual({ ...base, amountTotal: 3132, currency: 'usd' });
   });
 
+  it('accepts processing and the payment method used', () => {
+    expect(
+      parseCheckoutDetails({ ...base, status: 'processing', paymentMethod: 'sepa_debit' }, 'acme'),
+    ).toEqual({ ...base, status: 'processing', paymentMethod: 'sepa_debit' });
+  });
+
   it.each([-1, 29.5, '2900', Number.NaN])('rejects amountTotal %s', (amountTotal) => {
     expect(() => parseCheckoutDetails({ ...base, amountTotal }, 'acme')).toThrowError(
       expect.objectContaining({ code: 'PROVIDER_ERROR' }),

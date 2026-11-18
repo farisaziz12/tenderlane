@@ -1,4 +1,4 @@
-import type { ProviderId } from './capabilities.js';
+import type { PaymentMethodId, ProviderId } from './capabilities.js';
 import type { CatalogRequest, ResolvedCatalogItem } from './catalog.js';
 import type { TenderlaneContext } from './context.js';
 
@@ -53,12 +53,16 @@ export interface ResolvedCheckoutInput extends Omit<CheckoutInput, 'items' | 'co
 /**
  * Provider-neutral checkout status.
  *
- * - `'open'`: created, waiting on the customer or still processing.
+ * - `'open'`: created and waiting on the customer (to pay, to authenticate,
+ *   to choose a method). Nothing has been submitted for payment.
+ * - `'processing'`: the customer did their part and the provider is waiting
+ *   for the money. Seconds for some methods, days for bank debits, and it
+ *   can still fail.
  * - `'complete'`: the provider reported the payment complete.
  * - `'expired'`: the session expired or was cancelled.
  * - `'failed'`: the payment attempt failed.
  */
-export type CheckoutStatus = 'open' | 'complete' | 'expired' | 'failed';
+export type CheckoutStatus = 'open' | 'processing' | 'complete' | 'expired' | 'failed';
 
 /**
  * What a provider action returns, and the exact shape that crosses the wire
@@ -94,4 +98,10 @@ export interface CheckoutDetails {
    */
   readonly amountTotal?: number;
   readonly currency?: string;
+  /**
+   * The payment method the customer used, once the provider knows it
+   * (`'card'`, `'sepa_debit'`, ...). Tells an app whether `processing` will
+   * last seconds or days. Absent when the provider does not report it.
+   */
+  readonly paymentMethod?: PaymentMethodId;
 }

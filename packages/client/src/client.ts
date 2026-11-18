@@ -388,8 +388,8 @@ export function createTenderlaneClient<const TProviders extends readonly AnyBrow
         }
 
         // Only a completed payment is a success. A hosted checkout has merely
-        // been created at this point, and an inline payment may still be
-        // processing or waiting on the customer.
+        // been created at this point (`open` with a url), and an inline
+        // payment may be `processing` or still waiting on the customer.
         const status =
           result.status === 'complete' ? 'success' : result.url ? 'redirecting' : 'pending';
         setState({

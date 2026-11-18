@@ -152,6 +152,6 @@ describe('polarServerAdapter retrieve', () => {
 
     const details = await polarServerAdapter({ accessToken: 'polar_oat_x' }).retrieve?.('polar_co_1');
 
-    expect(details?.status).toBe('open');
+    expect(details?.status).toBe('processing');
   });
 });

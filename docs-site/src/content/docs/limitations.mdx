@@ -36,6 +36,7 @@ order: 7
 
 - **Malformed pass-through values become a 500.** A `customerEmail` the PSP rejects is reported as a provider failure, not a 400.
 - **Adapters ignore fields their PSP has no place for.** Polar ignores `cancelUrl`, `clientReferenceId`, `idempotencyKey` and `providerOptions`; Stripe's inline flow ignores `clientReferenceId`.
+- **No settlement timeline.** `processing` and `paymentMethod` tell you a bank debit is in flight. How long to wait, and what to do if it fails after you shipped, is yours to decide and to schedule.
 - **Catalogs are not cached.** `createStripeCatalog` and `createPolarCatalog` call the PSP once per item on every request.
 - **`createStripeCatalog` takes price ids only**, not lookup keys.
 - **Provider type checks need a literal provider list.** A provider array built at runtime widens to `string` and skips the check that routing targets a registered provider.
