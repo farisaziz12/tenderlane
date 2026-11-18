@@ -1,18 +1,15 @@
 import React, { useEffect, useRef, useCallback } from 'react';
-import type { CheckoutInput, BrowserPaymentProvider } from '@tenderlane/core';
+import type { CheckoutInput, AnyBrowserProvider } from '@tenderlane/core';
 import type { TenderlaneClientState } from '@tenderlane/client';
 import { useTenderlaneCheckout } from '../hooks/use-tenderlane-checkout.js';
 import { useTenderlane } from '../hooks/use-tenderlane.js';
-
-/** Flows that require inline provider UI (session creation + element mounting) */
-const INLINE_FLOWS = new Set(['payment-intent', 'embedded-checkout']);
 
 /**
  * Props for inline payment element components registered via the `elements` prop.
  * Any provider can implement a component matching this interface.
  */
 export interface InlinePaymentElementProps {
-  provider: BrowserPaymentProvider;
+  provider: AnyBrowserProvider;
   clientSecret: string;
   onReady?: () => void;
   onChange?: (event: { complete: boolean }) => void;
@@ -37,14 +34,13 @@ export interface CheckoutFormRenderState {
 
 export interface TenderlaneCheckoutFormProps {
   /**
-   * The checkout input (line items, URLs) used for both prepare() and submit().
+   * The checkout input (items, URLs) used for both prepare() and submit().
    */
   input: CheckoutInput;
 
   /**
-   * Map of provider IDs to their inline payment element components.
-   * Only needed for flows that require inline UI (payment-intent, embedded-checkout).
-   * Components are only rendered when the route selects the matching provider + flow.
+   * Inline payment element components, keyed by provider id. Rendered only
+   * when the route selects that provider with the `inline` flow.
    */
   elements?: Record<string, React.ComponentType<InlinePaymentElementProps>>;
 
@@ -56,13 +52,15 @@ export interface TenderlaneCheckoutFormProps {
 }
 
 /**
- * Provider-agnostic checkout form container.
+ * Drives one checkout for whichever route is selected, so the app renders
+ * the same form for every provider and flow.
  *
- * - Auto-calls `prepare()` when the route selects an inline flow (payment-intent)
- * - Re-prepares when input changes (e.g., currency switch creates a new PaymentIntent)
- * - Auto-renders the matching element component from the `elements` map
- * - Delegates pay button and error display to the children render prop
- * - For redirect flows, renders only children (no inline element)
+ * - Hosted flow: renders `children` only; `submit()` redirects.
+ * - Inline flow: calls `prepare()` when the route or `input` changes, renders
+ *   the matching component from `elements` above `children`, and `submit()`
+ *   confirms the payment in place.
+ *
+ * It renders no markup of its own: the button, errors and layout are yours.
  */
 export function TenderlaneCheckoutForm({
   input,
@@ -77,10 +75,8 @@ export function TenderlaneCheckoutForm({
 
   const status = checkout.status;
   const selectedProvider = checkout.selectedProvider;
-  const routeFlow = checkout.selectedRoute?.flow;
-  const routeRuleId = checkout.selectedRoute?.ruleId ?? checkout.selectedRoute?.source;
-
-  const isInlineFlow = routeFlow ? INLINE_FLOWS.has(routeFlow) : false;
+  const routeRuleId = checkout.route?.ruleId ?? checkout.route?.source;
+  const isInlineFlow = checkout.route?.flow === 'inline';
 
   // Stable key combining route + serialized input.
   const prepareKey = isInlineFlow
@@ -118,10 +114,7 @@ export function TenderlaneCheckoutForm({
     const timeout = setTimeout(() => {
       // Read fresh state — parent effects have now run and route is current
       const snapshot = client.getSnapshot();
-      const currentFlow = snapshot.route?.flow;
-      const currentIsInline = currentFlow ? INLINE_FLOWS.has(currentFlow) : false;
-
-      if (!currentIsInline) {
+      if (snapshot.route?.flow !== 'inline') {
         // Route changed to redirect flow after parent context sync — skip
         return;
       }

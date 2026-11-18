@@ -4,7 +4,7 @@ import { createRulesRouter } from '../../src/routing/rules-router.js';
 describe('createRulesRouter', () => {
   const fallback = {
     provider: 'stripe',
-    flow: 'checkout-session' as const,
+    flow: 'hosted' as const,
     paymentMethods: ['card'],
   };
 
@@ -16,7 +16,7 @@ describe('createRulesRouter', () => {
           when: { country: 'CH', currency: 'chf' },
           use: {
             provider: 'stripe',
-            flow: 'checkout-session',
+            flow: 'hosted',
             paymentMethods: ['card', 'twint'],
           },
         },
@@ -25,7 +25,7 @@ describe('createRulesRouter', () => {
           when: { country: 'DE', currency: 'eur' },
           use: {
             provider: 'stripe',
-            flow: 'checkout-session',
+            flow: 'hosted',
             paymentMethods: ['card', 'sepa_debit'],
           },
         },
@@ -48,7 +48,7 @@ describe('createRulesRouter', () => {
         {
           id: 'ch-only',
           when: { country: 'CH' },
-          use: { provider: 'stripe', flow: 'checkout-session', paymentMethods: ['card'] },
+          use: { provider: 'stripe', flow: 'hosted', paymentMethods: ['card'] },
         },
       ],
       fallback,
@@ -67,7 +67,7 @@ describe('createRulesRouter', () => {
         {
           id: 'first',
           when: { country: 'CH' },
-          use: { provider: 'stripe', flow: 'checkout-session', paymentMethods: ['card'] },
+          use: { provider: 'stripe', flow: 'hosted', paymentMethods: ['card'] },
         },
         {
           id: 'second',
@@ -89,7 +89,7 @@ describe('createRulesRouter', () => {
         {
           id: 'dach',
           when: { country: { in: ['CH', 'DE', 'AT'] } },
-          use: { provider: 'stripe', flow: 'checkout-session', paymentMethods: ['card'] },
+          use: { provider: 'stripe', flow: 'hosted', paymentMethods: ['card'] },
         },
       ],
       fallback,
@@ -105,7 +105,7 @@ describe('createRulesRouter', () => {
         {
           id: 'high-value',
           when: { amount: { gte: 5000 } },
-          use: { provider: 'stripe', flow: 'checkout-session', paymentMethods: ['card'] },
+          use: { provider: 'stripe', flow: 'hosted', paymentMethods: ['card'] },
         },
       ],
       fallback,
@@ -124,7 +124,7 @@ describe('createRulesRouter', () => {
             country: 'CH',
             experiment: { checkoutRouting: 'stripe-first' },
           },
-          use: { provider: 'stripe', flow: 'checkout-session', paymentMethods: ['card'] },
+          use: { provider: 'stripe', flow: 'hosted', paymentMethods: ['card'] },
         },
       ],
       fallback,
@@ -149,7 +149,7 @@ describe('createRulesRouter', () => {
         {
           id: 'custom-predicate',
           when: {},
-          use: { provider: 'stripe', flow: 'checkout-session', paymentMethods: ['card'] },
+          use: { provider: 'stripe', flow: 'hosted', paymentMethods: ['card'] },
         },
       ],
       fallback,
@@ -169,7 +169,7 @@ describe('createRulesRouter', () => {
           id: 'test-rule',
           description: 'Swiss card payments via Stripe',
           when: { country: 'CH' },
-          use: { provider: 'stripe', flow: 'checkout-session' },
+          use: { provider: 'stripe', flow: 'hosted' },
         },
       ],
       fallback,
@@ -179,29 +179,18 @@ describe('createRulesRouter', () => {
     expect(route.reason).toBe('Swiss card payments via Stripe');
   });
 
-  it('throws RoutingError when no match and no fallback', () => {
-    const router = createRulesRouter({
-      rules: [],
-      fallback: undefined as any,
-    });
-
-    expect(() => router.evaluate({ country: 'US' })).toThrow(
-      'No payment route matched the current context and no fallback route was configured.',
-    );
-  });
-
   it('re-evaluates correctly when context changes', () => {
     const router = createRulesRouter({
       rules: [
         {
           id: 'ch-rule',
           when: { country: 'CH' },
-          use: { provider: 'stripe', flow: 'checkout-session', paymentMethods: ['card'] },
+          use: { provider: 'stripe', flow: 'hosted', paymentMethods: ['card'] },
         },
         {
           id: 'de-rule',
           when: { country: 'DE' },
-          use: { provider: 'stripe', flow: 'checkout-session', paymentMethods: ['sepa_debit'] },
+          use: { provider: 'stripe', flow: 'hosted', paymentMethods: ['sepa_debit'] },
         },
       ],
       fallback,

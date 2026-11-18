@@ -25,6 +25,7 @@ import { stripeServerAdapter } from '@tenderlane/stripe/server';
 
 const psp = vi.hoisted(() => ({
   stripeSessions: vi.fn(),
+  stripePaymentIntents: vi.fn(),
   polarCheckouts: vi.fn(),
   acmeSessions: vi.fn(),
 }));
@@ -34,7 +35,7 @@ vi.mock('stripe', () => {
   class Stripe {
     static errors = { StripeError };
     checkout = { sessions: { create: psp.stripeSessions } };
-    paymentIntents = { create: vi.fn() };
+    paymentIntents = { create: psp.stripePaymentIntents };
   }
   return { default: Stripe };
 });
@@ -49,12 +50,7 @@ const ENDPOINT = 'https://shop.example/api/payments';
 
 // ---- A community adapter, from the public entry point only -----------------
 
-const ACME_CAPABILITIES = {
-  provider: 'acme',
-  flows: ['checkout-session'],
-  paymentMethods: ['card'],
-  supports: { redirect: true },
-} as const;
+const ACME_CAPABILITIES = { flows: ['hosted'], paymentMethods: ['card'] } as const;
 
 function acmeProvider(options: { serverEndpoint: string }) {
   return defineBrowserProvider({
@@ -96,15 +92,20 @@ const routing = createRulesRouter({
     {
       id: 'ch-stripe',
       when: { country: 'CH' },
-      use: { provider: 'stripe', flow: 'checkout-session', paymentMethods: ['card', 'twint'] },
+      use: { provider: 'stripe', flow: 'hosted', paymentMethods: ['card', 'twint'] },
+    },
+    {
+      id: 'de-stripe-inline',
+      when: { country: 'DE' },
+      use: { provider: 'stripe', flow: 'inline' },
     },
     {
       id: 'us-polar',
       when: { country: 'US' },
-      use: { provider: 'polar', flow: 'checkout-session' },
+      use: { provider: 'polar', flow: 'hosted' },
     },
   ],
-  fallback: { provider: 'acme', flow: 'checkout-session' },
+  fallback: { provider: 'acme', flow: 'hosted' },
 });
 
 const catalog = createInlineCatalog({
@@ -121,21 +122,21 @@ let geoCountry = 'CH';
 const handler = createTenderlaneHandler({
   providers: [
     stripeServerAdapter({ secretKey: 'sk_test_x' }),
-    polarServerAdapter({ accessToken: 'polar_oat_x', organizationId: 'org_x' }),
+    polarServerAdapter({ accessToken: 'polar_oat_x' }),
     acmeServerAdapter(),
   ],
   catalog,
   routing,
-  resolveContext: (request) => ({ country: request.headers.get('x-geo-country') as 'CH' }),
+  resolveContext: (request) => ({ country: request.headers.get('x-geo-country') ?? undefined }),
   allowedRedirectOrigins: ['https://shop.example'],
 });
 
 function createClient(country: string) {
   return createTenderlaneClient({
-    context: { country: country as 'CH' },
+    context: { country },
     providers: [
       stripeProvider({ publishableKey: 'pk_test_x', serverEndpoint: ENDPOINT }),
-      polarProvider({ organizationId: 'org_x', serverEndpoint: ENDPOINT }),
+      polarProvider({ serverEndpoint: ENDPOINT }),
       acmeProvider({ serverEndpoint: ENDPOINT }),
     ],
     routing,
@@ -232,6 +233,35 @@ describe('the same checkout through each provider', () => {
   });
 });
 
+describe('the inline flow', () => {
+  it('DE prepares a PaymentIntent priced by the server and receives only its client secret', async () => {
+    geoCountry = 'DE';
+    psp.stripePaymentIntents.mockResolvedValue({
+      id: 'pi_1',
+      status: 'requires_payment_method',
+      client_secret: 'pi_1_secret_abc',
+      amount: 2500,
+    });
+    const client = createClient('DE');
+    expect(client.getSnapshot()).toMatchObject({ status: 'ready', canSubmit: false });
+
+    await client.prepare(input);
+
+    const state = client.getSnapshot();
+    expect(state.status).toBe('prepared');
+    expect(state.providerSession).toEqual({
+      flow: 'inline',
+      clientSecret: 'pi_1_secret_abc',
+      sessionId: 'pi_1',
+    });
+    expect(state.canSubmit).toBe(true);
+    expect(psp.stripePaymentIntents.mock.calls[0]![0]).toMatchObject({
+      amount: 2500,
+      currency: 'usd',
+    });
+  });
+});
+
 describe('a tampering browser', () => {
   it('cannot pick a provider the server would not route to', async () => {
     // The browser claims US (cheaper, Polar); the edge says CH.
@@ -247,12 +277,15 @@ describe('a tampering browser', () => {
   it('cannot lower the price with a forged context, unitAmount or providerOptions', async () => {
     const client = createClient('CH');
 
-    await client.submit({
+    // Not a CheckoutInput literal: the type has no place for an amount or
+    // for provider options, so a forged body has to be built around it.
+    const forged = {
       ...input,
-      items: [{ sku: 'pro-plan', quantity: 1, unitAmount: 1 } as never],
+      items: [{ sku: 'pro-plan', quantity: 1, unitAmount: 1 }],
       context: { country: 'US' },
       providerOptions: { line_items: [{ quantity: 1, price: 'price_free' }] },
-    });
+    };
+    await client.submit(forged);
 
     const parameters = psp.stripeSessions.mock.calls[0]![0];
     expect(parameters.line_items[0].price_data.unit_amount).toBe(2900);

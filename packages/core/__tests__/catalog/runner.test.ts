@@ -1,8 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-  resolveCatalogItems,
-  wrapLegacyLineItems,
-} from '../../src/catalog/runner.js';
+import { resolveCatalogItems } from '../../src/catalog/runner.js';
 import { createInlineCatalog } from '../../src/catalog/inline.js';
 import { defineCatalog } from '../../src/catalog/define.js';
 import { CatalogError } from '../../src/errors/errors.js';
@@ -49,36 +46,5 @@ describe('defineCatalog', () => {
     expect(resolved[0]?.name).toBe('Custom foo');
     expect(resolved[0]?.unitAmount).toBe(1000);
     expect(resolved[0]?.currency).toBe('eur');
-  });
-});
-
-describe('wrapLegacyLineItems', () => {
-  it('produces ResolvedCatalogItem[] from legacy lineItems without going through a catalog', () => {
-    const wrapped = wrapLegacyLineItems(
-      [
-        {
-          id: 'item-a',
-          name: 'Item A',
-          quantity: 2,
-          unitAmount: 1500,
-          currency: 'usd',
-          description: 'desc',
-        },
-        { name: 'Item B', quantity: 1, unitAmount: 500 },
-      ],
-      { currency: 'eur' },
-    );
-
-    expect(wrapped[0]).toEqual({
-      sku: 'item-a',
-      quantity: 2,
-      name: 'Item A',
-      description: 'desc',
-      unitAmount: 1500,
-      currency: 'usd',
-      metadata: undefined,
-    });
-    expect(wrapped[1]?.sku).toMatch(/^legacy-/);
-    expect(wrapped[1]?.currency).toBe('eur');
   });
 });

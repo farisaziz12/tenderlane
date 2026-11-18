@@ -6,14 +6,10 @@ import Footer from '../components/Footer.astro';
 interface Props {
   title: string;
   description?: string;
-  active?: 'home' | 'why' | 'docs' | 'playground';
-  mode?: 'marketing' | 'docs';
 }
 const {
   title,
-  description = 'Reactive payment orchestration for modern web apps. Frontend-first, type-safe, provider-agnostic.',
-  active = 'home',
-  mode = 'marketing',
+  description = 'A headless TypeScript library that selects the payment provider and checkout flow from application state. Alpha.',
 } = Astro.props;
 
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
@@ -33,12 +29,12 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
       rel="stylesheet"
     />
   </head>
   <body>
-    <Nav active={active} mode={mode} />
+    <Nav />
     <main>
       <slot />
     </main>

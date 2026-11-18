@@ -1,32 +1,39 @@
 # @tenderlane/core
 
-Core types, routing engine, middleware, catalog primitive, error hierarchy, and server handler for [Tenderlane](https://github.com/farisaziz12/tenderlane).
+The contracts and the provider-neutral logic of [Tenderlane](../../README.md): the rules router, catalogs, the error types and the server handler. No runtime dependencies, and no knowledge of any payment provider.
 
-Zero runtime dependencies. Provider-agnostic. Must never import a PSP SDK.
+Alpha. Not published to npm; use it from this workspace.
 
-## Install
+## Entry points
 
-```bash
-npm install @tenderlane/core
+| Import | Contents |
+| --- | --- |
+| `@tenderlane/core` | `createRulesRouter`, `createInlineCatalog`, `defineCatalog`, `createRemoteCatalog`, the error classes and `hasErrorCode`, all shared types |
+| `@tenderlane/core/server` | `createTenderlaneHandler` |
+| `@tenderlane/core/adapters` | `defineBrowserProvider`, `defineServerAdapter`, `requestProviderAction`, `parseCheckoutResult` |
+
+## Example
+
+```ts
+import { createInlineCatalog, createRulesRouter } from '@tenderlane/core';
+import { createTenderlaneHandler } from '@tenderlane/core/server';
+
+const routing = createRulesRouter({
+  rules: [{ id: 'ch', when: { country: 'CH' }, use: { provider: 'stripe', flow: 'inline' } }],
+  fallback: { provider: 'stripe', flow: 'hosted' },
+});
+
+const handler = createTenderlaneHandler({
+  providers: [stripeServerAdapter({ secretKey })], // from @tenderlane/stripe/server
+  catalog: createInlineCatalog({
+    'pro-plan': { name: 'Pro plan', pricing: { amount: 2900, currency: 'chf' } },
+  }),
+  routing,
+});
+
+export const POST = handler.POST;
 ```
 
-## What's in here
-
-- Contracts and types shared by every package
-- `createRouter` (rules-based routing across PSPs)
-- `defineCatalog`, `createInlineCatalog`, `createRemoteCatalog`
-- Middleware runner + lifecycle hooks
-- `TenderlaneError` hierarchy with typed `code`
-- `createTenderlaneHandler` — Web `Request`/`Response` server handler
-
-## Usage
-
-Most users install [`tenderlane`](https://www.npmjs.com/package/tenderlane) (the meta package) and never import `@tenderlane/core` directly. Reach for this package when you're building a custom provider adapter or need the contracts without any provider code.
-
-## Status
-
-Alpha. APIs may change before `1.0`.
-
-## License
+Docs: [routing](../../docs-site/src/content/docs/routing.mdx), [server and price integrity](../../docs-site/src/content/docs/server.mdx), [adapters](../../docs-site/src/content/docs/adapters.mdx).
 
 MIT

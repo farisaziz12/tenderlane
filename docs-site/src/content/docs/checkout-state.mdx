@@ -1,0 +1,82 @@
+---
+title: Checkout state
+description: The client is a small state machine. Its status is a discriminated union, so the compiler knows which fields exist in which state.
+order: 5
+---
+import Source from '../../components/Source.astro';
+import status from '../../../snippets/status.tsx?raw';
+import client from '../../../snippets/client.ts?raw';
+
+## States
+
+```text
+idle ─► evaluating ─► ready ─(inline: preparing ─► prepared)─► submitting ─► success
+             │                     │                              ├─► redirecting
+             ▼                     ▼                              ├─► pending
+           error                 error                            └─► error ─► submit() again
+```
+
+| Status | Meaning | Guaranteed non-null |
+| --- | --- | --- |
+| `idle` | Before the first evaluation. Only observable inside `reset()`. | |
+| `evaluating` | An async router is deciding. The rules router is synchronous and skips this. | |
+| `ready` | A route is selected. | `route` |
+| `preparing` | Inline flow: the provider session is being created. | `route` |
+| `prepared` | Inline flow: the session exists; the payment element can mount. | `route`, `providerSession` |
+| `submitting` | `submit()` is in flight. | `route` |
+| `redirecting` | A hosted checkout was created and the browser is leaving for it. Nothing is paid yet. | `route`, `checkoutResult` |
+| `pending` | The provider accepted the payment and has not completed it (processing, or waiting on the customer). | `route`, `checkoutResult` |
+| `success` | The provider's browser SDK reported the payment complete. | `route`, `checkoutResult` |
+| `error` | Routing, preparing or submitting failed. | `error` |
+
+`canSubmit` is derived: a route is selected, nothing is in flight or settled, and an inline flow has its session. `selectedProvider` is `route.provider` or `null`.
+
+:::caution
+`success` is a client-side signal from the provider's SDK, meant for the UI. It is not proof of payment. Fulfil orders from the provider's webhook. A hosted checkout never reaches `success` in this tab at all: the customer pays on the provider's page and comes back to your `successUrl`.
+:::
+
+## Reading the state in React
+
+<Source code={status} file="docs-site/snippets/status.tsx" />
+
+`useTenderlaneCheckout()` returns the state plus `submit`, `prepare`, `selectPaymentMethod` and `reset`. It is built on `useSyncExternalStore`.
+
+`TenderlaneCheckoutForm` covers the common case. It calls `prepare()` when an inline route is selected or its `input` changes, renders the element you registered for that provider, and passes `{ status, canSubmit, error, submit, retry }` to its children. It renders no markup of its own.
+
+## Without React
+
+<Source code={client} file="docs-site/snippets/client.ts" />
+
+`subscribe` and `getSnapshot` are the whole binding surface. `@tenderlane/react` is about 350 lines on top of them and `@tenderlane/vue` about 150.
+
+## Rules the client enforces
+
+- **One submit at a time.** A second `submit()` while one is in flight throws `INVALID_STATE`.
+- **No submit without a session on an inline flow.** `submit()` before `prepare()` throws `INVALID_STATE`.
+- **A stale session is never payable.** A context change, or a new `prepare()`, drops the previous session first.
+- **A context change during a submit waits.** It is applied after the submit settles, so the result is not overwritten and a payment element is not unmounted mid-confirmation.
+- **A failed submit keeps the route.** The status is `error`, `canSubmit` is true again, and the customer can retry.
+- **A failed or expired result is an error**, not a pending state.
+
+## Errors
+
+Every error is a `TenderlaneError` with a `code`:
+
+| Code | Raised when |
+| --- | --- |
+| `ROUTING_ERROR` | The router threw |
+| `CONFIGURATION_ERROR` | The router selected a provider that is not registered, or an unknown payment method was selected |
+| `INVALID_STATE` | `prepare()` or `submit()` was called when the state does not allow it |
+| `UNSUPPORTED_CAPABILITY` | An inline route selected a provider that cannot create sessions |
+| `PROVIDER_ERROR` | The server or the provider rejected the request. `provider` and, where known, `providerCode` are set |
+| `VALIDATION_ERROR`, `CATALOG_ERROR` | Server side: bad request, or an item that cannot be priced |
+
+`submit()` records the error in the state and also rejects, so both `await` and state-driven UIs work. `prepare()` records it only.
+
+## Middleware
+
+`middleware` on the client config is a list of observers:
+
+`onContextChange`, `onRouteEvaluated`, `onSessionCreated`, `onCheckoutStart`, `onCheckoutSuccess`, `onCheckoutPending`, `onCheckoutError`.
+
+On the server handler, `onCatalogResolved` fires with the resolved prices. A middleware that throws is logged and skipped. Middleware cannot change a route, a price or a result.

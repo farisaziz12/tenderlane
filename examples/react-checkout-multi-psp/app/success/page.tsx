@@ -1,30 +1,23 @@
-import styles from './success.module.css';
-
 export default async function SuccessPage({
   searchParams,
 }: {
-  searchParams: Promise<{ session_id?: string }>;
+  searchParams: Promise<Record<string, string | undefined>>;
 }) {
-  const { session_id } = await searchParams;
+  const query = await searchParams;
+  const session = query.session ?? query.session_id ?? query.checkout_id;
 
   return (
-    <div className={styles.container}>
-      <div className={styles.card}>
-        <div className={styles.icon}>&#10003;</div>
-        <h1 className={styles.heading}>Payment Successful</h1>
-        <p className={styles.message}>
-          Your checkout session has been completed.
-        </p>
-        {session_id && (
-          <div className={styles.sessionPanel}>
-            <span className={styles.sessionLabel}>Session ID</span>
-            <span className={styles.sessionId}>{session_id}</span>
-          </div>
-        )}
-        <a href="/" className={styles.button}>
-          Back to Checkout
-        </a>
-      </div>
-    </div>
+    <main className="page narrow">
+      <h1>Back from the provider</h1>
+      <p className="lede">
+        The provider sent the customer to the success URL. That alone does not prove a payment: a
+        real app confirms it from the provider&apos;s webhook before fulfilling the order. Webhook
+        handling is not part of Tenderlane yet.
+      </p>
+      {session && <p className="mono">{session}</p>}
+      <a className="button" href="/">
+        Back to the checkout
+      </a>
+    </main>
   );
 }

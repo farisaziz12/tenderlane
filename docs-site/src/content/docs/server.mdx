@@ -1,0 +1,79 @@
+---
+title: Server and price integrity
+description: createTenderlaneHandler is the one endpoint the browser talks to. It decides the price and re-checks the route, and it is where every trust decision is made.
+order: 4
+---
+import Source from '../../components/Source.astro';
+import server from '../../../snippets/server.ts?raw';
+import catalog from '../../../snippets/catalog.ts?raw';
+
+## The handler
+
+<Source code={server} file="docs-site/snippets/server.ts" />
+
+`createTenderlaneHandler` returns `{ POST, resolve }`, both `(request: Request) => Promise<Response>`. It runs wherever the Web `Request` and `Response` exist. The example mounts `POST` as a Next.js route handler.
+
+## What the browser may and may not decide
+
+The request body is `{ provider, action, payload, paymentMethods }`, where `payload` is a `CheckoutInput`:
+
+```ts
+interface CheckoutInput {
+  items: { sku: string; quantity: number }[];
+  context?: TenderlaneContext;
+  successUrl: string;
+  cancelUrl: string;
+  customerEmail?: string;
+  clientReferenceId?: string;
+  metadata?: Record<string, string>;
+  idempotencyKey?: string;
+}
+```
+
+| Input from the browser | What the server does with it |
+| --- | --- |
+| A price | There is no field for one. Any `unitAmount` key, at any depth, is deleted before anything reads the body. |
+| `items` | Validated: non-empty, at most `maxItems` (100), `sku` a non-empty string, `quantity` an integer from 1 to `maxQuantity` (10 000). Priced by `catalog.resolve()`. |
+| `provider` | Must be a registered adapter. With `routing` set, must be the provider the server's own evaluation selects, or the request is rejected with 400. |
+| `paymentMethods` | Ignored when `routing` is set; the route's methods are used. |
+| `context` | Passed to `resolveContext`, whose return value is what pricing and routing use. Without `resolveContext` it is used as sent. |
+| `successUrl`, `cancelUrl` | With `allowedRedirectOrigins` set, must be absolute URLs on one of those origins. |
+| Anything else in the body | Dropped. The adapter payload is built field by field from validated values. |
+
+The response is `{ provider, id, status, url?, clientSecret? }`. An adapter result is passed through a validator that copies only those fields, so the rest of a PSP response (customer details, amounts, internal ids) never reaches the browser. The browser validates the same shape before acting on it, and only follows an absolute `http(s)` URL.
+
+:::caution
+Three options default to the permissive choice so that a first setup works. Set them before real use: `routing` (otherwise the browser picks the provider), `resolveContext` (otherwise a forged context can select a cheaper regional price) and `allowedRedirectOrigins` (otherwise the success URL can point anywhere).
+:::
+
+## Catalogs
+
+A catalog turns `{ sku, quantity }` into a name, a unit amount and a currency. Amounts are integers in the currency's minor unit (2900 is CHF 29.00 or $29.00). Tenderlane does no currency arithmetic beyond `unitAmount * quantity`, and does not convert between currencies.
+
+<Source code={catalog} file="docs-site/snippets/catalog.ts" />
+
+`createStripeCatalog` (`@tenderlane/stripe/server`) and `createPolarCatalog` (`@tenderlane/polar/server`) read the price from the PSP at resolve time, so the PSP dashboard is the price list. They make one API call per item and do not cache.
+
+`catalogs: { polar: polarCatalog }` sets a catalog per provider; `catalog` is the default.
+
+### Showing a price in the browser
+
+The browser needs a price to display. Two options, both display-only:
+
+- Import an inline catalog on both sides, as the example does. The prices are then in the client bundle.
+- Mount `handler.resolve` on a second route and call it with `createRemoteCatalog({ endpoint })`. It returns the server's resolution of `{ items, context }`.
+
+Whatever the browser displayed, `POST` resolves again and charges that.
+
+## Errors
+
+| Status | When | Body |
+| --- | --- | --- |
+| 400 | Invalid body, unknown provider or action, wrong provider for the route, unknown SKU, cart the provider cannot represent | `{ error, code }` with the specific message; `code` is `VALIDATION_ERROR` or `CATALOG_ERROR` |
+| 500 | The PSP call failed, or anything unexpected | `{ error: 'Checkout request failed.', code }`. The detail goes to `onError`, not to the browser. |
+
+## What the handler does not do
+
+- **Authentication, CSRF, rate limiting.** It is a plain route handler. Wrap it as you would any endpoint that creates billable objects.
+- **Confirmation.** It creates a checkout. It does not learn whether the customer paid. That requires the provider's webhook, which Tenderlane does not handle yet.
+- **Idempotency.** `idempotencyKey` is forwarded to Stripe if the browser sends one. Tenderlane does not generate or store keys. The client refuses a second `submit()` while one is in flight, which prevents double clicks but not retries across page loads.

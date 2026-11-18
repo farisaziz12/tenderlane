@@ -1,159 +1,185 @@
 import type {
-  TenderlaneContext,
+  AnyBrowserProvider,
   BrowserPaymentProvider,
+  CheckoutInput,
+  CheckoutResult,
+  InferProviderIds,
+  PaymentMethodDescriptor,
+  ProviderSession,
   Router,
   SelectedPaymentRoute,
+  TenderlaneContext,
+  TenderlaneError,
   TenderlaneMiddleware,
-  CheckoutResult,
-  PaymentMethodDescriptor,
-  CheckoutInput,
-  ProviderSession,
 } from '@tenderlane/core';
-import type { TenderlaneError } from '@tenderlane/core';
 
-/**
- * Union of all possible states in the checkout state machine.
- *
- * Transitions:
- * ```
- * idle → evaluating → ready → preparing → prepared → submitting → success | redirecting | pending
- *                   ↘ error                                      ↘ error → (submit again)
- * ```
- *
- * - `idle` — Initial state before the first route evaluation, or after {@link TenderlaneClient.reset}.
- * - `evaluating` — The router is evaluating the current context (may be async for auto-routers).
- * - `ready` — A route has been selected and payment methods are available. {@link TenderlaneClientState.canSubmit} is `true`.
- * - `preparing` — A provider session is being created (e.g. PaymentIntent for inline flows).
- * - `prepared` — The provider session is ready. {@link TenderlaneClientState.providerSession} is populated.
- * - `submitting` — The provider's `submit()` call is in progress.
- * - `redirecting` — A hosted checkout was created and the browser is leaving for it. The payment has not happened yet.
- * - `pending` — The provider accepted the submission but the payment is not complete (processing, or waiting on the customer). Confirm the outcome on the server.
- * - `success` — The provider reported the payment complete. {@link TenderlaneClientState.checkoutResult} is populated.
- * - `error` — Any failure during evaluation, preparation, or submission. {@link TenderlaneClientState.error} is populated. After a failed submit the route is kept and `submit()` may be called again.
- */
-export type ClientStatus =
-  | 'idle'
-  | 'evaluating'
-  | 'ready'
-  | 'preparing'
-  | 'prepared'
-  | 'submitting'
-  | 'redirecting'
-  | 'pending'
-  | 'success'
-  | 'error';
-
-/**
- * Configuration object passed to {@link createTenderlaneClient}.
- *
- * @property context - The initial checkout context (country, currency, amount, etc.)
- *   used for the first route evaluation. Update later via {@link TenderlaneClient.updateContext}.
- * @property providers - Registered browser payment provider adapters (e.g. `stripeProvider()`).
- *   The router's selected `provider` ID must match one of these.
- * @property routing - The router that selects a provider and flow based on context.
- *   Typically created with `createRulesRouter()` from `@tenderlane/core`.
- * @property middleware - Optional middleware hooks for observability, analytics, or
- *   side effects at each lifecycle point (route evaluated, checkout start, success, error).
- */
-export interface TenderlaneClientConfig {
+/** Fields every state carries. */
+interface StateBase {
+  /** The context the current route was (or is being) selected for. */
   readonly context: TenderlaneContext;
-  readonly providers: readonly BrowserPaymentProvider[];
-  readonly routing: Router;
+  /** Payment methods offered by the selected route. Empty without a route. */
+  readonly paymentMethods: readonly PaymentMethodDescriptor[];
+  readonly selectedPaymentMethod: string | null;
+  /** `route.provider`, or `null` without a route. */
+  readonly selectedProvider: string | null;
+  /**
+   * Whether `submit()` can be called now: a route is selected, nothing is in
+   * flight or settled, and an inline flow has its provider session.
+   */
+  readonly canSubmit: boolean;
+}
+
+/**
+ * The checkout state machine. `status` is the discriminant: narrowing on it
+ * tells you which of `route`, `providerSession`, `checkoutResult` and `error`
+ * are present.
+ *
+ * ```
+ * idle → evaluating → ready ─(inline: preparing → prepared)→ submitting → success
+ *            ↘ error                    ↘ error                 ├→ redirecting
+ *                                                               ├→ pending
+ *                                                               └→ error (submit again)
+ * ```
+ *
+ * - `idle`: before the first evaluation. Observable only inside `reset()`.
+ * - `evaluating`: an async router is deciding. Sync routers skip this.
+ * - `ready`: a route is selected.
+ * - `preparing` / `prepared`: inline flows only. The provider session is
+ *   being created / is ready for the payment element.
+ * - `submitting`: `submit()` is in flight.
+ * - `redirecting`: a hosted checkout was created and the browser is leaving
+ *   for it. Nothing has been paid yet.
+ * - `pending`: the provider accepted the submission but the payment is not
+ *   complete (processing, or waiting on the customer).
+ * - `success`: the provider's browser SDK reported the payment complete. This
+ *   is a client-side signal for the UI. Fulfil orders from the provider's
+ *   webhook, not from this state.
+ * - `error`: evaluation, preparation or submission failed. With a `route`,
+ *   `submit()` (or `prepare()`) can be called again.
+ */
+export type TenderlaneClientState = StateBase &
+  (
+    | {
+        readonly status: 'idle';
+        readonly route: null;
+        readonly providerSession: null;
+        readonly checkoutResult: null;
+        readonly error: null;
+      }
+    | {
+        readonly status: 'evaluating';
+        /** The previously selected route, until the new one arrives. */
+        readonly route: SelectedPaymentRoute | null;
+        readonly providerSession: null;
+        readonly checkoutResult: null;
+        readonly error: null;
+      }
+    | {
+        readonly status: 'ready' | 'preparing';
+        readonly route: SelectedPaymentRoute;
+        readonly providerSession: null;
+        readonly checkoutResult: null;
+        readonly error: null;
+      }
+    | {
+        readonly status: 'prepared';
+        readonly route: SelectedPaymentRoute;
+        readonly providerSession: ProviderSession;
+        readonly checkoutResult: null;
+        readonly error: null;
+      }
+    | {
+        readonly status: 'submitting';
+        readonly route: SelectedPaymentRoute;
+        readonly providerSession: ProviderSession | null;
+        readonly checkoutResult: null;
+        readonly error: null;
+      }
+    | {
+        readonly status: 'redirecting' | 'pending' | 'success';
+        readonly route: SelectedPaymentRoute;
+        readonly providerSession: ProviderSession | null;
+        readonly checkoutResult: CheckoutResult;
+        readonly error: null;
+      }
+    | {
+        readonly status: 'error';
+        /** `null` when route evaluation itself failed. */
+        readonly route: SelectedPaymentRoute | null;
+        readonly providerSession: ProviderSession | null;
+        readonly checkoutResult: null;
+        readonly error: TenderlaneError;
+      }
+  );
+
+export type ClientStatus = TenderlaneClientState['status'];
+
+/**
+ * Configuration for {@link createTenderlaneClient}.
+ *
+ * `routing` is checked against `providers`: a router that can select a
+ * provider id that is not in `providers` is a type error.
+ */
+export interface TenderlaneClientConfig<
+  TProviders extends readonly AnyBrowserProvider[] = readonly AnyBrowserProvider[],
+> {
+  /** The initial context. Update it with {@link TenderlaneClient.updateContext}. */
+  readonly context: TenderlaneContext;
+  /** Browser provider adapters, for example `stripeProvider()`. */
+  readonly providers: TProviders;
+  /** Selects a provider and flow for a context. Usually `createRulesRouter()`. */
+  readonly routing: Router<InferProviderIds<TProviders>>;
+  /** Observers for lifecycle events (analytics, logging). They cannot change the outcome. */
   readonly middleware?: readonly TenderlaneMiddleware[];
 }
 
 /**
- * Immutable state snapshot returned by {@link TenderlaneClient.getSnapshot}.
- *
- * Each state transition produces a new object reference, making this safe
- * for use with React's `useSyncExternalStore` and other external store patterns.
- *
- * @property status - Current position in the checkout state machine.
- * @property context - The active checkout context (country, currency, amount, etc.).
- * @property route - The selected payment route, or `null` before evaluation completes.
- * @property selectedProvider - The ID of the provider chosen by the router (e.g. `"stripe"`), or `null`.
- * @property paymentMethods - Available payment methods for the selected provider and route.
- * @property selectedPaymentMethod - The ID of the currently selected payment method, or `null`.
- * @property canSubmit - Whether the client is in a state that allows calling `submit()`.
- * @property error - The most recent error, or `null` if no error has occurred.
- * @property checkoutResult - The result of a successful checkout, or `null`.
- * @property providerSession - The provider session (e.g. clientSecret) for inline payment flows, or `null` for redirect flows.
- */
-export interface TenderlaneClientState {
-  readonly status: ClientStatus;
-  readonly context: TenderlaneContext;
-  readonly route: SelectedPaymentRoute | null;
-  readonly selectedProvider: string | null;
-  readonly paymentMethods: PaymentMethodDescriptor[];
-  readonly selectedPaymentMethod: string | null;
-  readonly canSubmit: boolean;
-  readonly error: TenderlaneError | null;
-  readonly checkoutResult: CheckoutResult | null;
-  readonly providerSession: ProviderSession | null;
-}
-
-/**
- * The headless checkout client interface.
- *
- * Created by {@link createTenderlaneClient}. Follows the `useSyncExternalStore`
- * contract so it can be consumed directly by React, Solid, Vue, or any
- * framework that supports external stores.
+ * The headless checkout client. `subscribe` and `getSnapshot` follow the
+ * external-store contract (`useSyncExternalStore`), which is all a framework
+ * binding needs.
  */
 export interface TenderlaneClient {
-  /**
-   * Register a listener that is called whenever the client state changes.
-   * Returns an unsubscribe function. Compatible with `useSyncExternalStore`.
-   */
+  /** Register a listener for state changes. Returns the unsubscribe function. */
   subscribe(listener: () => void): () => void;
 
-  /**
-   * Return the current immutable state snapshot.
-   * Returns a stable reference until the next state transition.
-   */
+  /** The current state. The same reference until the next transition. */
   getSnapshot(): TenderlaneClientState;
 
-  /**
-   * Look up a registered browser payment provider by its ID.
-   * Returns `undefined` if no provider with the given ID was registered.
-   */
+  /** Look up a registered browser provider by id. */
   getProvider(providerId: string): BrowserPaymentProvider | undefined;
 
   /**
-   * Replace the checkout context and trigger a new route evaluation.
-   * Any in-flight evaluation from a previous call is discarded.
+   * Replace the context and select a route for it. A structurally equal
+   * context is ignored. During a submit the new route is applied once the
+   * submit settles.
    */
   updateContext(context: TenderlaneContext): void;
 
   /**
-   * Select a payment method by ID from the available methods for the current route.
-   * Throws a `ConfigurationError` if the method ID is not available.
+   * Select one of `paymentMethods`.
+   * @throws {ConfigurationError} If the method is not offered by the route.
    */
   selectPaymentMethod(methodId: string): void;
 
   /**
-   * Create a provider session for inline payment flows (e.g. Stripe PaymentIntent).
-   * Transitions the state to `preparing` then `prepared`. The resulting
-   * {@link TenderlaneClientState.providerSession} contains the `clientSecret`.
+   * Inline flows: create the provider session (`ready → preparing → prepared`).
+   * A failure is recorded in the state (`status: 'error'`), not thrown.
    *
-   * @throws {TenderlaneError} If the client is not in a submittable state.
-   * @throws {UnsupportedCapabilityError} If the provider does not support session creation.
+   * @throws {TenderlaneError} `INVALID_STATE` if no route is selected or a submit is in flight.
+   * @throws {UnsupportedCapabilityError} If the provider cannot create sessions.
    */
   prepare(input: CheckoutInput): Promise<void>;
 
   /**
-   * Submit the checkout to the selected provider.
-   * For redirect flows, this may trigger a browser redirect.
-   * For inline flows, call {@link prepare} first to create the session.
+   * Submit the checkout to the selected provider. One submit runs at a time.
+   * Hosted flows redirect the browser; inline flows confirm the prepared
+   * session. A failure is recorded in the state and also thrown.
    *
-   * @returns The checkout result from the provider.
-   * @throws {TenderlaneError} If the client is not in a submittable state.
-   * @throws {ProviderError} If the provider's submit call fails.
+   * @throws {TenderlaneError} `INVALID_STATE` if `canSubmit` is false.
+   * @throws {ProviderError} If the provider rejects the submission.
    */
   submit(input: CheckoutInput): Promise<CheckoutResult>;
 
-  /**
-   * Clear the error, checkout result and provider session, then evaluate the
-   * route again for the current context, leaving the client ready to use.
-   */
+  /** Clear the error, result and session, then select a route again. */
   reset(): void;
 }

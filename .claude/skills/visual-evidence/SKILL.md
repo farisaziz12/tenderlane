@@ -9,8 +9,8 @@ Required for a diff under `docs-site/src/**` or `examples/**/app/**`. CI (`pr-ru
 
 ## Run the surface
 
-- Docs site and playground: `pnpm docs:dev` (the playground needs no PSP keys).
-- Example checkout: `pnpm build && pnpm --filter nextjs-multi-psp-checkout-example dev`. It needs Stripe test keys from `examples/react-checkout-multi-psp/.env.example`; without them, capture the docs-site playground instead and say so.
+- Docs site: `pnpm docs:dev`.
+- Example checkout: `pnpm example`. Without keys it runs against the built-in demo PSP, which is enough to capture the routing and the hosted round trip. The Stripe and Polar routes need test keys from `examples/react-checkout-multi-psp/.env.example`; say which setup a capture shows.
 
 Read the port from the server's output.
 
@@ -21,7 +21,7 @@ node tools/shot.mjs <url> <name>            # desktop 1280 and phone 390 PNGs
 node tools/shot.mjs <url> <name> --record   # also a .webm of the page while you script it
 ```
 
-First run on a machine: `pnpm exec playwright install chromium` (the recording needs Playwright's ffmpeg).
+First run on a machine: `pnpm exec playwright install chromium` (the recording needs Playwright's ffmpeg). Where a browser is already installed, point at it with `CHROME=/path/to/chrome`.
 
 Files land in `.evidence/` (git-ignored) as `<name>_desktop.png` and `<name>_phone.png`.
 

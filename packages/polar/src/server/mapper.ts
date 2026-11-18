@@ -108,7 +108,6 @@ export function mapFromPolarCheckout(checkout: PolarCheckoutResponse): CheckoutR
     id: checkout.id,
     status: mapPolarStatus(checkout.status),
     url: checkout.url,
-    raw: checkout,
   };
 }
 
@@ -116,8 +115,6 @@ export function mapPolarStatus(
   status: PolarCheckoutResponse['status'],
 ): CheckoutResult['status'] {
   switch (status) {
-    case 'open':
-      return 'open';
     case 'succeeded':
     case 'confirmed':
       return 'complete';
@@ -126,6 +123,6 @@ export function mapPolarStatus(
     case 'failed':
       return 'failed';
     default:
-      return 'created';
+      return 'open';
   }
 }

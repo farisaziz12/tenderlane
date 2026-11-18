@@ -27,7 +27,6 @@ import {
  *   providers: [
  *     polarServerAdapter({
  *       accessToken: process.env.POLAR_ACCESS_TOKEN!,
- *       organizationId: process.env.POLAR_ORG_ID!,
  *       server: 'sandbox',
  *     }),
  *   ],

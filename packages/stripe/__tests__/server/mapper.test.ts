@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { mapToStripeSessionParams } from '../../src/server/mapper.js';
+import type Stripe from 'stripe';
+import {
+  mapFromStripePaymentIntent,
+  mapFromStripeSession,
+  mapToStripeSessionParams,
+} from '../../src/server/mapper.js';
 import type { ResolvedCheckoutInput } from '@tenderlane/core';
 
 const baseInput: ResolvedCheckoutInput = {
@@ -227,5 +232,41 @@ describe('mapToStripePaymentIntentParams currency', () => {
     const { mapToStripePaymentIntentParams } = await import('../../src/server/mapper.js');
 
     expect(() => mapToStripePaymentIntentParams({ ...baseInput, items: [] })).toThrow();
+  });
+});
+
+describe('results sent to the browser', () => {
+  it('maps a Checkout Session to id, status and url only', () => {
+    const session = {
+      id: 'cs_test_1',
+      status: 'open',
+      url: 'https://checkout.stripe.com/c/pay/cs_test_1',
+      customer_details: { email: 'someone@example.com' },
+      amount_total: 2900,
+    } as Stripe.Checkout.Session;
+
+    expect(mapFromStripeSession(session)).toEqual({
+      provider: 'stripe',
+      id: 'cs_test_1',
+      status: 'open',
+      url: 'https://checkout.stripe.com/c/pay/cs_test_1',
+    });
+  });
+
+  it('maps a PaymentIntent to id, status and client secret only', () => {
+    const paymentIntent = {
+      id: 'pi_1',
+      status: 'requires_payment_method',
+      client_secret: 'pi_1_secret_abc',
+      amount: 2900,
+      latest_charge: 'ch_1',
+    } as Stripe.PaymentIntent;
+
+    expect(mapFromStripePaymentIntent(paymentIntent)).toEqual({
+      provider: 'stripe',
+      id: 'pi_1',
+      status: 'open',
+      clientSecret: 'pi_1_secret_abc',
+    });
   });
 });

@@ -22,7 +22,7 @@ function captureAdapter(id = 'mock') {
     async (_action: string, _payload: ResolvedCheckoutInput): Promise<CheckoutResult> => ({
       provider: id,
       id: 'session_123',
-      status: 'created',
+      status: 'open',
     }),
   );
   const adapter: ServerProviderAdapter = { id, actions: ['checkout'], handle };
@@ -258,7 +258,7 @@ describe('server-side routing', () => {
   const routing = {
     evaluate: (context: Record<string, unknown>) => ({
       provider: context.country === 'CH' ? 'stripe' : 'polar',
-      flow: 'checkout-session' as const,
+      flow: 'hosted' as const,
       paymentMethods: ['card'],
       source: 'rule' as const,
     }),

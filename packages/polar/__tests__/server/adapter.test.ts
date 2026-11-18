@@ -36,7 +36,6 @@ describe('polarServerAdapter', () => {
     const { polarServerAdapter } = await import('../../src/server/adapter.js');
     const adapter = polarServerAdapter({
       accessToken: 'polar_oat_test',
-      organizationId: 'org_test',
       server: 'sandbox',
     });
 
@@ -54,7 +53,6 @@ describe('polarServerAdapter', () => {
     const { polarServerAdapter } = await import('../../src/server/adapter.js');
     const adapter = polarServerAdapter({
       accessToken: 'polar_oat_test',
-      organizationId: 'org_test',
     });
 
     const result = await adapter.handle('checkout', baseInput);
@@ -76,7 +74,6 @@ describe('polarServerAdapter', () => {
     const { polarServerAdapter } = await import('../../src/server/adapter.js');
     const adapter = polarServerAdapter({
       accessToken: 'polar_oat_test',
-      organizationId: 'org_test',
     });
 
     await expect(adapter.handle('refund', baseInput)).rejects.toThrow(ProviderError);
@@ -90,7 +87,6 @@ describe('polarServerAdapter', () => {
     const { CatalogError } = await import('@tenderlane/core');
     const adapter = polarServerAdapter({
       accessToken: 'polar_oat_test',
-      organizationId: 'org_test',
     });
 
     const inputWithoutRefs: ResolvedCheckoutInput = {
@@ -117,7 +113,6 @@ describe('polarServerAdapter', () => {
     const { polarServerAdapter } = await import('../../src/server/adapter.js');
     const adapter = polarServerAdapter({
       accessToken: 'polar_oat_test',
-      organizationId: 'org_test',
     });
 
     await expect(adapter.handle('checkout', baseInput)).rejects.toBeInstanceOf(

@@ -1,117 +1,55 @@
-import React, { useEffect, useState, Suspense, createElement } from 'react';
+import React, { useEffect, useState } from 'react';
+import { Elements, PaymentElement, useElements } from '@stripe/react-stripe-js';
 import type { Stripe } from '@stripe/stripe-js';
+import type { AnyBrowserProvider } from '@tenderlane/core';
 import type { StripeBrowserProvider } from '../browser/provider.js';
 
 /**
- * Props for the {@link StripePaymentElement} component.
- *
- * Matches the `InlinePaymentElementProps` contract from `@tenderlane/react`.
- *
- * @property provider - The Stripe browser provider instance returned by `stripeProvider()`.
- *   Used to obtain the Stripe.js instance and bind the Elements reference.
- * @property clientSecret - The client secret from the provider session
- *   (obtained via {@link TenderlaneClient.prepare}). Required to initialize Stripe Elements.
- * @property onReady - Optional callback fired when the Stripe Payment Element has fully loaded.
- * @property onChange - Optional callback fired when the payment form state changes,
- *   including whether all required fields are `complete`.
+ * Props of {@link StripePaymentElement}. The same shape as
+ * `InlinePaymentElementProps` from `@tenderlane/react`, so the component can
+ * be passed to `TenderlaneCheckoutForm`'s `elements` map as is.
  */
 export interface StripePaymentElementProps {
-  provider: StripeBrowserProvider;
+  /** The provider returned by `stripeProvider()`. */
+  provider: AnyBrowserProvider;
+  /** `providerSession.clientSecret` from the checkout state. */
   clientSecret: string;
   onReady?: () => void;
   onChange?: (event: { complete: boolean }) => void;
 }
 
-/**
- * Lazy-loaded inner component that imports @stripe/react-stripe-js.
- * This ensures the heavy Stripe React library is code-split and only
- * loaded when this component actually mounts.
- */
-const StripeElementsInner = React.lazy(async () => {
-  const stripeReact = await import('@stripe/react-stripe-js');
+function isStripeProvider(provider: AnyBrowserProvider): provider is StripeBrowserProvider {
+  return provider.id === 'stripe' && 'getStripeInstance' in provider && 'setElements' in provider;
+}
 
-  function ElementsBridge({
-    provider,
-    onReady,
-    onChange,
-  }: {
-    provider: StripeBrowserProvider;
-    onReady?: () => void;
-    onChange?: (event: { complete: boolean }) => void;
-  }) {
-    const elements = stripeReact.useElements();
+/** Hands the mounted Elements instance to the provider, which confirms with it. */
+function ElementsBridge({
+  provider,
+  onReady,
+  onChange,
+}: Pick<StripePaymentElementProps, 'onReady' | 'onChange'> & { provider: StripeBrowserProvider }) {
+  const elements = useElements();
 
-    useEffect(() => {
-      provider.setElements(elements);
-      return () => provider.setElements(null);
-    }, [elements, provider]);
+  useEffect(() => {
+    provider.setElements(elements);
+    return () => provider.setElements(null);
+  }, [elements, provider]);
 
-    // Cast to any to avoid React type version mismatch between @types/react 18 and 19
-    const PaymentElementComponent = stripeReact.PaymentElement as any;
-    return createElement(PaymentElementComponent, {
-      onReady,
-      onChange,
-    });
-  }
-
-  function StripeElementsWrapper({
-    stripeInstance,
-    clientSecret,
-    provider,
-    onReady,
-    onChange,
-  }: {
-    stripeInstance: Stripe;
-    clientSecret: string;
-    provider: StripeBrowserProvider;
-    onReady?: () => void;
-    onChange?: (event: { complete: boolean }) => void;
-  }) {
-    return createElement(
-      stripeReact.Elements as any,
-      { stripe: stripeInstance, options: { clientSecret } },
-      createElement(ElementsBridge, { provider, onReady, onChange }),
-    );
-  }
-
-  return { default: StripeElementsWrapper };
-});
+  return <PaymentElement onReady={onReady} onChange={onChange} />;
+}
 
 /**
- * Renders a Stripe Payment Element for inline payment collection.
+ * Stripe's Payment Element for the `inline` flow. Card details are entered
+ * into Stripe's iframe and never touch the app or Tenderlane.
  *
- * Both `@stripe/stripe-js` and `@stripe/react-stripe-js` are lazy-loaded:
- * - Stripe.js loads via dynamic `import()` when the provider's `getStripeInstance()` is called.
- * - `@stripe/react-stripe-js` loads via `React.lazy` when this component mounts.
- *
- * This means zero bundle impact when using redirect flows or non-Stripe providers.
+ * Import it from `@tenderlane/stripe/react`. To keep `@stripe/react-stripe-js`
+ * out of the initial bundle, load this module with your framework's lazy
+ * import (`React.lazy`, `next/dynamic`).
  *
  * @example
- * ```tsx
- * import { useTenderlaneCheckout } from '@tenderlane/react';
- * import { StripePaymentElement } from '@tenderlane/stripe/react';
- *
- * function TenderlaneCheckoutForm({ provider }: { provider: StripeBrowserProvider }) {
- *   const checkout = useTenderlaneCheckout();
- *
- *   if (!checkout.providerSession) return null;
- *
- *   return (
- *     <form onSubmit={(event) => {
- *       event.preventDefault();
- *       checkout.submit({ amount: 5000, currency: 'usd', successUrl: '/success', cancelUrl: '/cancel' });
- *     }}>
- *       <StripePaymentElement
- *         provider={provider}
- *         clientSecret={checkout.providerSession.clientSecret}
- *         onReady={() => console.log('Payment element ready')}
- *         onChange={({ complete }) => console.log('Form complete:', complete)}
- *       />
- *       <button type="submit" disabled={!checkout.canSubmit}>Pay</button>
- *     </form>
- *   );
- * }
- * ```
+ * <TenderlaneCheckoutForm input={input} elements={{ stripe: StripePaymentElement }}>
+ *   {({ submit, canSubmit }) => <button disabled={!canSubmit} onClick={submit}>Pay</button>}
+ * </TenderlaneCheckoutForm>
  */
 export function StripePaymentElement({
   provider,
@@ -119,27 +57,34 @@ export function StripePaymentElement({
   onReady,
   onChange,
 }: StripePaymentElementProps) {
+  if (!isStripeProvider(provider)) {
+    throw new Error(
+      `StripePaymentElement was rendered for provider "${provider.id}". Register it under the "stripe" key of \`elements\`.`,
+    );
+  }
+
   const [stripeInstance, setStripeInstance] = useState<Stripe | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    provider.getStripeInstance().then((instance) => {
-      if (!cancelled) setStripeInstance(instance);
-    });
-    return () => { cancelled = true; };
+    provider.getStripeInstance().then(
+      (instance) => {
+        if (!cancelled) setStripeInstance(instance);
+      },
+      (error: unknown) => {
+        console.error('[tenderlane] Stripe.js failed to load:', error);
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
   }, [provider]);
 
   if (!stripeInstance) return null;
 
   return (
-    <Suspense fallback={null}>
-      <StripeElementsInner
-        stripeInstance={stripeInstance}
-        clientSecret={clientSecret}
-        provider={provider}
-        onReady={onReady}
-        onChange={onChange}
-      />
-    </Suspense>
+    <Elements stripe={stripeInstance} options={{ clientSecret }}>
+      <ElementsBridge provider={provider} onReady={onReady} onChange={onChange} />
+    </Elements>
   );
 }

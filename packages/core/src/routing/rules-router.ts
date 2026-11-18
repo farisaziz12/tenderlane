@@ -1,66 +1,61 @@
-import type { RulesRouterConfig, Router, SelectedPaymentRoute } from '../types/routing.js';
-import { RoutingError } from '../errors/errors.js';
+import type {
+  RouteTarget,
+  RulesRouterConfig,
+  RulesRouter,
+  SelectedPaymentRoute,
+} from '../types/routing.js';
+import type { TenderlaneContext } from '../types/context.js';
 import { matchRuleConditions } from './evaluate.js';
 
+function select<TProviderId extends string>(
+  target: RouteTarget<TProviderId>,
+  origin: Pick<SelectedPaymentRoute, 'reason' | 'ruleId' | 'source'>,
+): SelectedPaymentRoute<TProviderId> {
+  return {
+    provider: target.provider,
+    flow: target.flow,
+    paymentMethods: target.paymentMethods ?? [],
+    ...origin,
+  };
+}
+
 /**
- * Create a deterministic rules-based router.
- * Rules are evaluated in order; first match wins.
- * Rules are serializable - no functions in the primary model.
- * Optional `predicates` escape hatch for function-based overrides keyed by rule ID.
+ * Create a synchronous, deterministic router from an ordered list of rules.
+ * The first rule whose `when` matches the context wins; otherwise `fallback`.
  *
- * The `const` type parameter preserves string literal types from the config,
- * enabling TypeScript to catch typos in provider IDs, payment methods, and flows.
+ * The provider ids used in `rules` and `fallback` are inferred as a literal
+ * union, so `createTenderlaneClient` and `createTenderlaneHandler` reject a
+ * router that targets a provider that was not registered.
+ *
+ * @example
+ * const routing = createRulesRouter({
+ *   rules: [
+ *     { id: 'ch', when: { country: 'CH' }, use: { provider: 'stripe', flow: 'inline' } },
+ *   ],
+ *   fallback: { provider: 'stripe', flow: 'hosted' },
+ * });
+ * // RulesRouter<'stripe'>
  */
-export function createRulesRouter<const T extends RulesRouterConfig>(config: T): Router {
+export function createRulesRouter<const TProviderId extends string>(
+  config: RulesRouterConfig<TProviderId>,
+): RulesRouter<TProviderId> {
   const { rules, fallback, predicates } = config;
 
   return {
-    evaluate(context: Record<string, unknown>): SelectedPaymentRoute {
+    evaluate(context: TenderlaneContext): SelectedPaymentRoute<TProviderId> {
       for (const rule of rules) {
-        // If a predicate exists for this rule's ID, use it instead of declarative conditions
+        // A predicate registered for the rule id replaces its `when` clause.
         const predicate = predicates?.[rule.id];
-        if (predicate) {
-          if (predicate(context)) {
-            return {
-              provider: rule.use.provider,
-              flow: rule.use.flow,
-              paymentMethods: rule.use.paymentMethods ?? [],
-              providerOptions: rule.use.providerOptions,
-              reason: `Matched predicate for rule "${rule.id}"`,
-              ruleId: rule.id,
-              source: 'rule',
-            };
-          }
-          continue;
-        }
-
-        if (matchRuleConditions(context, rule.when)) {
-          return {
-            provider: rule.use.provider,
-            flow: rule.use.flow,
-            paymentMethods: rule.use.paymentMethods ?? [],
-            providerOptions: rule.use.providerOptions,
+        const matched = predicate ? predicate(context) : matchRuleConditions(context, rule.when);
+        if (matched) {
+          return select(rule.use, {
             reason: rule.description ?? `Matched rule "${rule.id}"`,
             ruleId: rule.id,
             source: 'rule',
-          };
+          });
         }
       }
-
-      if (!fallback) {
-        throw new RoutingError(
-          'No payment route matched the current context and no fallback route was configured.',
-        );
-      }
-
-      return {
-        provider: fallback.provider,
-        flow: fallback.flow,
-        paymentMethods: fallback.paymentMethods ?? [],
-        providerOptions: fallback.providerOptions,
-        reason: 'No rule matched; using fallback route',
-        source: 'fallback',
-      };
+      return select(fallback, { reason: 'No rule matched; using fallback', source: 'fallback' });
     },
   };
 }

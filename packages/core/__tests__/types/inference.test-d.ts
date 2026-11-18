@@ -36,7 +36,7 @@ test('InferProviderIds extracts union from tuple', () => {
 test('InferCapabilities extracts capabilities from adapter', () => {
   type TestCaps = ProviderCapabilities & {
     provider: 'test';
-    flows: readonly ['checkout-session'];
+    flows: readonly ['hosted'];
   };
   type Adapter = BrowserPaymentProvider<'test', TestCaps>;
   expectTypeOf<InferCapabilities<Adapter>>().toEqualTypeOf<TestCaps>();
@@ -57,7 +57,7 @@ test('InferPaymentMethods extracts literal methods from adapter', () => {
 test('InferPaymentMethods works directly on capabilities', () => {
   const caps = {
     provider: 'test',
-    flows: ['checkout-session'] as const,
+    flows: ['hosted'] as const,
     paymentMethods: ['card', 'sepa_debit'] as const,
     supports: {},
   } as const satisfies ProviderCapabilities;

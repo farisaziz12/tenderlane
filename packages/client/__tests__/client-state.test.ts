@@ -5,7 +5,6 @@ import type {
   CheckoutInput,
   CheckoutResult,
   PaymentMethodDescriptor,
-  ProviderCapabilities,
   Router,
   SelectedPaymentRoute,
 } from '@tenderlane/core';
@@ -25,15 +24,10 @@ function createProvider(overrides: Partial<BrowserPaymentProvider> = {}): Browse
   return {
     '~types': {} as never,
     id: 'mock',
-    capabilities: {
-      provider: 'mock',
-      flows: ['checkout-session', 'payment-intent'],
-      paymentMethods: ['card', 'twint'],
-      supports: { redirect: true },
-    } as ProviderCapabilities,
+    capabilities: { flows: ['hosted', 'inline'], paymentMethods: ['card', 'twint'] },
     getAvailablePaymentMethods: () => methods,
     createSession: vi.fn(async () => ({
-      flow: 'payment-intent' as const,
+      flow: 'inline' as const,
       clientSecret: 'secret_123',
       sessionId: 'pi_123',
     })),
@@ -46,7 +40,7 @@ function createProvider(overrides: Partial<BrowserPaymentProvider> = {}): Browse
 
 const route: SelectedPaymentRoute = {
   provider: 'mock',
-  flow: 'payment-intent',
+  flow: 'inline',
   paymentMethods: [],
   source: 'rule',
 };
@@ -93,6 +87,9 @@ describe('retry after a failed submit', () => {
 
     expect(client.getSnapshot().status).toBe('ready');
     expect(client.getSnapshot().error).toBeNull();
+    // An inline route is submittable only once its session exists.
+    expect(client.getSnapshot().canSubmit).toBe(false);
+    await client.prepare(input);
     expect(client.getSnapshot().canSubmit).toBe(true);
   });
 
@@ -240,10 +237,10 @@ describe('context changes', () => {
     let release!: () => void;
     const createSession = vi.fn(
       () =>
-        new Promise<{ flow: 'payment-intent'; clientSecret: string; sessionId: string }>(
+        new Promise<{ flow: 'inline'; clientSecret: string; sessionId: string }>(
           (resolve) => {
             release = () =>
-              resolve({ flow: 'payment-intent', clientSecret: 'stale', sessionId: 'pi_stale' });
+              resolve({ flow: 'inline', clientSecret: 'stale', sessionId: 'pi_stale' });
           },
         ),
     );
@@ -276,7 +273,7 @@ describe('races found in review', () => {
   it('a failed re-prepare does not leave the previous session payable', async () => {
     const createSession = vi
       .fn()
-      .mockResolvedValueOnce({ flow: 'payment-intent', clientSecret: 'old', sessionId: 'pi_old' })
+      .mockResolvedValueOnce({ flow: 'inline', clientSecret: 'old', sessionId: 'pi_old' })
       .mockRejectedValueOnce(new Error('503'));
     const provider = createProvider({ createSession });
     const client = createClient(provider);
@@ -298,7 +295,7 @@ describe('races found in review', () => {
     const createSession = vi
       .fn()
       .mockRejectedValueOnce(new Error('503'))
-      .mockResolvedValueOnce({ flow: 'payment-intent', clientSecret: 'ok', sessionId: 'pi_ok' });
+      .mockResolvedValueOnce({ flow: 'inline', clientSecret: 'ok', sessionId: 'pi_ok' });
     const client = createClient(createProvider({ createSession }));
 
     await client.prepare(input);
@@ -403,8 +400,8 @@ describe('races found in review', () => {
     let releaseSession!: () => void;
     const createSession = vi.fn(
       () =>
-        new Promise<{ flow: 'payment-intent'; clientSecret: string }>((resolve) => {
-          releaseSession = () => resolve({ flow: 'payment-intent', clientSecret: 'secret' });
+        new Promise<{ flow: 'inline'; clientSecret: string }>((resolve) => {
+          releaseSession = () => resolve({ flow: 'inline', clientSecret: 'secret' });
         }),
     );
     const client = createTenderlaneClient({

@@ -1,0 +1,82 @@
+---
+title: Architecture
+description: Six packages, one direction of dependency, and one server endpoint that owns the trust boundary.
+order: 2
+---
+
+## Packages
+
+```text
+@tenderlane/core            no dependencies, names no provider
+   ├─ .                     types, rules router, catalogs, errors
+   ├─ /server               createTenderlaneHandler (Web Request/Response)
+   └─ /adapters             what an adapter author needs
+        │
+        ├── @tenderlane/client     headless checkout state machine
+        │      ├── @tenderlane/react   provider, hook, form
+        │      └── @tenderlane/vue     plugin and composables (experimental)
+        │
+        ├── @tenderlane/stripe     .  /server  /react
+        └── @tenderlane/polar      .  /server
+```
+
+| Package | Owns | Does not own |
+| --- | --- | --- |
+| `@tenderlane/core` | The contracts every other package implements, route evaluation, price resolution, the server handler | Any PSP SDK, any framework, any state |
+| `@tenderlane/client` | The checkout state machine: route selection, `prepare`, `submit`, one submit at a time | Rendering, HTTP (providers do that) |
+| `@tenderlane/react` | Subscribing React to the client; calling `prepare` at the right time for inline flows | Business logic, markup |
+| `@tenderlane/stripe`, `@tenderlane/polar` | Translating between Tenderlane's contracts and one PSP | Routing, pricing |
+| `@tenderlane/vue` | Subscribing Vue to the client | Inline payment elements (hosted flows only) |
+
+Dependencies point one way: adapters and the client depend on core, bindings depend on the client. Core imports nothing.
+
+### Browser and server entries
+
+Each adapter package has a browser entry and a server entry:
+
+- `@tenderlane/stripe` runs in the browser and never imports the `stripe` npm package. It holds the publishable key only.
+- `@tenderlane/stripe/server` imports `stripe` and holds the secret key.
+
+The split is enforced by `package.json` subpath exports, so importing the server adapter into a client bundle is an explicit, visible import and not an accident of tree shaking.
+
+## Data flow of one checkout
+
+```text
+1. App state changes          context = { country: 'CH' }
+2. Router (browser)           route = { provider: 'stripe', flow: 'inline' }
+3. Client                     status: ready
+4. inline only: prepare()     POST /api/payments { provider, action, payload: { items: [{ sku, quantity }], ... } }
+5. Handler (server)           validate → derive context → evaluate the same router
+                              → price items from the catalog → call the server adapter
+6. Server adapter             PSP API call with the secret key
+7. Response                   { provider, id, status, url? , clientSecret? }   nothing else
+8. Browser provider           hosted: redirect to url
+                              inline: mount the element, submit() confirms it
+9. Client                     status: redirecting | pending | success | error
+```
+
+Steps 5 to 7 are described in [Server and price integrity](/docs/server).
+
+## Extension points that exist
+
+| Extension | How | Example in the repository |
+| --- | --- | --- |
+| Another payment provider | `defineBrowserProvider`, `defineServerAdapter` from `@tenderlane/core/adapters` | `examples/react-checkout-multi-psp/app/demo-psp` |
+| Another source of prices | `defineCatalog({ resolve })` | `packages/stripe/src/server/catalog.ts` |
+| Another routing strategy | Any object with `evaluate(context)`; it may be async | `packages/client/__tests__/client.test.ts` |
+| Observing the lifecycle | `middleware: [{ onRouteEvaluated, onCheckoutStart, ... }]` | `packages/core/src/types/middleware.ts` |
+| Another UI framework | `client.subscribe` and `client.getSnapshot` | `packages/vue/src/index.ts` (about 150 lines) |
+
+There is no plugin registry and no event bus. Middleware observes; it cannot change a route or a price.
+
+## Design choices
+
+**Rules are data.** A rule is a JSON object, so the same rules run in the browser and on the server, and can be stored or generated. The `predicates` option takes functions for the cases JSON cannot express; those cannot be serialized.
+
+**The router is shared, the decision is not trusted.** The browser evaluates the router to render the right UI immediately. The server evaluates it again with the context it believes and rejects a mismatch.
+
+**No amount on the wire.** `CheckoutInput` has no price field. See [Server and price integrity](/docs/server).
+
+**Provider ids are literals.** `stripeProvider()` returns a provider whose `id` has type `'stripe'`. `createRulesRouter` infers the union of ids its rules target, and the client and handler require that union to be registered. See [Routing](/docs/routing).
+
+**Errors cross package boundaries by `code`.** Every error extends `TenderlaneError` and carries a string `code`. Code that handles errors from another package checks `hasErrorCode(error, 'CATALOG_ERROR')` and not `instanceof`, which breaks when two copies of a package are installed.

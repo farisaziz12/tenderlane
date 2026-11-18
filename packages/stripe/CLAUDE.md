@@ -1,74 +1,26 @@
 # @tenderlane/stripe
 
-Stripe provider adapter for Tenderlane. Has separate browser and server entry points.
-
-## Structure
+Stripe adapter. Three entry points with a hard boundary.
 
 ```
 src/
-  index.ts              # Browser entry: exports stripeProvider()
-  browser/
-    provider.ts         # stripeProvider() factory - BrowserPaymentProvider<"stripe", ...>
-    types.ts            # StripeProviderOptions (publishableKey, serverEndpoint)
-  server/
-    index.ts            # Server entry: exports stripeServerAdapter() + createStripeCatalog()
-    adapter.ts          # stripeServerAdapter() factory - ServerProviderAdapter<"stripe">
-    catalog.ts          # createStripeCatalog() — PSP-sourced catalog (stripe.prices.retrieve)
-    mapper.ts           # mapToStripeSessionParams(), mapFromStripeSession()
-    types.ts            # StripeServerConfig (secretKey, apiVersion)
-  shared/
-    capabilities.ts     # STRIPE_CAPABILITIES, STRIPE_PAYMENT_METHODS, STRIPE_FLOWS
-    metadata.ts         # StripePhantomTypes type alias
+  index.ts                 browser entry
+  browser/provider.ts      stripeProvider(): hosted + inline. Lazy-loads @stripe/stripe-js.
+  react/                   StripePaymentElement                     → @tenderlane/stripe/react
+  server/adapter.ts        stripeServerAdapter(): 'checkout', 'create-payment-intent'
+  server/mapper.ts         Tenderlane ↔ Stripe params and results
+  server/catalog.ts        createStripeCatalog(): prices from stripe.prices.retrieve
+  shared/capabilities.ts   flows and payment method labels
 ```
 
-## Stripe-sourced catalog
+## Rules
 
-`createStripeCatalog({ secretKey, skus })` returns a `Catalog` whose `resolve()` calls `stripe.prices.retrieve(priceId, { expand: ['product'] })` for each requested SKU. Reads `unit_amount`, `currency`, and the product's `name`. Populates `providerRefs.stripe.priceId` on the result so the adapter's mapper emits `{ price: priceId, quantity }` — Stripe looks up the canonical price internally.
+- `index.ts`, `browser/` and `react/` must never import the `stripe` package. Only `server/` does.
+- The browser provider talks to the app's handler through `requestProviderAction` from `@tenderlane/core/adapters`, never with a hand-written `fetch`.
+- Mappers read money only from `ResolvedCheckoutInput.items`: `providerRefs.stripe.priceId` when present, otherwise `price_data` from `unitAmount`/`currency`.
+- Results returned to the handler carry only `id`, `status`, `url` or `clientSecret`. Never return the Stripe object.
+- A PaymentIntent has one currency; a mixed-currency cart is a `CatalogError`.
+- `submitInline` reports `complete` only for `paymentIntent.status === 'succeeded'`.
+- `providerOptions` on the payload comes from server config and is merged last into the Stripe params.
 
-Server-only by construction (requires `secretKey`). Pair with `createRemoteCatalog` on the client. The mapper's inline `price_data` fallback path remains for catalogs that don't declare a Stripe priceId (e.g., `createInlineCatalog` with no `providerRefs.stripe`).
-
-## Critical Boundary
-
-**Browser entry (`@tenderlane/stripe`):**
-- Must NEVER import the `stripe` npm package
-- Only uses `fetch()` to call the configured `serverEndpoint`
-- On submit: POST `{ provider: "stripe", action: "checkout", payload }` → get back `{ url }` → redirect
-
-**Server entry (`@tenderlane/stripe/server`):**
-- Imports `stripe` npm package
-- Creates `new Stripe(secretKey)`
-- Maps `CheckoutInput` → `stripe.checkout.sessions.create()` params
-
-This boundary is enforced via `package.json` `exports` and `tsup.config.ts` entry points.
-
-## Stripe Checkout Session Mapping
-
-`mapToStripeSessionParams()` in `server/mapper.ts`:
-- `mode: "payment"` (always for alpha)
-- `line_items` use `price_data` with `product_data` (inline pricing, no pre-created Price objects)
-- `success_url` supports `{CHECKOUT_SESSION_ID}` placeholder token
-- `customer_email`, `client_reference_id`, `metadata` mapped directly
-- `idempotencyKey` passed via `Stripe.RequestOptions` (not session params)
-- `providerOptions` from `CheckoutInput` merged into params as escape hatch (allows `payment_method_types`, `allow_promotion_codes`, etc.)
-
-## Mapper Migration to Catalog (planned)
-
-When the catalog primitive lands, `mapToStripeSessionParams()` will accept `ResolvedCatalogItem[]` instead of raw line items. Preference order per item:
-1. If `item.providerRefs.stripe.priceId` is present → emit `{ price: <priceId>, quantity }` (uses a pre-created Stripe Price object).
-2. Otherwise → fall back to today's inline `price_data` shape using `item.unitAmount`, `item.currency`, `item.name`. Behavior unchanged from current alpha.
-
-Server-supplied amounts are canonical (see root CLAUDE.md "Price integrity"). The mapper never reads pricing from anything except the resolved catalog item.
-
-## Provider ID Inference
-
-`stripeProvider()` returns `BrowserPaymentProvider<"stripe", StripeCapabilities, StripeProviderOptions>`. The literal `"stripe"` is preserved through the `~types` phantom metadata, allowing type-level inference of valid provider IDs.
-
-## Alpha Capabilities (honest)
-
-- flows: `["checkout-session"]`
-- paymentMethods: `["card"]`
-- redirect: yes
-- embedded: no
-- subscriptions: no
-- refunds: no
-- webhooks: declared but not implemented
+Tests mock the Stripe SDK. Nothing here is verified against the live API in CI.

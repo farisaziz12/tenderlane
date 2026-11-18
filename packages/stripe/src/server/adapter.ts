@@ -1,5 +1,6 @@
 import Stripe from 'stripe';
 import type {
+  ServerActionOptions,
   ServerProviderAdapter,
   ResolvedCheckoutInput,
   CheckoutResult,
@@ -16,7 +17,7 @@ import {
 /**
  * Create a Stripe server-side provider adapter.
  *
- * Supports both Checkout Session (redirect) and PaymentIntent (Elements) flows.
+ * Supports the hosted (Checkout Session) and inline (PaymentIntent) flows.
  * The adapter handles two actions:
  * - `checkout` — Creates a Stripe Checkout Session and returns a redirect URL.
  * - `create-payment-intent` — Creates a Stripe PaymentIntent and returns the `clientSecret`.
@@ -26,7 +27,7 @@ import {
  *
  * @example
  * ```ts
- * import { createTenderlaneHandler } from '@tenderlane/core';
+ * import { createTenderlaneHandler } from '@tenderlane/core/server';
  * import { stripeServerAdapter } from '@tenderlane/stripe/server';
  *
  * const handler = createTenderlaneHandler({
@@ -58,9 +59,9 @@ export function stripeServerAdapter(
     async handle(
       action: string,
       payload: ResolvedCheckoutInput,
-      options?: Record<string, unknown>,
+      options?: ServerActionOptions,
     ): Promise<CheckoutResult> {
-      const paymentMethods = options?.paymentMethods as string[] | undefined;
+      const paymentMethods = options?.paymentMethods;
 
       try {
         if (action === 'checkout') {

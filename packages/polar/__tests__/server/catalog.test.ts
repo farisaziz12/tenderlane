@@ -29,7 +29,6 @@ describe('createPolarCatalog', () => {
 
     const catalog = createPolarCatalog({
       accessToken: 'polar_oat_test',
-      organizationId: 'org_test',
       client: client as never,
       skus: { 'premium-plan': { productId: 'polar_prod_abc' } },
     });
@@ -64,7 +63,6 @@ describe('createPolarCatalog', () => {
 
     const catalog = createPolarCatalog({
       accessToken: 'polar_oat_test',
-      organizationId: 'org_test',
       client: client as never,
       skus: {
         'premium-annual': {
@@ -86,7 +84,6 @@ describe('createPolarCatalog', () => {
     const client = mockPolarClient(() => ({}));
     const catalog = createPolarCatalog({
       accessToken: 'polar_oat_test',
-      organizationId: 'org_test',
       client: client as never,
       skus: { known: { productId: 'p_known' } },
     });
@@ -110,7 +107,6 @@ describe('createPolarCatalog', () => {
     }));
     const catalog = createPolarCatalog({
       accessToken: 'polar_oat_test',
-      organizationId: 'org_test',
       client: client as never,
       skus: { 'pay-what': { productId: 'polar_prod_custom' } },
     });
@@ -131,7 +127,6 @@ describe('createPolarCatalog', () => {
 
     const catalog = createPolarCatalog({
       accessToken: 'polar_oat_test',
-      organizationId: 'org_test',
       client: client as never,
       skus: { 'pro-plan': { productId: 'missing' } },
     });

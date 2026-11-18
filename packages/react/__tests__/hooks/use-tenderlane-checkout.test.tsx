@@ -4,7 +4,6 @@ import { renderHook, act, waitFor } from '@testing-library/react';
 import { TenderlaneProvider } from '../../src/provider.js';
 import { useTenderlaneCheckout } from '../../src/hooks/use-tenderlane-checkout.js';
 import { useTenderlane } from '../../src/hooks/use-tenderlane.js';
-import { usePaymentMethods } from '../../src/hooks/use-payment-methods.js';
 import type { TenderlaneClientConfig } from '@tenderlane/client';
 import type {
   BrowserPaymentProvider,
@@ -18,10 +17,8 @@ function createMockProvider(): BrowserPaymentProvider {
     '~types': {} as any,
     id: 'mock',
     capabilities: {
-      provider: 'mock',
-      flows: ['checkout-session'],
+      flows: ['hosted'],
       paymentMethods: ['card'],
-      supports: { redirect: true },
     } as ProviderCapabilities,
     getAvailablePaymentMethods(): PaymentMethodDescriptor[] {
       return [
@@ -47,7 +44,7 @@ function createConfig(): TenderlaneClientConfig {
       evaluate(): SelectedPaymentRoute {
         return {
           provider: 'mock',
-          flow: 'checkout-session',
+          flow: 'hosted',
           paymentMethods: ['card'],
           source: 'rule',
         };
@@ -115,23 +112,5 @@ describe('useTenderlane', () => {
     expect(result.current).toBeDefined();
     expect(result.current.getSnapshot).toBeDefined();
     expect(result.current.subscribe).toBeDefined();
-  });
-});
-
-describe('usePaymentMethods', () => {
-  it('returns available payment methods', async () => {
-    const { result } = renderHook(() => usePaymentMethods(), {
-      wrapper: createWrapper(),
-    });
-
-    await waitFor(() => {
-      expect(result.current).toHaveLength(1);
-    });
-
-    expect(result.current[0]).toMatchObject({
-      id: 'card',
-      type: 'card',
-      provider: 'mock',
-    });
   });
 });

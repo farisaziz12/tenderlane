@@ -11,4 +11,4 @@ export type { RemoteCatalogConfig } from './remote.js';
 export { defineCatalog } from './define.js';
 export type { DefineCatalogConfig } from './define.js';
 
-export { resolveCatalogItems, wrapLegacyLineItems } from './runner.js';
+export { resolveCatalogItems } from './runner.js';

@@ -96,7 +96,7 @@ export interface TenderlaneCheckout {
   readonly state: Readonly<ShallowRef<TenderlaneClientState>>;
   readonly status: ComputedRef<TenderlaneClientState['status']>;
   readonly selectedProvider: ComputedRef<string | null>;
-  readonly selectedRoute: ComputedRef<TenderlaneClientState['route']>;
+  readonly route: ComputedRef<TenderlaneClientState['route']>;
   readonly paymentMethods: ComputedRef<TenderlaneClientState['paymentMethods']>;
   readonly selectedPaymentMethod: ComputedRef<string | null>;
   readonly canSubmit: ComputedRef<boolean>;
@@ -123,7 +123,7 @@ export function useTenderlaneCheckout(): TenderlaneCheckout {
     state,
     status: computed(() => state.value.status),
     selectedProvider: computed(() => state.value.selectedProvider),
-    selectedRoute: computed(() => state.value.route),
+    route: computed(() => state.value.route),
     paymentMethods: computed(() => state.value.paymentMethods),
     selectedPaymentMethod: computed(() => state.value.selectedPaymentMethod),
     canSubmit: computed(() => state.value.canSubmit),

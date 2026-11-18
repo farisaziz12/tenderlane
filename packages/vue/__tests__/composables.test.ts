@@ -15,9 +15,8 @@ function createProvider(id: string): BrowserPaymentProvider {
     id,
     capabilities: {
       provider: id,
-      flows: ['checkout-session'],
+      flows: ['hosted'],
       paymentMethods: ['card'],
-      supports: { redirect: true },
     } as ProviderCapabilities,
     getAvailablePaymentMethods: () => [{ id: 'card', label: 'Card', type: 'card', provider: id }],
     submit: vi.fn(async () => ({
@@ -32,7 +31,7 @@ function createProvider(id: string): BrowserPaymentProvider {
 const routing: Router = {
   evaluate: (context) => ({
     provider: context.country === 'CH' ? 'alpha' : 'beta',
-    flow: 'checkout-session',
+    flow: 'hosted',
     paymentMethods: [],
     source: 'rule',
   }),

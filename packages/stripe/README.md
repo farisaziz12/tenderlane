@@ -1,31 +1,22 @@
 # @tenderlane/stripe
 
-Stripe provider adapter for [Tenderlane](https://github.com/farisaziz12/tenderlane).
+Stripe adapter for [Tenderlane](../../README.md).
 
-Split into three entry points so the browser bundle never pulls in the server-only `stripe` SDK:
+Alpha. Not published to npm; use it from this workspace. No test runs against the live Stripe API; the SDK is mocked.
 
-- `@tenderlane/stripe` — browser entry. Redirect-to-Checkout flow. No `stripe` import.
-- `@tenderlane/stripe/server` — server adapter. Imports `stripe`.
-- `@tenderlane/stripe/react` — React helpers (Stripe Elements wiring, when shipped).
+| Import | Runs in | Contents | Needs |
+| --- | --- | --- | --- |
+| `@tenderlane/stripe` | Browser | `stripeProvider({ publishableKey, serverEndpoint })` | `@stripe/stripe-js` for the inline flow |
+| `@tenderlane/stripe/server` | Server | `stripeServerAdapter({ secretKey })`, `createStripeCatalog` | `stripe` |
+| `@tenderlane/stripe/react` | Browser | `StripePaymentElement` | `@stripe/react-stripe-js`, `react` |
 
-## Install
+The browser entry never imports the `stripe` package and holds only the publishable key.
 
-```bash
-npm install @tenderlane/stripe @tenderlane/core stripe
-# Browser-only apps additionally need:
-npm install @stripe/stripe-js
-```
+- `hosted`: a Checkout Session in `payment` mode, then a redirect.
+- `inline`: a PaymentIntent, confirmed with the Payment Element. Card details go into Stripe's iframe.
+- Prices come from the server's catalog: a Stripe Price when the item has `providerRefs.stripe.priceId`, otherwise inline `price_data`.
+- `createStripeCatalog({ secretKey, skus: { 'pro-plan': { priceId } } })` reads prices from Stripe at request time (one API call per item, no cache).
 
-`stripe` and `@stripe/stripe-js` are peer deps, marked optional, so you only install what you actually use.
-
-## Catalog support
-
-Use `createStripeCatalog` to make Stripe the source of truth for product/price data. The server handler resolves catalog items at submit time, so `unitAmount` never crosses the wire from the client.
-
-## Status
-
-Alpha. Stripe Checkout redirect is implemented; Elements is on the roadmap.
-
-## License
+Not implemented: webhooks, subscriptions, refunds, lookup keys.
 
 MIT

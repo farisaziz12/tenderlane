@@ -1,26 +1,249 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import Hero from '../components/home/Hero.astro';
-import ValueProps from '../components/home/ValueProps.astro';
-import Diff from '../components/home/Diff.astro';
-import Architecture from '../components/home/Architecture.astro';
-import Walkthrough from '../components/home/Walkthrough.astro';
-import Showcase from '../components/home/Showcase.astro';
-import Philosophy from '../components/home/Philosophy.astro';
-import Changelog from '../components/home/Changelog.astro';
-import Alpha from '../components/home/Alpha.astro';
-import CTA from '../components/home/CTA.astro';
+import Source from '../components/Source.astro';
+import routing from '../../snippets/routing.ts?raw';
+import server from '../../snippets/server.ts?raw';
+import checkout from '../../snippets/checkout.tsx?raw';
+import typeErrors from '../../snippets/type-errors.ts?raw';
+
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const repository = 'https://github.com/farisaziz12/tenderlane';
+const example = `${repository}/tree/main/examples/react-checkout-multi-psp`;
+
+// The part of type-errors.ts that carries the errors; the imports add nothing here.
+const typeErrorsBody = typeErrors.slice(typeErrors.indexOf('createRulesRouter({'));
 ---
 
-<Layout title="Tenderlane — Reactive payment orchestration" active="home">
-  <Hero />
-  <ValueProps />
-  <Diff />
-  <Architecture />
-  <Walkthrough />
-  <Showcase />
-  <Philosophy />
-  <Changelog />
-  <Alpha />
-  <CTA />
+<Layout title="Tenderlane: route a checkout between payment providers from app state">
+  <div class="container home">
+    <header class="intro">
+      <p class="status">
+        Alpha proof of concept. Not published to npm, not production-ready.
+        <a href={`${base}/docs/limitations`}>What is missing</a>
+      </p>
+      <h1>
+        Tenderlane selects the payment provider and checkout flow from your application&rsquo;s
+        state.
+      </h1>
+      <p class="lede">
+        It is a headless TypeScript library. You write routing rules as data. A client state
+        machine runs whichever provider the rules select behind one <code>submit()</code>, and a
+        server handler re-checks the route and sets the price, so the browser never sends an
+        amount. Stripe and Polar adapters and React bindings exist today.
+      </p>
+      <p class="links">
+        <a class="btn btn-primary" href={`${base}/docs/getting-started`}>Run the example</a>
+        <a class="btn btn-ghost" href={`${base}/docs/architecture`}>Architecture</a>
+        <a class="btn btn-ghost" href={repository}>Source</a>
+      </p>
+    </header>
+
+    <section>
+      <h2>The problem</h2>
+      <p>
+        A checkout that uses two providers, or two flows of one provider, grows the same
+        conditional in three places: the component that decides what to render, the submit
+        handler, and the API route that creates the session. Each provider SDK has its own
+        session object and its own meaning of &ldquo;done&rdquo;, and nothing checks that the
+        three places agree.
+      </p>
+      <p>
+        Tenderlane moves that decision into one router that the browser and the server both
+        evaluate, and puts every provider behind the same two interfaces.
+      </p>
+    </section>
+
+    <section>
+      <h2>What you write</h2>
+
+      <h3>1. Rules: which provider and flow, for which state</h3>
+      <p>
+        Plain data, first match wins. <code>hosted</code> redirects to the provider&rsquo;s page;
+        <code>inline</code> mounts the provider&rsquo;s payment element in yours.
+      </p>
+      <Source code={routing} file="docs-site/snippets/routing.ts" />
+
+      <h3>2. A server endpoint: the trust boundary</h3>
+      <p>
+        The browser sends <code>{'{ sku, quantity }'}</code>. The handler prices it from your
+        catalog, evaluates the same rules, and only then calls the provider with your secret key.
+      </p>
+      <Source code={server} file="docs-site/snippets/server.ts" />
+
+      <h3>3. One form for every route</h3>
+      <p>
+        The form renders no markup of its own. When app state changes the route, the same
+        component switches between a redirect and an inline payment element.
+      </p>
+      <Source code={checkout} file="docs-site/snippets/checkout.tsx" />
+    </section>
+
+    <section>
+      <h2>What the compiler checks</h2>
+      <p>
+        Provider ids are inferred as literals from the providers you register, and the router is
+        checked against them. These are real errors: the file compiles only because each one is
+        expected.
+      </p>
+      <Source code={typeErrorsBody} file="docs-site/snippets/type-errors.ts" />
+    </section>
+
+    <section>
+      <h2>Where it sits</h2>
+      <pre class="flow" aria-label="Data flow">{`browser                                         server
+───────                                         ──────
+app state { country, ... }
+   │
+router ─► route { provider, flow }
+   │
+client state machine ── submit() ──────────────► handler.POST
+   │                    { provider,              1. drop any client amount, validate
+   │                      items: [{ sku, qty }] } 2. derive the server's context
+   │                                             3. same router: is this the right provider?
+   │                                             4. price items from the catalog
+   │                                             5. server adapter ─► PSP API (secret key)
+   ◄─────────── { id, status, url | clientSecret } ◄┘
+   │
+hosted: redirect to url      inline: confirm in the provider's element`}</pre>
+      <p>
+        Tenderlane is a library in your app and your API route. It is not a service, does not
+        proxy payments, and never sees card data: that stays in the provider&rsquo;s page or
+        iframe.
+      </p>
+    </section>
+
+    <section class="columns">
+      <div>
+        <h2>Works today</h2>
+        <ul>
+          <li>Rules router shared by browser and server</li>
+          <li>Headless client state machine, typed as a discriminated union</li>
+          <li>React provider, hook and form</li>
+          <li>Stripe: Checkout (hosted) and Payment Element (inline)</li>
+          <li>Polar: hosted checkout, one product per checkout</li>
+          <li>Server-side pricing from a catalog you define, or from Stripe or Polar</li>
+          <li>An adapter API for other providers</li>
+        </ul>
+      </div>
+      <div>
+        <h2>Does not exist yet</h2>
+        <ul>
+          <li>Webhooks: Tenderlane cannot confirm a payment for you</li>
+          <li>Subscriptions, refunds, saved payment methods</li>
+          <li>Failover between providers</li>
+          <li>Any provider other than Stripe and Polar</li>
+          <li>npm releases of this API</li>
+          <li>A test against a live PSP sandbox in CI (the PSP SDKs are mocked)</li>
+        </ul>
+      </div>
+    </section>
+
+    <section>
+      <h2>Try it</h2>
+      <p>
+        The example runs without any account, against a built-in demo PSP that is labelled as
+        such and moves no money. Stripe test keys switch on the real Stripe routes.
+      </p>
+      <pre class="flow">{`git clone https://github.com/farisaziz12/tenderlane.git
+cd tenderlane
+pnpm install
+pnpm example        # http://localhost:3000`}</pre>
+      <p>
+        <a href={`${base}/docs/getting-started`}>Getting started</a> walks through what you see.
+        The <a href={example}>example source</a> is under 500 lines.
+      </p>
+    </section>
+  </div>
 </Layout>
+
+<style>
+  .home {
+    max-width: 820px;
+    padding-top: 56px;
+    color: var(--text-1);
+    font-size: 16px;
+    line-height: 1.65;
+  }
+  .intro {
+    margin-bottom: 56px;
+  }
+  .status {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 10px;
+    font-size: 13px;
+    color: var(--text-2);
+    margin: 0 0 20px;
+  }
+  h1 {
+    font-size: clamp(26px, 4.2vw, 38px);
+    line-height: 1.18;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: var(--text-0);
+    margin: 0 0 18px;
+  }
+  .lede {
+    font-size: 17px;
+    margin: 0 0 24px;
+  }
+  .links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 0;
+  }
+  section {
+    margin: 0 0 56px;
+  }
+  h2 {
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--text-0);
+    margin: 0 0 12px;
+  }
+  h3 {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-0);
+    margin: 32px 0 6px;
+  }
+  p {
+    margin: 0 0 12px;
+  }
+  a:not(.btn) {
+    color: var(--accent);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  code {
+    font: 0.88em var(--font-mono);
+    color: var(--text-0);
+    background: var(--bg-2);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+  ul {
+    margin: 0;
+    padding-left: 20px;
+  }
+  li {
+    margin: 6px 0;
+  }
+  .columns {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 32px;
+  }
+  .flow {
+    margin: 16px 0;
+    padding: 16px;
+    border: 1px solid var(--line-2);
+    border-radius: 8px;
+    background: var(--code-bg);
+    color: var(--text-1);
+    font: 12.5px/1.6 var(--font-mono);
+    overflow-x: auto;
+  }
+</style>

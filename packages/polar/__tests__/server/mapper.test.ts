@@ -148,6 +148,6 @@ describe('mapFromPolarCheckout / mapPolarStatus', () => {
     expect(mapPolarStatus('succeeded')).toBe('complete');
     expect(mapPolarStatus('expired')).toBe('expired');
     expect(mapPolarStatus('failed')).toBe('failed');
-    expect(mapPolarStatus(undefined)).toBe('created');
+    expect(mapPolarStatus(undefined)).toBe('open');
   });
 });

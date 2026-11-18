@@ -2,7 +2,7 @@
   "name": "tenderlane-monorepo",
   "private": true,
   "version": "0.0.0",
-  "description": "Reactive payment orchestration SDK for modern web apps",
+  "description": "Headless, typed checkout routing across payment providers. Alpha.",
   "packageManager": "pnpm@9.15.4",
   "engines": {
     "node": ">=18.0.0"
@@ -14,6 +14,7 @@
     "lint": "oxlint --deny-warnings",
     "clean": "turbo run clean",
     "dev": "turbo run dev",
+    "example": "turbo run build --filter='./packages/*' && pnpm --filter nextjs-multi-psp-checkout-example dev",
     "docs": "cd docs-site && pnpm build",
     "docs:dev": "cd docs-site && pnpm dev",
     "docs:serve": "cd docs-site && pnpm preview",
@@ -34,7 +35,6 @@
     "publint": "^0.3.25",
     "sherif": "^1.13.0",
     "turbo": "^2.3.0",
-    "typedoc": "^0.28.0",
     "typescript": "^5.7.0"
   }
 }

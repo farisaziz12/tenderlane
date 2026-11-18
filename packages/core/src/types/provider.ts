@@ -5,20 +5,18 @@ import type { ProviderPhantomTypes } from './phantom.js';
 import type { SelectedPaymentRoute } from './routing.js';
 
 /**
- * Provider-specific session data returned by createSession().
- * Contains information the UI layer needs to render inline payment forms
- * (e.g., Stripe Elements needs clientSecret).
+ * What `createSession()` returns for an inline flow: the data the provider's
+ * payment element needs to mount.
  */
 export interface ProviderSession {
   readonly flow: PaymentFlow;
-  readonly clientSecret?: string;
-  readonly sessionId?: string;
-  readonly data?: Record<string, unknown>;
+  readonly clientSecret: string;
+  readonly sessionId: string;
 }
 
 /**
- * Browser-side payment provider adapter.
- * Carries phantom type metadata via `~types` for compile-time inference.
+ * Browser half of a provider adapter. Holds no secrets. Carries phantom type
+ * metadata via `~types` so the provider id stays a string literal.
  */
 export interface BrowserPaymentProvider<
   TProviderId extends string = string,
@@ -29,28 +27,26 @@ export interface BrowserPaymentProvider<
   readonly id: TProviderId;
   readonly capabilities: TCapabilities;
   getAvailablePaymentMethods(context: TenderlaneContext): PaymentMethodDescriptor[];
-  submit(input: CheckoutInput, route: SelectedPaymentRoute): Promise<CheckoutResult>;
-
   /**
-   * Optional: Create a server-side session and return data needed
-   * for inline payment forms. Called automatically by the client
-   * when the selected route's flow requires it (e.g., payment-intent).
-   * Not needed for redirect flows (checkout-session).
+   * Hosted flow: ask the server for a checkout and redirect to it.
+   * Inline flow: confirm the session created by `createSession()`.
    */
-  createSession?(
-    input: CheckoutInput,
-    route: SelectedPaymentRoute,
-  ): Promise<ProviderSession>;
+  submit(input: CheckoutInput, route: SelectedPaymentRoute): Promise<CheckoutResult>;
+  /** Inline flow only: create the provider session the payment element mounts with. */
+  createSession?(input: CheckoutInput, route: SelectedPaymentRoute): Promise<ProviderSession>;
+}
+
+/** Options the server handler passes to an adapter alongside the payload. */
+export interface ServerActionOptions {
+  /** Payment methods allowed by the route. Empty or absent means no restriction. */
+  readonly paymentMethods?: readonly string[];
 }
 
 /**
- * Server-side payment provider adapter. Handles PSP operations that require
- * secret keys.
+ * Server half of a provider adapter: the PSP calls that need a secret key.
  *
- * The `payload` is a {@link ResolvedCheckoutInput} — the server handler has
- * already resolved the catalog, so `payload.items[]` carries canonical
- * server-authoritative pricing. Adapters MUST read pricing exclusively from
- * `payload.items[].unitAmount` / `payload.items[].providerRefs`.
+ * `payload.items` is already resolved by the server's catalog. Adapters read
+ * prices only from there.
  */
 export interface ServerProviderAdapter<TProviderId extends string = string> {
   readonly id: TProviderId;
@@ -58,9 +54,9 @@ export interface ServerProviderAdapter<TProviderId extends string = string> {
   handle(
     action: string,
     payload: ResolvedCheckoutInput,
-    options?: Record<string, unknown>,
+    options?: ServerActionOptions,
   ): Promise<CheckoutResult>;
 }
 
-/** Any browser payment provider (for use in constraints) */
-export type AnyBrowserProvider = BrowserPaymentProvider<string, ProviderCapabilities, any>;
+/** Any browser provider, for use in generic constraints. */
+export type AnyBrowserProvider = BrowserPaymentProvider<string, ProviderCapabilities, unknown>;

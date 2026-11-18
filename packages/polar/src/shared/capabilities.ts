@@ -15,23 +15,8 @@ export const POLAR_PAYMENT_METHODS = ['card'] as const satisfies readonly KnownP
  * redirect-only, USD-only, card-only.
  */
 export const POLAR_CAPABILITIES = {
-  provider: 'polar',
-  flows: ['checkout-session'],
+  flows: ['hosted'],
   paymentMethods: POLAR_PAYMENT_METHODS,
-  currencies: ['usd'],
-  countries: [
-    'US', 'GB', 'DE', 'FR', 'CH', 'AT', 'NL', 'BE',
-    'IT', 'ES', 'PT', 'IE', 'SE', 'NO', 'DK', 'FI',
-    'CA', 'AU', 'NZ', 'JP',
-  ],
-  supports: {
-    redirect: true,
-    embedded: false,
-    subscriptions: false,
-    refunds: false,
-    // No webhook verification is implemented yet.
-    webhooks: false,
-  },
 } as const satisfies ProviderCapabilities;
 
 export type PolarCapabilities = typeof POLAR_CAPABILITIES;

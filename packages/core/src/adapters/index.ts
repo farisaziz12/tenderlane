@@ -8,15 +8,25 @@
  * @packageDocumentation
  */
 import type { ProviderCapabilities } from '../types/capabilities.js';
-import type { CheckoutInput, CheckoutResult, ResolvedCheckoutInput } from '../types/checkout.js';
+import type {
+  CheckoutInput,
+  CheckoutResult,
+  CheckoutStatus,
+  ResolvedCheckoutInput,
+} from '../types/checkout.js';
 import type { ProviderPhantomTypes } from '../types/phantom.js';
-import type { BrowserPaymentProvider, ServerProviderAdapter } from '../types/provider.js';
+import type {
+  BrowserPaymentProvider,
+  ServerActionOptions,
+  ServerProviderAdapter,
+} from '../types/provider.js';
 import type { SelectedPaymentRoute } from '../types/routing.js';
 import { ProviderError } from '../errors/errors.js';
 
 export type {
   BrowserPaymentProvider,
   ServerProviderAdapter,
+  ServerActionOptions,
   ProviderSession,
 } from '../types/provider.js';
 export type {
@@ -100,10 +110,59 @@ export function defineServerAdapter<
   handle(
     action: TActions[number],
     payload: ResolvedCheckoutInput,
-    options?: Record<string, unknown>,
+    options?: ServerActionOptions,
   ): Promise<CheckoutResult>;
 }): ServerProviderAdapter<TProviderId> {
   return adapter as ServerProviderAdapter<TProviderId>;
+}
+
+const CHECKOUT_STATUSES: readonly CheckoutStatus[] = ['open', 'complete', 'expired', 'failed'];
+
+function isHttpUrl(value: string): boolean {
+  try {
+    const protocol = new URL(value).protocol;
+    return protocol === 'https:' || protocol === 'http:';
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Validate a value that claims to be a {@link CheckoutResult} and return only
+ * its known fields. Used on both sides of the wire: the server handler passes
+ * every adapter result through it, so nothing else from a PSP response reaches
+ * the browser, and the browser checks the response before acting on it. A
+ * `url` must be an absolute http(s) URL, because the browser navigates to it.
+ *
+ * @throws {ProviderError} When the value does not have the expected shape.
+ */
+export function parseCheckoutResult(value: unknown, provider: string): CheckoutResult {
+  const invalid = (detail: string) =>
+    new ProviderError(`Invalid checkout result from "${provider}": ${detail}.`, provider);
+
+  if (typeof value !== 'object' || value === null) throw invalid('not an object');
+  const candidate = value as Record<string, unknown>;
+
+  if (typeof candidate.provider !== 'string') throw invalid('`provider` is not a string');
+  if (typeof candidate.id !== 'string' || candidate.id.length === 0) {
+    throw invalid('`id` is not a non-empty string');
+  }
+  const status = CHECKOUT_STATUSES.find((known) => known === candidate.status);
+  if (!status) throw invalid('`status` is not a known checkout status');
+  if (candidate.url !== undefined && (typeof candidate.url !== 'string' || !isHttpUrl(candidate.url))) {
+    throw invalid('`url` is not an absolute http(s) URL');
+  }
+  if (candidate.clientSecret !== undefined && typeof candidate.clientSecret !== 'string') {
+    throw invalid('`clientSecret` is not a string');
+  }
+
+  return {
+    provider: candidate.provider,
+    id: candidate.id,
+    status,
+    ...(candidate.url !== undefined ? { url: candidate.url } : {}),
+    ...(candidate.clientSecret !== undefined ? { clientSecret: candidate.clientSecret } : {}),
+  };
 }
 
 export interface ProviderActionRequest {
@@ -121,10 +180,10 @@ export interface ProviderActionRequest {
 
 /**
  * POST one provider action to the app's Tenderlane handler, in the wire
- * format the handler expects, and return the normalized result. Throws a
- * `ProviderError` carrying the HTTP status when the handler answers non-2xx.
+ * format the handler expects, and return the validated result. Throws a
+ * `ProviderError` when the handler answers non-2xx or with an unexpected body.
  *
- * Browser providers use this for redirect flows and for session creation.
+ * Browser providers use this for hosted checkouts and for session creation.
  * It does not navigate: redirecting to `result.url` is the provider's call.
  */
 export async function requestProviderAction(
@@ -151,5 +210,6 @@ export async function requestProviderAction(
     );
   }
 
-  return (await response.json()) as CheckoutResult;
+  const body: unknown = await response.json().catch(() => undefined);
+  return parseCheckoutResult(body, request.provider);
 }

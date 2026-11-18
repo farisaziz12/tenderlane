@@ -1,0 +1,103 @@
+---
+title: Getting started
+description: Run the example checkout in a few minutes, with no payment account, then switch on Stripe test mode.
+order: 1
+---
+import Source from '../../components/Source.astro';
+import routing from '../../../../examples/react-checkout-multi-psp/app/checkout/routing.ts?raw';
+import route from '../../../../examples/react-checkout-multi-psp/app/api/payments/route.ts?raw';
+
+## Prerequisites
+
+- Node.js 18 or newer
+- pnpm 9 (`corepack enable` picks the version pinned in `package.json`)
+
+Nothing else. The packages are not on npm yet, so you run Tenderlane from a clone of the repository.
+
+## Run the example
+
+```bash
+git clone https://github.com/farisaziz12/tenderlane.git
+cd tenderlane
+pnpm install
+pnpm example
+```
+
+`pnpm example` builds the packages and starts the Next.js example on http://localhost:3000.
+
+## What you should see
+
+A page with three panels: the app state (a country select), the route the router selected, and a checkout.
+
+1. With **United Kingdom** selected, the route panel reads `fallback / demo / hosted`.
+2. Press **Pay**. The browser posts `{ items: [{ sku: 'pro-plan', quantity: 1 }] }` to `/api/payments`. There is no amount in the request.
+3. The server prices the item from its catalog and returns a URL. You land on a page marked **Demo PSP** showing $29.00.
+4. Press **Pay** there. You return to `/success`.
+
+Now change the country to **Switzerland**. The route panel changes to `ch-inline / stripe / inline` and the price to CHF 29.00, without a reload. Without Stripe keys the checkout panel tells you that route cannot be paid yet.
+
+:::note
+The demo PSP is a stand-in written with the same adapter API as the Stripe and Polar adapters. It exists so the whole flow can run without an account. It is not a payment provider and no money moves.
+:::
+
+## Switch on Stripe test mode
+
+Copy the env file and add your [Stripe test keys](https://dashboard.stripe.com/test/apikeys):
+
+```bash
+cp examples/react-checkout-multi-psp/.env.example examples/react-checkout-multi-psp/.env.local
+```
+
+```bash
+STRIPE_SECRET_KEY=sk_test_...
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
+```
+
+Restart `pnpm example`. Then:
+
+- **Switzerland** mounts Stripe's Payment Element in the page (`inline`). Pay with the test card `4242 4242 4242 4242`, any future date, any CVC. The status becomes `success`.
+- **Germany** redirects to Stripe Checkout (`hosted`).
+
+The Polar route (**United States**) needs a Polar sandbox token and product id; see `.env.example`.
+
+| Variable | Needed for | Exposed to the browser |
+| --- | --- | --- |
+| `STRIPE_SECRET_KEY` | Stripe routes | No |
+| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Stripe inline route | Yes, by design |
+| `POLAR_ACCESS_TOKEN`, `POLAR_PRODUCT_ID` | Polar route | No |
+| `POLAR_ENVIRONMENT` | `sandbox` (default) or `production` | No |
+
+## The two files that matter
+
+The rules, imported by both the page and the API route:
+
+<Source code={routing} file="examples/react-checkout-multi-psp/app/checkout/routing.ts" />
+
+The API route. It registers a real PSP adapter only when its key is present:
+
+<Source code={route} file="examples/react-checkout-multi-psp/app/api/payments/route.ts" />
+
+The checkout component is [`app/checkout/checkout.tsx`](https://github.com/farisaziz12/tenderlane/blob/main/examples/react-checkout-multi-psp/app/checkout/checkout.tsx).
+
+## Which package do I use?
+
+| You are writing | Import from |
+| --- | --- |
+| Routing rules, a catalog | `@tenderlane/core` |
+| The API route | `@tenderlane/core/server`, plus `@tenderlane/stripe/server` or `@tenderlane/polar/server` |
+| A React checkout | `@tenderlane/react`, plus `@tenderlane/stripe` or `@tenderlane/polar` |
+| A checkout without React | `@tenderlane/client` |
+| An adapter for another provider | `@tenderlane/core/adapters` |
+
+## Run the checks
+
+```bash
+pnpm check   # lint, build, typecheck, tests, package export checks
+```
+
+The tests mock the PSP SDKs. No test in this repository talks to a live Stripe or Polar sandbox.
+
+## Next
+
+- [Architecture](/docs/architecture): the packages and the data flow.
+- [Limitations](/docs/limitations): what is missing before this could be used for real payments.

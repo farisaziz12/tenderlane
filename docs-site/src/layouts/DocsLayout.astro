@@ -22,7 +22,7 @@ const { title, description, slug, headings, groups, breadcrumb } = Astro.props;
 const hasToc = headings.some((h) => h.depth === 2 || h.depth === 3);
 ---
 
-<Layout title={`${title} · Tenderlane docs`} description={description ?? title} active="docs" mode="docs">
+<Layout title={`${title} · Tenderlane docs`} description={description ?? title}>
   <div class="docs-mobile-bar">
     <button class="docs-mobile-btn" id="docs-open-sidebar" aria-label="Open docs navigation">
       <Icon name="menu" size={14} />
@@ -43,8 +43,6 @@ const hasToc = headings.some((h) => h.depth === 2 || h.depth === 3);
     <DocsSidebar current={slug} groups={groups} />
     <main class="docs-main">
       <div class="docs-breadcrumb">
-        <span>Docs</span>
-        <span>/</span>
         <span>{breadcrumb.section}</span>
         <span>/</span>
         <span style="color:var(--text-1)">{breadcrumb.label}</span>

@@ -3,7 +3,6 @@ import { createTenderlaneClient } from '../src/client.js';
 import type { TenderlaneClientConfig } from '../src/types.js';
 import type {
   BrowserPaymentProvider,
-  ProviderCapabilities,
   Router,
   PaymentMethodDescriptor,
   CheckoutInput,
@@ -12,14 +11,9 @@ import type {
 
 function createMockProvider(): BrowserPaymentProvider {
   return {
-    '~types': {} as any,
+    '~types': {} as never,
     id: 'mock',
-    capabilities: {
-      provider: 'mock',
-      flows: ['checkout-session'],
-      paymentMethods: ['card'],
-      supports: { redirect: true },
-    } as ProviderCapabilities,
+    capabilities: { flows: ['hosted'], paymentMethods: ['card'] },
     getAvailablePaymentMethods(): PaymentMethodDescriptor[] {
       return [
         { id: 'card', label: 'Credit card', type: 'card', provider: 'mock' },
@@ -29,7 +23,7 @@ function createMockProvider(): BrowserPaymentProvider {
       return {
         provider: 'mock',
         id: 'session_123',
-        status: 'created' as const,
+        status: 'open' as const,
         url: 'https://checkout.example.com/123',
       };
     },
@@ -41,7 +35,7 @@ function createMockRouter(route?: Partial<SelectedPaymentRoute>): Router {
     evaluate(): SelectedPaymentRoute {
       return {
         provider: 'mock',
-        flow: 'checkout-session',
+        flow: 'hosted',
         paymentMethods: ['card'],
         source: 'rule',
         ...route,
@@ -111,7 +105,7 @@ describe('createTenderlaneClient', () => {
   it('re-evaluates when context changes', async () => {
     const evaluateSpy = vi.fn().mockReturnValue({
       provider: 'mock',
-      flow: 'checkout-session',
+      flow: 'hosted',
       paymentMethods: ['card'],
       source: 'rule',
     });
@@ -261,3 +255,43 @@ describe('createTenderlaneClient', () => {
     expect(onCheckoutSuccess).not.toHaveBeenCalled();
   });
 });
+
+describe('an asynchronous router', () => {
+  const route = (provider: string): SelectedPaymentRoute => ({
+    provider,
+    flow: 'hosted',
+    paymentMethods: [],
+    source: 'rule',
+  });
+
+  it('is `evaluating` until the route arrives, then `ready`', async () => {
+    const client = createTenderlaneClient(
+      createConfig({ routing: { evaluate: async () => route('mock') } }),
+    );
+
+    expect(client.getSnapshot()).toMatchObject({ status: 'evaluating', canSubmit: false });
+    await vi.waitFor(() => expect(client.getSnapshot().status).toBe('ready'));
+    expect(client.getSnapshot().route?.provider).toBe('mock');
+  });
+
+  it('discards a decision that arrives after the context has moved on', async () => {
+    const pending: Array<(selected: SelectedPaymentRoute) => void> = [];
+    const routing: Router = {
+      evaluate: () => new Promise<SelectedPaymentRoute>((resolve) => pending.push(resolve)),
+    };
+    const client = createTenderlaneClient(createConfig({ routing }));
+
+    client.updateContext({ country: 'DE' });
+    // The first evaluation (for CH) answers last, with a provider that is not registered.
+    pending[1]?.(route('mock'));
+    pending[0]?.(route('stale'));
+
+    await vi.waitFor(() => expect(client.getSnapshot().status).toBe('ready'));
+    expect(client.getSnapshot()).toMatchObject({
+      context: { country: 'DE' },
+      selectedProvider: 'mock',
+      error: null,
+    });
+  });
+});
+

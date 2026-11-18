@@ -24,7 +24,6 @@ export type {
 } from './phantom.js';
 
 export type {
-  CheckoutLineItem,
   CheckoutInput,
   ResolvedCheckoutInput,
   CheckoutStatus,
@@ -51,7 +50,7 @@ export type {
   RouteTarget,
   SelectedPaymentRoute,
   RulesRouterConfig,
-  AutoRouterConfig,
+  RulesRouter,
   Router,
 } from './routing.js';
 
@@ -59,6 +58,7 @@ export type {
   ProviderSession,
   BrowserPaymentProvider,
   ServerProviderAdapter,
+  ServerActionOptions,
   AnyBrowserProvider,
 } from './provider.js';
 

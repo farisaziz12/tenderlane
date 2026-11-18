@@ -1,0 +1,44 @@
+---
+title: Limitations
+description: Tenderlane is an alpha proof of concept. This page lists what is not built and what you would have to add before taking real payments with it.
+order: 7
+---
+
+## Not built
+
+| Area | State |
+| --- | --- |
+| Webhooks | None. Tenderlane creates checkouts and reports what the browser SDK says. It cannot tell you that a payment settled. |
+| Subscriptions | None. Stripe sessions are created in `payment` mode only. |
+| Refunds, captures, disputes | None. |
+| Saved payment methods, customers | None. |
+| Failover | None. If the selected provider fails, the checkout is in `error`; it does not try another. |
+| Providers | Stripe and Polar. No Adyen, PayPal, Braintree, Mollie or Paddle. |
+| Polar inline checkout | Not supported. Hosted only, one product per checkout. |
+| Frameworks | React is complete for both flows. Vue covers hosted flows only and has no example. No Solid, Svelte or Angular bindings. |
+| Releases | The API on this branch is not published to npm. |
+
+## Not verified
+
+- **No test talks to a real PSP.** Unit tests and the cross-provider `e2e` test mock the `stripe` and `@polar-sh/sdk` packages. No automated check runs the Stripe or Polar code paths against the real APIs, so treat them as unverified until you have run them with your own test keys.
+- **The example's default path uses a demo PSP**, which is a stand-in inside the example app. It proves the routing, the wire format, server-side pricing and the redirect round trip. It proves nothing about a real provider.
+- **No security review.** The server handler validates its input and has tests for tampering, but nobody outside the project has audited it.
+
+## Yours to add
+
+- **Payment confirmation.** Verify the provider's webhook signature and fulfil from the webhook. Do not fulfil from the `success` status or from a visit to the success URL.
+- **Authentication, CSRF protection and rate limiting** on the endpoint.
+- **`routing`, `resolveContext` and `allowedRedirectOrigins`** on the handler. They are optional so that a first setup works; without them the browser has more say than it should. See [Server and price integrity](/docs/server).
+- **Idempotency keys** if a checkout can be retried across page loads.
+- **Tax, currency conversion and rounding.** Amounts are integers in minor units and are passed through untouched.
+
+## Sharp edges
+
+- **Catalogs are not cached.** `createStripeCatalog` and `createPolarCatalog` call the PSP once per item on every request.
+- **`createStripeCatalog` takes price ids only**, not lookup keys.
+- **Provider type checks need a literal provider list.** A provider array built at runtime widens to `string` and skips the check that routing targets a registered provider.
+- **The API will change.** This is `0.1.0-alpha`. Nothing is stable.
+
+## Status of the project
+
+Tenderlane is an independent open-source project. It has been put forward as a possible starting point for a payments library in the TanStack ecosystem. It is not a TanStack project and is not endorsed by TanStack.
