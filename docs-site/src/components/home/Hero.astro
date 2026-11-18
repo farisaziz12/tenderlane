@@ -1,0 +1,721 @@
+---
+import { packageVersion } from '../../lib/version';
+import Icon from '../Icons.astro';
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+
+// What Tenderlane is for. The line under it says how much of that exists today.
+const tagline =
+  'Reactive payment orchestration for modern web apps. The right provider, the right methods, the right flow, picked in the browser the moment your app knows enough to decide. Headless, typed, MIT.';
+const today =
+  'Today: Stripe and Polar, with React bindings. More providers and payment methods are planned.';
+const repository = 'https://github.com/farisaziz12/tenderlane';
+---
+
+<section class="hero glow-bg">
+  <div class="container hero-grid">
+    <div class="hero-copy">
+      <div class="hero-badges">
+        <a class="badge alpha link-badge" href={`${base}/docs/limitations`} title="What is not built yet">
+          <span class="dot"></span>v{packageVersion} · alpha
+        </a>
+        <span class="badge"><span style="color:var(--text-2)">not on npm yet</span></span>
+        <span class="badge"><span style="color:var(--text-2)">MIT</span></span>
+      </div>
+      <h1 class="t-display t-h1 hero-headline">
+        One checkout.<br />
+        <span style="color:var(--accent)">Every market.</span><br />
+        Zero vendor lock.
+      </h1>
+      <p class="t-body-lg hero-tag">{tagline}</p>
+      <p class="hero-today">{today}</p>
+      <div class="hero-cta">
+        <a href={`${base}/docs/getting-started`} class="btn btn-primary">
+          Run the example <Icon name="arrow" size={12} />
+        </a>
+        <a href={`${base}/playground`} class="btn btn-ghost">Open the playground</a>
+      </div>
+      <div class="install-pill">
+        <span style="color:var(--text-3)">$</span>
+        <span><span style="color:var(--accent)">git</span> clone {repository}</span>
+      </div>
+    </div>
+    <div class="hero-demo-wrap">
+      <div class="hero-demo-glow"></div>
+      <div class="hero-demo" id="hero-demo">
+        {/* Left: rules */}
+        <div class="rules-pane">
+          <div class="rules-head">
+            <span style="color:var(--text-2);font-size:11px">routing.ts</span>
+            <span class="live-dot">re-evaluating</span>
+          </div>
+          <div class="rules-comment">// context</div>
+          <div class="rules-ctx">
+            <span class="tok-pu">{'{ '}</span><span class="tok-p">country</span><span class="tok-pu">:</span>
+            <span class="country-token">
+              <span>'</span>
+              <select id="country-select" aria-label="Choose country">
+                <option value="CH" selected>CH</option>
+                <option value="NL">NL</option>
+                <option value="DE">DE</option>
+                <option value="GB">GB</option>
+                <option value="US">US</option>
+                <option value="BR">BR</option>
+              </select>
+              <span>'</span>
+            </span>
+            <span class="tok-pu">, </span>
+            <span class="tok-p">currency</span><span class="tok-pu">:</span>
+            <span class="tok-s">'<span id="currency-out">chf</span>'</span>
+            <span class="tok-pu">, </span>
+            <span class="tok-p">amount</span><span class="tok-pu">:</span>
+            <span class="tok-n">2900</span>
+            <span class="tok-pu">{' }'}</span>
+          </div>
+          <div class="rules-comment">// rules · first match wins</div>
+          <div class="rules-list" id="rules-list"></div>
+          <div class="rules-comment">// fallback</div>
+          <div class="rules-fallback" id="rules-fallback">
+            <span class="tok-pu">{'{ '}</span><span class="tok-p">provider</span><span class="tok-pu">:</span>
+            <span class="tok-s">'stripe'</span><span class="tok-pu">, </span>
+            <span class="tok-p">flow</span><span class="tok-pu">:</span>
+            <span class="tok-s">'hosted'</span><span class="tok-pu">{' }'}</span>
+          </div>
+        </div>
+        {/* Right: live UI */}
+        <div class="ui-pane">
+          <div class="ui-pane-head">
+            <div>
+              <div class="ui-pane-eyebrow">Total · <span id="cur-label">CHF</span></div>
+              <div class="ui-amount" id="ui-amount">CHF 29.00</div>
+            </div>
+            <span class="route-badge">
+              <span class="dot"></span>ROUTE · <span id="route-id">ch-inline</span>
+            </span>
+          </div>
+          <div class="methods" id="methods"></div>
+          <div class="ui-foot">
+            <div class="ui-grid">
+              <div>
+                <div class="ui-grid-label">Flow</div>
+                <div class="ui-grid-value" id="flow-out">inline</div>
+              </div>
+              <div>
+                <div class="ui-grid-label">Provider</div>
+                <div class="ui-grid-value" id="provider-out">stripe</div>
+              </div>
+            </div>
+            <button class="pay-btn" id="pay-btn">Pay CHF 29.00</button>
+          </div>
+        </div>
+      </div>
+      <div class="try-hint">
+        <span class="hint-dot"></span>
+        Try it · change country
+      </div>
+      <p class="demo-note">
+        The rules run through the real router, in your browser. The checkout is a preview: no
+        provider is called.
+      </p>
+    </div>
+  </div>
+  <div class="container trusted">
+    <span class="t-cap">Works today with</span>
+    <div class="logos">
+      {['Stripe', 'Polar', 'React', 'Next.js'].map((name) => (
+        <span class="logo-name">{name}</span>
+      ))}
+    </div>
+    <a href={`${base}/docs/limitations`} class="roadmap-link">what is not built yet</a>
+  </div>
+</section>
+
+<script>
+  // The demo runs the same router and the same rules the docs show
+  // (docs-site/snippets/markets.ts). Only the checkout preview on the right is
+  // not real: it calls no provider.
+  import { rules, routing } from '../../../snippets/markets';
+
+  type Country = 'CH' | 'NL' | 'DE' | 'GB' | 'US' | 'BR';
+  type Currency = 'chf' | 'eur' | 'gbp' | 'usd' | 'brl';
+
+  const countryToCurrency: Record<Country, Currency> = {
+    CH: 'chf',
+    NL: 'eur',
+    DE: 'eur',
+    GB: 'gbp',
+    US: 'usd',
+    BR: 'brl',
+  };
+
+  const methodMeta: Record<string, { label: string; sub: string; color: string; letter: string; dark?: boolean }> = {
+    card: { label: 'Card', sub: 'Visa · Mastercard · Amex', color: '#3b3f49', letter: 'C', dark: false },
+    twint: { label: 'TWINT', sub: 'Pay with your phone (CH)', color: '#ED1C24', letter: 'T' },
+    ideal: { label: 'iDEAL', sub: 'Dutch bank transfer', color: '#CC0066', letter: 'i' },
+    sepa_debit: { label: 'SEPA Direct Debit', sub: 'Bank debit (EU)', color: '#0033A0', letter: 'S' },
+    klarna: { label: 'Klarna', sub: 'Pay later or in 3', color: '#FFB3C7', letter: 'K', dark: true },
+  };
+
+  const formatTotal = (currency: Currency): string => {
+    switch (currency) {
+      case 'chf':
+        return 'CHF 29.00';
+      case 'eur':
+        return '€29.00';
+      case 'brl':
+        return 'R$ 145.00';
+      case 'gbp':
+        return '£23.00';
+      default:
+        return '$29.00';
+    }
+  };
+
+  const escape = (s: string) => s.replace(/[<>&]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c] ?? c));
+
+  const token = (value: string) => `<span class="tok-s">'${escape(value)}'</span>`;
+  const punctuation = (value: string) => `<span class="tok-pu">${value}</span>`;
+  const property = (name: string) => `<span class="tok-p">${name}</span>${punctuation(':')}`;
+
+  const renderRules = (activeRuleId: string | undefined) => {
+    const list = document.getElementById('rules-list');
+    if (!list) return;
+    list.innerHTML = rules
+      .map((rule) => {
+        const when = Object.entries(rule.when)
+          .map(([key, value]) => `${property(key)} ${token(String(value))}`)
+          .join(punctuation(', '));
+        const methods = rule.use.paymentMethods.map(token).join(punctuation(', '));
+        return `
+          <div class="rule${rule.id === activeRuleId ? ' rule-active' : ''}">
+            <div>${punctuation('{ ')}${property('id')} ${token(rule.id)}${punctuation(',')}</div>
+            <div style="padding-left:16px">${property('when')} ${punctuation('{ ')}${when}${punctuation(' },')}</div>
+            <div style="padding-left:16px">${property('use')} ${punctuation('{ ')}${property('provider')} ${token(rule.use.provider)}${punctuation(', ')}${property('flow')} ${token(rule.use.flow)}${punctuation(',')}</div>
+            <div style="padding-left:32px">${property('paymentMethods')} ${punctuation('[')}${methods}${punctuation('] } },')}</div>
+          </div>`;
+      })
+      .join('');
+  };
+
+  const renderMethods = (methods: string[]) => {
+    const node = document.getElementById('methods');
+    if (!node) return;
+    node.innerHTML = methods
+      .map((method, index) => {
+        const meta = methodMeta[method] ?? {
+          label: method,
+          sub: '',
+          color: '#888',
+          letter: method[0]?.toUpperCase() ?? '?',
+        };
+        const selected = index === 0;
+        return `
+          <label class="method${selected ? ' method-selected' : ''}">
+            <span class="radio">${selected ? '<span></span>' : ''}</span>
+            <span class="glyph" style="background:${meta.color};color:${meta.dark ? '#000' : '#fff'}">${meta.letter}</span>
+            <span class="method-text">
+              <span class="method-label">${escape(meta.label)}</span>
+              <span class="method-sub">${escape(meta.sub)}</span>
+            </span>
+          </label>`;
+      })
+      .join('');
+  };
+
+  const update = () => {
+    const select = document.getElementById('country-select') as HTMLSelectElement | null;
+    if (!select) return;
+    const country = select.value as Country;
+    const currency = countryToCurrency[country];
+    // The real thing: evaluate the rules for this context.
+    const route = routing.evaluate({ country, currency, amount: 2900 });
+
+    const currencyOut = document.getElementById('currency-out');
+    const curLabel = document.getElementById('cur-label');
+    const uiAmount = document.getElementById('ui-amount');
+    const routeId = document.getElementById('route-id');
+    const flowOut = document.getElementById('flow-out');
+    const fallback = document.getElementById('rules-fallback');
+    const payBtn = document.getElementById('pay-btn');
+
+    if (currencyOut) currencyOut.textContent = currency;
+    if (curLabel) curLabel.textContent = currency.toUpperCase();
+    const total = formatTotal(currency);
+    if (uiAmount) uiAmount.textContent = total;
+    if (payBtn) payBtn.textContent = `Pay ${total}`;
+    if (routeId) routeId.textContent = route.ruleId ?? 'fallback';
+    const providerOut = document.getElementById('provider-out');
+    if (providerOut) providerOut.textContent = route.provider;
+    if (flowOut) flowOut.textContent = route.flow;
+    if (fallback) fallback.style.opacity = route.source === 'rule' ? '0.55' : '1';
+
+    renderRules(route.ruleId);
+    renderMethods([...route.paymentMethods]);
+  };
+
+  const select = document.getElementById('country-select');
+  select?.addEventListener('change', update);
+  update();
+</script>
+
+<style>
+  .hero {
+    padding: 64px var(--side-pad) 100px;
+    padding-left: max(var(--side-pad), env(safe-area-inset-left));
+    padding-right: max(var(--side-pad), env(safe-area-inset-right));
+    position: relative;
+  }
+  .hero-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.25fr);
+    gap: 56px;
+    align-items: center;
+  }
+  .hero-grid > * {
+    min-width: 0;
+  }
+  .hero-badges {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 28px;
+    flex-wrap: wrap;
+  }
+  .link-badge {
+    text-decoration: none;
+    color: var(--text-1);
+  }
+  .hero-headline {
+    margin: 0 0 24px;
+  }
+  .hero-tag {
+    margin: 0 0 36px;
+    max-width: 540px;
+  }
+  .hero-cta {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 28px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .install-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    background: var(--bg-1);
+    border: 1px solid var(--line-2);
+    border-radius: 8px;
+    font: 500 13px var(--font-mono);
+    color: var(--text-1);
+    max-width: 100%;
+    overflow-x: auto;
+  }
+  .hero-demo-wrap {
+    position: relative;
+  }
+  .hero-demo-glow {
+    position: absolute;
+    inset: -16px;
+    background: radial-gradient(circle at 70% 30%, color-mix(in oklab, var(--accent) 18%, transparent), transparent 60%);
+    filter: blur(40px);
+    pointer-events: none;
+  }
+  .hero-demo {
+    display: grid;
+    grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
+    gap: 16px;
+    border-radius: 14px;
+    padding: 12px;
+    background: var(--bg-1);
+    border: 1px solid var(--line-2);
+    position: relative;
+  }
+  .hero-demo > * {
+    min-width: 0;
+  }
+  .rules-pane {
+    background: var(--code-bg);
+    border-radius: 8px;
+    padding: 16px 16px 18px;
+    border: 1px solid var(--line-1);
+    font-family: var(--font-mono);
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--code-fg);
+    min-height: 360px;
+    min-width: 0;
+    overflow-x: auto;
+  }
+  .rules-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--line-1);
+  }
+  .rules-comment {
+    color: var(--text-2);
+    font-size: 11px;
+    margin: 14px 0 8px;
+  }
+  .rules-ctx :global(.country-token) {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 0 2px;
+    background: color-mix(in oklab, var(--accent) 18%, transparent);
+    border: 1px solid var(--accent-soft);
+    border-radius: 4px;
+    color: var(--accent);
+  }
+  .rules-ctx :global(.country-token select) {
+    background: transparent;
+    border: none;
+    color: var(--accent);
+    font: inherit;
+    cursor: pointer;
+    appearance: none;
+    padding: 0 2px;
+  }
+  :global(.rule) {
+    padding: 6px 8px;
+    margin: 0 -8px;
+    border-radius: 6px;
+    transition: background 0.3s;
+    border-left: 2px solid transparent;
+    padding-left: 10px;
+  }
+  :global(.rule-active) {
+    background: color-mix(in oklab, var(--accent) 12%, transparent);
+    border-left-color: var(--accent);
+    padding-left: 8px;
+  }
+  .rules-fallback {
+    padding-left: 6px;
+    opacity: 0.55;
+  }
+  .ui-pane {
+    border-radius: 8px;
+    padding: 20px 22px;
+    background: var(--bg-2);
+    border: 1px solid var(--line-1);
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    min-width: 0;
+  }
+  .ui-pane-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .ui-pane-head > div {
+    min-width: 0;
+  }
+  .ui-pane-eyebrow {
+    font-size: 11px;
+    color: var(--text-3);
+    font-family: var(--font-mono);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .ui-amount {
+    font-size: 36px;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    margin-top: 4px;
+  }
+  .route-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font: 500 11px/1 var(--font-mono);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    background: color-mix(in oklab, var(--accent) 12%, var(--bg-1));
+    color: var(--accent);
+    border: 1px solid var(--accent-soft);
+    white-space: nowrap;
+    flex-shrink: 0;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .route-badge #route-id {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .route-badge .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 8px var(--accent-glow);
+  }
+  :global(.methods) {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  :global(.method) {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--line-1);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  :global(.method-selected) {
+    background: var(--bg-1);
+    border-color: var(--line-3);
+  }
+  :global(.method .radio) {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border: 1px solid var(--line-3);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  :global(.method-selected .radio) {
+    border-color: var(--accent);
+  }
+  :global(.method-selected .radio span) {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+  :global(.method .glyph) {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 700;
+  }
+  :global(.method-text) {
+    display: flex;
+    flex-direction: column;
+  }
+  :global(.method-label) {
+    font-size: 13px;
+    font-weight: 500;
+  }
+  :global(.method-sub) {
+    font-size: 11px;
+    color: var(--text-2);
+  }
+  .ui-foot {
+    margin-top: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .ui-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    padding: 12px;
+    border-radius: 8px;
+    background: var(--bg-1);
+    border: 1px solid var(--line-1);
+  }
+  .ui-grid-label {
+    font-size: 10px;
+    color: var(--text-3);
+    font-family: var(--font-mono);
+    text-transform: uppercase;
+  }
+  .ui-grid-value {
+    font-size: 13px;
+    font-family: var(--font-mono);
+    color: var(--text-0);
+    margin-top: 2px;
+  }
+  .pay-btn {
+    padding: 12px 16px;
+    border-radius: 8px;
+    background: var(--accent);
+    color: var(--accent-ink);
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 14px;
+    letter-spacing: -0.01em;
+  }
+  .try-hint {
+    position: absolute;
+    top: -10px;
+    right: 16px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: var(--bg-0);
+    border: 1px solid var(--accent-soft);
+    border-radius: 6px;
+    font: 500 11px var(--font-mono);
+    color: var(--accent);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .hint-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 8px var(--accent-glow);
+  }
+  .trusted {
+    margin-top: 72px;
+    padding-top: 28px;
+    border-top: 1px solid var(--line-1);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: var(--text-3);
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .logos {
+    display: flex;
+    gap: 32px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .logo-name {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--text-2);
+  }
+  .roadmap-link {
+    color: var(--text-2);
+    font-size: 12px;
+    font-family: var(--font-mono);
+  }
+  @media (max-width: 1000px) {
+    .hero-grid {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 48px;
+    }
+    .hero-demo {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+  @media (max-width: 768px) {
+    .hero {
+      padding: 48px var(--side-pad) 72px;
+      padding-left: max(var(--side-pad), env(safe-area-inset-left));
+      padding-right: max(var(--side-pad), env(safe-area-inset-right));
+    }
+    .hero-grid {
+      gap: 36px;
+    }
+    .hero-demo {
+      gap: 12px;
+      padding: 10px;
+    }
+    .rules-pane {
+      min-height: 0;
+      font-size: 12.5px;
+      padding: 14px;
+    }
+    .ui-pane {
+      padding: 16px 18px;
+    }
+    .ui-amount {
+      font-size: 28px;
+    }
+    .trusted {
+      margin-top: 48px;
+      padding-top: 20px;
+      justify-content: flex-start;
+    }
+    .logos {
+      gap: 20px;
+    }
+    /* Detach the try-hint from the absolute top-right slot and let it sit above the card as a label */
+    .hero-demo-wrap {
+      display: flex;
+      flex-direction: column;
+    }
+    .try-hint {
+      position: static;
+      align-self: flex-start;
+      margin-bottom: 10px;
+    }
+  }
+  @media (max-width: 480px) {
+    .hero-headline br {
+      display: none;
+    }
+    .install-pill {
+      font-size: 11px;
+      padding: 8px 12px;
+      gap: 8px;
+      flex-wrap: wrap;
+      row-gap: 6px;
+      width: 100%;
+      max-width: 100%;
+      overflow-x: auto;
+    }
+    .hero-badges {
+      gap: 6px;
+      margin-bottom: 22px;
+    }
+    .hero-demo {
+      padding: 8px;
+      gap: 10px;
+    }
+    .rules-pane {
+      font-size: 12px;
+      padding: 12px;
+    }
+    .ui-pane {
+      padding: 14px 16px;
+      gap: 12px;
+    }
+    .ui-amount {
+      font-size: 24px;
+    }
+    .route-badge {
+      font-size: 10px;
+      padding: 4px 8px;
+    }
+    .try-hint {
+      font-size: 10px;
+      padding: 3px 8px;
+    }
+    .hero-cta {
+      width: 100%;
+    }
+    .hero-cta .btn {
+      width: 100%;
+      justify-content: center;
+    }
+  }
+  .hero-today {
+    margin: 12px 0 0;
+    font-size: 14px;
+    color: var(--text-2);
+    max-width: 520px;
+  }
+  .demo-note {
+    margin: 12px 4px 0;
+    font-size: 12px;
+    color: var(--text-3);
+    max-width: 640px;
+  }
+</style>

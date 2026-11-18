@@ -23,8 +23,11 @@ in code, tests, commits and PRs.
    import `stripe` or `@polar-sh/sdk`. Core names no provider and has no default one.
 5. **Types are not loosened to make an error go away.** A rule that targets an unregistered
    provider does not compile; the type tests pin that.
-6. **The website says only what exists.** Every code block on it is a file under
-   `docs-site/snippets/` or `examples/`, imported with `?raw` and typechecked.
+6. **The website labels what does not exist yet.** The landing page and the playground show
+   where Tenderlane is going; every claim there says "works today", "partly" or "planned" where
+   it is made, and a demo says what in it is real. The docs describe only what is built. Every
+   code block is a file under `docs-site/snippets/` or `examples/`, imported with `?raw` and
+   typechecked.
 
 ## If the code and the tests disagree
 

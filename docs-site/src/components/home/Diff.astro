@@ -1,0 +1,136 @@
+---
+import { Code } from 'astro:components';
+import Section from '../Section.astro';
+import Icon from '../Icons.astro';
+import tenderlaneCode from '../../../snippets/twint.ts?raw';
+
+// Illustrative: what this usually looks like without a router. Not Tenderlane code.
+const handRolled = `<span class="tok-k">const</span> [<span class="tok-p">provider</span>, <span class="tok-f">setProvider</span>] = <span class="tok-f">useState</span>(<span class="tok-s">'stripe'</span>);
+<span class="tok-k">const</span> [<span class="tok-p">methods</span>, <span class="tok-f">setMethods</span>] = <span class="tok-f">useState</span>([<span class="tok-s">'card'</span>]);
+<span class="tok-k">const</span> [<span class="tok-p">flow</span>, <span class="tok-f">setFlow</span>] = <span class="tok-f">useState</span>(<span class="tok-s">'checkout-session'</span>);
+
+<span class="tok-del"><span class="tok-c">// re-run when country changes</span></span>
+<span class="tok-del"><span class="tok-f">useEffect</span>(() <span class="tok-pu">=&gt;</span> {</span>
+<span class="tok-del">  <span class="tok-k">if</span> (country <span class="tok-pu">===</span> <span class="tok-s">'CH'</span>) {</span>
+<span class="tok-del">    <span class="tok-f">setFlow</span>(<span class="tok-s">'payment-intent'</span>);</span>
+<span class="tok-del">    <span class="tok-f">setMethods</span>([<span class="tok-s">'card'</span>, <span class="tok-s">'twint'</span>]);</span>
+<span class="tok-del">  } <span class="tok-k">else if</span> (country <span class="tok-pu">===</span> <span class="tok-s">'NL'</span>) { /* … */ }</span>
+<span class="tok-del">}, [country]);</span>
+
+<span class="tok-del"><span class="tok-c">// re-run when currency changes</span></span>
+<span class="tok-del"><span class="tok-f">useEffect</span>(() <span class="tok-pu">=&gt;</span> { /* … */ }, [currency]);</span>
+
+<span class="tok-c">// ...and the same conditions again in the submit handler and the API route.</span>`;
+
+---
+
+<Section
+  eyebrow="Before → after"
+  title="What checkout routing usually looks like."
+  kicker='The same requirement both times: "show TWINT in Switzerland, fall back to Stripe Checkout everywhere else." Left: how it tends to get written. Right: how it reads with Tenderlane.'
+>
+  <div class="diff-grid">
+    <div>
+      <div class="diff-label">
+        <span class="t-cap" style="color:var(--err);display:inline-flex;align-items:center;gap:6px">
+          <Icon name="x" size={11} /> Hand-rolled
+        </span>
+        <span class="t-cap">checkout.tsx · illustrative</span>
+      </div>
+      <div class="code">
+        <div class="code-head">
+          <span style="font-family:var(--font-mono);font-size:12px;color:var(--text-2)">hand-rolled/checkout.tsx</span>
+        </div>
+        <div class="code-body">
+          <pre><code set:html={handRolled} /></pre>
+        </div>
+      </div>
+      <ul class="diff-bullets">
+        {[
+          'Provider and method names are plain strings, so a typo ships',
+          'The outcome depends on which effect ran last',
+          'The same conditions are repeated on the server, or not checked there at all',
+          'Changing a rule means changing code in three places',
+        ].map((text) => (
+          <li><span style="color:var(--err);margin-top:2px"><Icon name="x" size={11} /></span>{text}</li>
+        ))}
+      </ul>
+    </div>
+    <div>
+      <div class="diff-label">
+        <span class="t-cap" style="color:var(--accent);display:inline-flex;align-items:center;gap:6px">
+          <Icon name="check" size={11} /> tenderlane
+        </span>
+        <span class="t-cap">routing.ts · real, typechecked</span>
+      </div>
+      <div class="code">
+        <div class="code-head">
+          <span style="font-family:var(--font-mono);font-size:12px;color:var(--text-2)">docs-site/snippets/twint.ts</span>
+        </div>
+        <div class="code-body real-code">
+          <Code code={tenderlaneCode.trim()} lang="ts" theme="github-dark-default" />
+        </div>
+      </div>
+      <ul class="diff-bullets">
+        {[
+          'Provider, flow, country and currency are checked by the compiler',
+          'The first rule that matches wins, and that is the whole contract',
+          'The route follows the context synchronously: no effects to race',
+          'Rules are JSON: test them, store them, ship them from a flag',
+        ].map((text) => (
+          <li><span style="color:var(--accent);margin-top:2px"><Icon name="check" size={11} /></span>{text}</li>
+        ))}
+      </ul>
+    </div>
+  </div>
+</Section>
+
+<style>
+  .diff-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 24px;
+  }
+  .diff-grid > * {
+    min-width: 0;
+  }
+  .diff-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+  }
+  .diff-bullets {
+    list-style: none;
+    padding: 0;
+    margin: 20px 0 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    color: var(--text-1);
+    font-size: 13px;
+  }
+  .diff-bullets li {
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+  }
+  @media (max-width: 1000px) {
+    .diff-grid {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+  @media (max-width: 480px) {
+    .code-body pre {
+      font-size: 11px;
+    }
+  }
+  .real-code :global(pre) {
+    margin: 0;
+    padding: 0;
+    background: transparent !important;
+    font: 13px/1.6 var(--font-mono);
+    overflow-x: auto;
+  }
+</style>

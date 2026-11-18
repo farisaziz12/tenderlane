@@ -1,0 +1,153 @@
+---
+import Section from '../Section.astro';
+import Icon from '../Icons.astro';
+
+const cols = [
+  {
+    l: 'works today',
+    color: 'var(--accent)',
+    items: [
+      'Rules router, shared by the browser and the server',
+      'Headless checkout client, typed by status',
+      'React bindings via useSyncExternalStore',
+      'Stripe: Checkout (hosted) and Payment Element (inline)',
+      'Polar: hosted checkout',
+      'Server-side pricing from a catalog (inline, remote, Stripe or Polar)',
+      'Payment confirmation: order hook, status lookup, verified webhooks',
+      'An adapter API for your own provider',
+    ],
+  },
+  {
+    l: 'partly',
+    color: 'var(--warn)',
+    items: [
+      'Vue bindings: hosted flow only, no example',
+      'Webhooks: payment events only; no refunds, disputes or subscriptions',
+      'Stripe test-mode suite: written, not yet run',
+      'Polar: mocked tests only, one product per checkout',
+    ],
+  },
+  {
+    l: 'planned',
+    color: 'var(--text-3)',
+    items: [
+      'More providers: Adyen, Paddle, PayPal, Mollie',
+      'Subscriptions and refunds',
+      'Failover between providers',
+      'Svelte and Solid bindings',
+      'Polar embedded checkout',
+      'A rule editor and devtools',
+      'npm releases and a stable 1.0',
+    ],
+  },
+];
+---
+
+<Section
+  eyebrow="Where it stands"
+  title="Honest scope. Pre-1.0."
+  kicker="The page above describes where Tenderlane is going. This is how much of it exists today."
+>
+  <div class="alpha-grid">
+    {cols.map((g) => (
+      <div class="alpha-card">
+        <div class="t-cap" style={`color:${g.color};margin-bottom:16px`}>
+          <span class="alpha-dot" style={`background:${g.color}`}></span>{g.l}
+        </div>
+        <ul class="alpha-list">
+          {g.items.map((i) => (
+            <li>
+              <span class="alpha-bullet" style={`background:${g.color}`}></span>{i}
+            </li>
+          ))}
+        </ul>
+      </div>
+    ))}
+  </div>
+  <div class="rfc-bar">
+    <div>
+      <div class="t-cap" style="color:var(--accent);margin-bottom:6px">CONTRIBUTING</div>
+      <div style="font-size:16px">If you need an adapter or binding that is not here, open an issue. A provider adapter is two small objects.</div>
+    </div>
+    <a class="btn btn-ghost" href="https://github.com/farisaziz12/tenderlane/issues">
+      Open issues <Icon name="arrowExt" size={11} />
+    </a>
+  </div>
+</Section>
+
+<style>
+  .alpha-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 24px;
+  }
+  .alpha-grid > * {
+    min-width: 0;
+  }
+  .alpha-card {
+    padding: 28px;
+    border-radius: 14px;
+    background: var(--bg-1);
+    border: 1px solid var(--line-2);
+  }
+  .alpha-dot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    margin-right: 8px;
+  }
+  .alpha-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .alpha-list li {
+    font-size: 14px;
+    color: var(--text-1);
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+  }
+  .alpha-bullet {
+    width: 4px;
+    height: 4px;
+    margin-top: 8px;
+    border-radius: 50%;
+    opacity: 0.7;
+    flex-shrink: 0;
+  }
+  .rfc-bar {
+    margin-top: 56px;
+    padding: 28px 32px;
+    border-radius: 12px;
+    background: var(--bg-1);
+    border: 1px dashed var(--line-3);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+  @media (max-width: 900px) {
+    .alpha-grid {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+  @media (max-width: 480px) {
+    .alpha-card {
+      padding: 20px;
+    }
+    .rfc-bar {
+      padding: 20px;
+      gap: 16px;
+    }
+    .rfc-bar .btn {
+      width: 100%;
+      justify-content: center;
+    }
+  }
+</style>

@@ -1,5 +1,7 @@
 # Tenderlane
 
+Reactive payment orchestration for modern web apps. One checkout, every market, zero vendor lock: that is where it is going. Today it works with Stripe and Polar, and it is an alpha.
+
 Tenderlane picks the payment provider and checkout flow for each customer, from rules you write once.
 
 Say you take cards through Stripe in Switzerland and send customers in the US to Polar. With Tenderlane you write that down as a short list of rules. Your checkout page reads the rules to show the right payment form. Your server reads the same rules before it creates the payment, and it sets the price, so the browser never sends one.

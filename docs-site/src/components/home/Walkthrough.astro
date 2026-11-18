@@ -1,0 +1,120 @@
+---
+import { Code } from 'astro:components';
+import Section from '../Section.astro';
+import code from '../../../snippets/checkout.tsx?raw';
+
+const steps = [
+  { n: 1, t: 'Clone and run', s: 'The packages are not on npm yet. The example runs from the repository.' },
+  { n: 2, t: 'Describe your context', s: 'What your app knows: country, currency, amount, experiment.' },
+  { n: 3, t: 'Write rules', s: 'In code, in a database or behind a feature flag. Same shape.' },
+  { n: 4, t: 'Mount the provider', s: 'A React tree subscribes. The UI updates when the context does.' },
+  { n: 5, t: 'Render your own checkout', s: 'You own the button. Tenderlane tracks where the checkout is.' },
+];
+---
+
+<Section
+  eyebrow="What you write"
+  title="The whole integration, on screen."
+  kicker="One file, one provider, one router. Experiments, more providers and your own adapters build on this same shape. This is a real file from the repository, typechecked in CI."
+>
+  <div class="walk-grid">
+    <div>
+      {steps.map((step, index) => (
+        <div class="step" style={index === 0 ? 'border-top: 1px solid var(--line-2)' : ''}>
+          <div class={`step-num ${index === 0 ? 'step-active' : ''}`}>{String(step.n).padStart(2, '0')}</div>
+          <div>
+            <div class="step-title">{step.t}</div>
+            <div class="step-sub">{step.s}</div>
+          </div>
+        </div>
+      ))}
+    </div>
+    <div>
+      <div class="code">
+        <div class="code-head">
+          <span style="font-family:var(--font-mono);font-size:12px;color:var(--text-2)">docs-site/snippets/checkout.tsx</span>
+        </div>
+        <div class="code-body real-code">
+          <Code code={code.trim()} lang="tsx" theme="github-dark-default" />
+        </div>
+      </div>
+    </div>
+  </div>
+</Section>
+
+<style>
+  .walk-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+    gap: 48px;
+  }
+  .walk-grid > * {
+    min-width: 0;
+  }
+  .step {
+    display: flex;
+    gap: 16px;
+    padding: 20px 0;
+    border-bottom: 1px solid var(--line-2);
+  }
+  .step-num {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    background: var(--bg-2);
+    color: var(--text-1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-mono);
+    font-weight: 600;
+    font-size: 13px;
+    border: 1px solid var(--line-2);
+  }
+  .step-active {
+    background: var(--accent);
+    color: var(--accent-ink);
+    border-color: var(--accent);
+  }
+  .step-title {
+    font-weight: 500;
+    font-size: 16px;
+    color: var(--text-0);
+  }
+  .step-sub {
+    color: var(--text-2);
+    font-size: 13px;
+    margin-top: 4px;
+  }
+  @media (max-width: 1000px) {
+    .walk-grid {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 32px;
+    }
+  }
+  @media (max-width: 480px) {
+    .step {
+      padding: 16px 0;
+      gap: 12px;
+    }
+    .step-num {
+      width: 28px;
+      height: 28px;
+      font-size: 12px;
+    }
+    .step-title {
+      font-size: 15px;
+    }
+    .step-sub {
+      font-size: 12px;
+    }
+  }
+  .real-code :global(pre) {
+    margin: 0;
+    padding: 0;
+    background: transparent !important;
+    font: 13px/1.6 var(--font-mono);
+    overflow-x: auto;
+  }
+</style>

@@ -1,0 +1,136 @@
+---
+import Section from '../Section.astro';
+import Icon from '../Icons.astro';
+
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+
+const cards = [
+  {
+    eyebrow: 'Live · real router',
+    title: 'Reactive routing playground',
+    blurb: 'Change country, currency and plan. Edit the rules. Watch the route, the methods and the total follow. The checkout itself is a preview.',
+    href: `${base}/playground`,
+    snippet: `{ country: 'CH', currency: 'chf' }
+// → ch-inline · stripe · card, twint`,
+    label: 'open the playground',
+  },
+  {
+    eyebrow: 'Runs locally · no keys',
+    title: 'The example checkout',
+    blurb: 'A Next.js app that pays through a labelled demo provider: server-side pricing, a hosted page, a signed webhook and a confirmed order. Add Stripe test keys for the real thing.',
+    href: `${base}/docs/getting-started`,
+    snippet: `pnpm install
+pnpm example   # http://localhost:3000`,
+    label: 'run the example',
+  },
+  {
+    eyebrow: 'Docs',
+    title: 'Write your own adapter',
+    blurb: 'A provider is two small objects. The demo provider in the example is a complete one, written with the same entry point the Stripe and Polar adapters use.',
+    href: `${base}/docs/adapters`,
+    snippet: `defineBrowserProvider({ id: 'acme', ... })
+defineServerAdapter({ id: 'acme', ... })`,
+    label: 'read how adapters work',
+  },
+];
+---
+
+<Section
+  id="showcase"
+  eyebrow="Showcase"
+  title="See it route, before you ship it."
+  kicker="A playground that runs the real router, an example you can pay through without an account, and the adapter guide."
+>
+  <div class="showcase-grid">
+    {cards.map((c) => (
+      <a class="showcase-card" href={c.href}>
+        <div class="showcase-card-head">
+          <span class="t-cap" style="color:var(--accent)">{c.eyebrow}</span>
+          <Icon name="arrowExt" size={12} />
+        </div>
+        <h3 class="t-h4 showcase-title">{c.title}</h3>
+        <p class="showcase-blurb">{c.blurb}</p>
+        <div class="showcase-snippet">
+          <pre><code set:html={c.snippet} /></pre>
+        </div>
+        <div class="showcase-cta">
+          <span>{c.label}</span>
+          <Icon name="arrow" size={11} />
+        </div>
+      </a>
+    ))}
+  </div>
+</Section>
+
+<style>
+  .showcase-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 20px;
+  }
+  .showcase-grid > * {
+    min-width: 0;
+  }
+  .showcase-card {
+    display: flex;
+    flex-direction: column;
+    padding: 22px;
+    border-radius: 14px;
+    background: var(--bg-1);
+    border: 1px solid var(--line-2);
+    color: var(--text-0);
+    transition: border-color 0.2s, transform 0.2s, background 0.2s;
+  }
+  .showcase-card:hover {
+    border-color: var(--accent-soft);
+    background: color-mix(in oklab, var(--accent) 4%, var(--bg-1));
+    transform: translateY(-2px);
+  }
+  .showcase-card-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    color: var(--text-3);
+    margin-bottom: 18px;
+  }
+  .showcase-title {
+    margin: 0 0 10px;
+  }
+  .showcase-blurb {
+    color: var(--text-2);
+    font-size: 14px;
+    line-height: 1.55;
+    margin: 0 0 18px;
+  }
+  .showcase-snippet {
+    background: var(--code-bg);
+    border: 1px solid var(--line-1);
+    border-radius: 8px;
+    padding: 12px 14px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--code-fg);
+    overflow-x: auto;
+    margin-bottom: 18px;
+  }
+  .showcase-snippet pre {
+    margin: 0;
+  }
+  .showcase-cta {
+    margin-top: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  @media (max-width: 1000px) {
+    .showcase-grid {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+</style>
