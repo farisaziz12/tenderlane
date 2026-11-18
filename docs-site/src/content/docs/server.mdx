@@ -43,7 +43,7 @@ interface CheckoutInput {
 | `customerEmail`, `clientReferenceId`, `metadata`, `idempotencyKey` | Type-checked and forwarded to the provider as sent. They are browser input: do not fulfil an order from `clientReferenceId` or `metadata`. Key your order on the id `onCheckoutCreated` gives you. |
 | Anything else in the body | Dropped. The adapter payload is built field by field from validated values. |
 
-The response is `{ provider, id, status, url?, clientSecret? }`. An adapter result is passed through a validator that copies only those fields, so the rest of a PSP response (customer details, amounts, internal ids) never reaches the browser. The browser validates the same shape before acting on it, and only follows an absolute `http(s)` URL.
+The response is `{ provider, id, status, url?, clientSecret? }`. An adapter result is passed through a validator that copies only those fields, so the rest of a provider response (customer details, amounts, internal ids) never reaches the browser. The browser validates the same shape before acting on it, and only follows an absolute `http(s)` URL.
 
 :::caution
 Two options default to the permissive choice so that a first setup works. Set them before real use: `routing` (otherwise the browser picks the provider) and `resolveContext` (otherwise a forged context can select a cheaper regional price). Set `allowedRedirectOrigins` explicitly when a proxy changes the host the handler sees.
@@ -55,7 +55,7 @@ A catalog turns `{ sku, quantity }` into a name, a unit amount and a currency. A
 
 <Source code={catalog} file="docs-site/snippets/catalog.ts" />
 
-`createStripeCatalog` (`@tenderlane/stripe/server`) and `createPolarCatalog` (`@tenderlane/polar/server`) read the price from the PSP at resolve time, so the PSP dashboard is the price list. They make one API call per item and do not cache.
+`createStripeCatalog` (`@tenderlane/stripe/server`) and `createPolarCatalog` (`@tenderlane/polar/server`) read the price from the provider at resolve time, so the provider dashboard is the price list. They make one API call per item and do not cache.
 
 `catalogs: { polar: polarCatalog }` sets a catalog per provider; `catalog` is the default.
 
@@ -133,7 +133,7 @@ Tenderlane has no queue, no scheduler and no storage. A sweep that calls `retrie
 | Status | When | Body |
 | --- | --- | --- |
 | 400 | A webhook whose signature does not verify (also reported to `onError`, since a wrong or rotated secret looks the same). Invalid body, unknown provider or action, wrong provider for the route, redirect URL on another origin, unknown SKU, cart the provider cannot represent | `{ error, code }` with the specific message; `code` is `VALIDATION_ERROR` or `CATALOG_ERROR` |
-| 500 | The PSP call failed, no catalog is configured, or anything unexpected | `{ error: 'Checkout request failed.', code }`. The detail goes to `onError`, not to the browser. |
+| 500 | The provider call failed, no catalog is configured, or anything unexpected | `{ error: 'Checkout request failed.', code }`. The detail goes to `onError`, not to the browser. |
 
 ## What the handler does not do
 

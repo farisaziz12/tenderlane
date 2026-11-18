@@ -1,4 +1,4 @@
-/** A checkout held by the demo PSP. A real PSP keeps this in its own systems. */
+/** A checkout held by the demo provider. A real provider keeps this in its own systems. */
 export interface DemoSession {
   readonly id: string;
   readonly amount: number;

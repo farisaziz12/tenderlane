@@ -37,11 +37,12 @@ pnpm install
 pnpm example     # builds the packages, starts the example on http://localhost:3000
 ```
 
-The example is one checkout form whose provider and flow follow a country select. Without keys it pays through a built-in **demo PSP**, a labelled stand-in that runs the whole flow (routing, server-side pricing, redirect, return) and moves no money. Stripe test keys in `examples/react-checkout-multi-psp/.env.local` switch on the real Stripe routes. [`DEMO.md`](./DEMO.md) is a five-minute walkthrough.
+The example is one checkout form whose provider and flow follow a country select. Without keys it pays through a built-in **demo provider**, a labelled stand-in that runs the whole flow (routing, server-side pricing, redirect, return) and moves no money. Stripe test keys in `examples/react-checkout-multi-psp/.env.local` switch on the real Stripe routes. [`DEMO.md`](./DEMO.md) is a five-minute walkthrough.
 
 ```bash
 pnpm docs:dev    # the website and docs, http://localhost:4321
 pnpm check       # lint, build, typecheck, tests, package export checks
+pnpm test:journey  # the example in a real browser, with screenshots; needs `pnpm example` running
 pnpm test:live   # the Stripe adapter against Stripe test mode; needs STRIPE_TEST_SECRET_KEY
 ```
 
@@ -62,7 +63,7 @@ pnpm test:live   # the Stripe adapter against Stripe test mode; needs STRIPE_TES
 - Subscriptions, refunds, saved payment methods, failover.
 - Providers other than Stripe and Polar. Polar is hosted-only.
 - Vue bindings cover hosted flows only and have no example.
-- No test in CI runs against a live PSP. A Stripe test-mode suite exists (`pnpm test:live`) and has not been run yet.
+- No test in CI runs against a live provider. A Stripe test-mode suite exists (`pnpm test:live`) and has not been run yet.
 - No npm release.
 
 The full list, including what an integrator must add, is in [`docs-site/src/content/docs/limitations.mdx`](./docs-site/src/content/docs/limitations.mdx).
@@ -81,13 +82,13 @@ client state machine ── submit() ──────────────�
    │                      items: [{ sku, qty }] } 2. derive the server's context
    │                                             3. same router: is this the right provider?
    │                                             4. price items from the catalog
-   │                                             5. server adapter ─► PSP API (secret key)
+   │                                             5. server adapter ─► provider API (secret key)
    ◄─────────── { id, status, url | clientSecret } ◄┘
    │
 hosted: redirect to url      inline: confirm in the provider's element
 ```
 
-The request has no price field, and the response carries five fields and nothing else from the PSP. Card data stays in the provider's page or iframe.
+The request has no price field, and the response carries five fields and nothing else from the provider. Card data stays in the provider's page or iframe.
 
 ## Packages
 
@@ -114,10 +115,11 @@ The request has no price field, and the response carries five fields and nothing
 | Path | Contents |
 | --- | --- |
 | `packages/` | The six packages. Each has `src/` and `__tests__/`. |
-| `examples/react-checkout-multi-psp/` | The Next.js example, including the demo PSP adapter. |
-| `e2e/` | One checkout through Stripe, Polar and a third adapter, with mocked PSP SDKs. |
+| `examples/react-checkout-multi-psp/` | The Next.js example, including the demo provider adapter. |
+| `e2e/` | One checkout through Stripe, Polar and a third adapter, with mocked provider SDKs. |
 | `docs-site/` | The website (Astro). `snippets/` holds the code it shows, typechecked in CI. |
-| `tools/` | Repository checks and the screenshot script. |
+| `tools/` | Repository checks, the browser journey and the screenshot script. |
+| `docs/` | `CONTEXT.md`, the words we use, and `writing.md`, how we write. |
 
 ## Documentation
 
@@ -134,7 +136,7 @@ Run `pnpm docs:dev`, or read the sources in `docs-site/src/content/docs/`:
 
 ## Contributing
 
-`AGENTS.md` describes the workflow and the rules that are not negotiable (no PSP SDK in core or a browser entry, no amount from the client). `pnpm check` must pass.
+`AGENTS.md` describes the workflow and the rules that are not negotiable (no provider SDK in core or a browser entry, no amount from the client). `pnpm check` must pass.
 
 ## License
 

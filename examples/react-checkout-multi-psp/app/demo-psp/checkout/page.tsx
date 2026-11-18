@@ -14,7 +14,7 @@ export default async function DemoPspCheckout({
   return (
     <main className="page narrow">
       <p className="banner">
-        Demo PSP. This page stands in for a provider&apos;s hosted checkout. It is not a payment
+        Demo provider. This page stands in for a provider&apos;s hosted checkout. It is not a payment
         provider and no money moves.
       </p>
       {session ? (
@@ -40,7 +40,7 @@ export default async function DemoPspCheckout({
       ) : (
         <section className="panel">
           <p>
-            The demo PSP has no such checkout. It keeps them in memory, so a restart loses them.
+            The demo provider has no such checkout. It keeps them in memory, so a restart loses them.
           </p>
           <a className="button secondary" href="/">
             Back to the checkout

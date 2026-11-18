@@ -20,7 +20,7 @@ export default function Home() {
       </p>
       {!configured.stripe && !configured.polar && (
         <p className="banner">
-          No PSP keys are set, so only the built-in demo PSP is available. It runs the whole flow
+          No provider keys are set, so only the built-in demo provider is available. It runs the whole flow
           (routing, server-side pricing, redirect, return) but is not a payment provider and moves
           no money. Add Stripe test keys to <span className="mono">.env.local</span> to try a real
           one.

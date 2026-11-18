@@ -1,96 +1,111 @@
-Tenderlane selects the payment provider and checkout flow from application state. Rules are data evaluated in the browser (to render the right UI at once) and again on the server (which decides the price and refuses a mismatched provider). It is an alpha proof of concept: keep it small and say only what is true.
+# Tenderlane — agent instructions
 
-## Architecture
+Tenderlane picks the payment provider and checkout flow for each customer, from rules the app
+writes once. The browser reads the rules to show the right payment form; the server reads them
+again, sets the price and confirms the payment. It is an alpha proof of concept: keep it small
+and say only what is true. Vocabulary is law: [`docs/CONTEXT.md`](docs/CONTEXT.md). Use its words
+in code, tests, commits and PRs.
 
-```
-@tenderlane/core          no runtime dependencies, names no provider
-    |                     entries: "." (router, catalogs, errors, types), "/server" (handler), "/adapters"
-    |
-    +--- @tenderlane/client   headless checkout state machine
-    |        |
-    |        +--- @tenderlane/react  provider, hook, form (useSyncExternalStore)
-    |        +--- @tenderlane/vue    plugin + composables; hosted flows only, experimental
-    |
-    +--- @tenderlane/stripe   browser entry, /server, /react
-    +--- @tenderlane/polar    browser entry, /server; hosted flow only
-```
+## Non-negotiables
 
-There is no umbrella package. `examples/react-checkout-multi-psp` is the one example; `docs-site/snippets/` holds the code the website shows.
+1. **No amount comes from the browser.** `CheckoutInput` has no price field. The handler deletes
+   any `unitAmount`, prices from its own catalog, and builds the adapter payload field by field
+   from validated values. Nothing else in a request may reach a provider parameter that carries
+   money.
+2. **No provider object goes to the browser.** The response is
+   `{ provider, id, status, url?, clientSecret? }`. Adapter results pass through
+   `parseCheckoutResult` on the server and again in the browser.
+3. **`complete` means the provider's record says paid.** Not that a page was finished, a redirect
+   happened or a browser SDK said so. `processing` (customer done, money not arrived) is never
+   folded into `open` or `complete`. A webhook mapping and the `retrieve` mapping for the same
+   provider state must agree.
+4. **No provider SDK in `@tenderlane/core` or in a browser entry.** Only `*/server` entries
+   import `stripe` or `@polar-sh/sdk`. Core names no provider and has no default one.
+5. **Types are not loosened to make an error go away.** A rule that targets an unregistered
+   provider does not compile; the type tests pin that.
+6. **The website says only what exists.** Every code block on it is a file under
+   `docs-site/snippets/` or `examples/`, imported with `?raw` and typechecked.
 
-## Build & Test
+## If the code and the tests disagree
 
-```bash
-pnpm install
-pnpm build        # all packages, the example and the docs site (Turborepo)
-pnpm test         # Vitest, including type tests (*.test-d.ts)
-pnpm typecheck    # tsc --noEmit: packages, e2e, the example, docs-site/snippets
-pnpm lint         # oxlint, warnings are errors
-pnpm test:build   # publint --strict on every package
-pnpm check        # all of the above plus the hidden-code and workspace checks
-pnpm example      # build packages, run the example on :3000
-pnpm test:live    # Stripe adapter against Stripe test mode (needs STRIPE_TEST_SECRET_KEY); not in check or CI
-```
+Stop and say so. **Never edit, skip or weaken a test to make it pass.** A test that pins behaviour
+you think is wrong is a question for a person, not a line to change.
 
-## Key Patterns
+## Commands
 
-### Provider neutrality
-Core has no privileged provider. The first-party adapters use only what `@tenderlane/core/adapters` exports (`defineBrowserProvider`, `defineServerAdapter`, `requestProviderAction`, `parseCheckoutResult`), which is the surface a community adapter gets. `e2e/` keeps that honest: one checkout through Stripe, Polar and a third adapter written from that entry point alone, against mocked PSP SDKs. The example's demo PSP is a second such adapter.
+- `pnpm check`: everything below except the live suite. Must pass.
+- `pnpm test`: Vitest, including type tests (`*.test-d.ts`).
+- `pnpm typecheck`: packages, `e2e`, the example and `docs-site/snippets`.
+- `pnpm lint`: oxlint, warnings are errors.
+- `pnpm test:words`: the copy rules in `docs/writing.md`.
+- `pnpm test:hidden-code`: fails on a source line too long to have been written by hand.
+- `pnpm test:build`: publint on every package.
+- `pnpm test:journey`: drives the example in a real browser and captures evidence.
+- `pnpm test:live`: the Stripe adapter against Stripe test mode. Needs `STRIPE_TEST_SECRET_KEY`;
+  not part of `check` or CI.
+- `pnpm example`: build the packages and run the example on :3000.
 
-Errors that come from another package are matched by `code` (`hasErrorCode`), not `instanceof`.
+## Where things are
 
-### Typed provider ids
-A provider's `id` is a string literal (the `'~types'` phantom property carries it through generics). `createRulesRouter` infers the union of provider ids its rules target and returns `RulesRouter<TProviderId>`. `createTenderlaneClient`, `TenderlaneProvider` and `createTenderlaneHandler` take `Router<ids of the registered providers>`, so a rule that targets an unregistered provider does not compile. The type tests in `packages/core/__tests__/types/` and `packages/client/__tests__/types/` pin this; do not loosen a signature to make an error go away.
+| Path | Holds | Rule |
+| --- | --- | --- |
+| `packages/core` | Contracts, rules router, catalogs, errors; `/server` handler; `/adapters` | No dependencies. No provider names. |
+| `packages/client` | The checkout client: status, `prepare`, `submit` | No UI, no HTTP of its own |
+| `packages/react`, `packages/vue` | Framework bindings over the client | No business logic. Vue: hosted flow only |
+| `packages/stripe`, `packages/polar` | One provider each: browser entry, `/server`, Stripe also `/react` | Only what `core/adapters` exports |
+| `examples/react-checkout-multi-psp` | The one example, with the demo provider | Runs with no keys |
+| `e2e` | One checkout through three adapters, SDKs mocked; `live/` against Stripe test mode | |
+| `docs-site` | The website; `snippets/` holds its code | Follows `docs/writing.md` |
+| `docs` | `CONTEXT.md` (words), `writing.md` (copy) | |
 
-### Flows
-`PaymentFlow` is `'hosted' | 'inline'`. Hosted: the server creates a checkout on the provider's page and the browser redirects. Inline: `prepare()` creates a provider session, the app mounts the provider's element, `submit()` confirms it.
+Each package has its own `CLAUDE.md` with the rules for that folder: the handler's order of
+operations, the client's invariants, each adapter's status mapping. Read it before editing there.
+It adds to this file and does not repeat it.
 
-### Routing rules
-Serializable JSON, first match wins. Operators: literal, `{ in }`, `{ notIn }`, `{ gt, gte, lt, lte }`, nested objects. `predicates` (functions keyed by rule id) are the only non-serializable part.
+## Scope
 
-### State machine
-`TenderlaneClientState` is a discriminated union on `status`: `idle → evaluating → ready → (preparing → prepared →) submitting → success | redirecting | pending | error`. `success` means the provider's browser SDK reported the payment complete; a created hosted checkout is `redirecting`. `error` after a failed submit keeps the route, so `submit()` can be retried. One submit runs at a time. `canSubmit` and `selectedProvider` are derived, never set.
+Do only what was asked. No speculative abstractions, no new dependencies without asking, no new
+flow or status without an adapter that implements it. If something nearby looks wrong, mention
+it; don't fix it. Not built, and not to be implied: refunds, disputes, subscriptions, failover,
+other providers, webhook storage or deduplication, npm releases.
+`docs-site/src/content/docs/limitations.mdx` is the public list; keep it true.
 
-### Wire format (load-bearing)
-Request: `{ provider, action, payload: CheckoutInput, paymentMethods }`. `CheckoutInput` is `{ items: [{ sku, quantity }], context?, successUrl, cancelUrl, customerEmail?, clientReferenceId?, metadata?, idempotencyKey? }`. **It has no amount, and nothing from the request may reach a PSP parameter that carries money.** The handler deletes any `unitAmount`, prices from its own catalog, and builds the adapter payload field by field from validated values. The client's `context` is untrusted: `resolveContext` derives the server's. The client names the `provider`: pass the handler the same `routing` so the server checks it.
+## Style
 
-Confirmation: `onCheckoutCreated` hands the app the provider's checkout id and the server-priced items (record the order there; it fails closed). `handler.retrieve(provider, id)` asks the provider for `{ status, amountTotal?, currency?, paymentMethod? }` with the secret key; it is a server function, never a route.
+- ESM only, `.js` extensions in imports, TypeScript strict with `noUncheckedIndexedAccess`.
+- No `any`, no non-null assertions in `src/`. A cast where an adapter calls an SDK needs a comment
+  saying why.
+- Full words for names: `provider` not `p`, `context` not `ctx`, `error` not `err`, `result` not
+  `res`, `parameters` not `params`.
+- Errors extend `TenderlaneError` with a `code`. An error from another package is matched with
+  `hasErrorCode`, not `instanceof`.
+- Tests live in `__tests__/` mirroring `src/`. A change to `packages/*/src` needs a test that
+  fails without it, and a changeset.
+- Comments explain why, never what.
 
-Statuses: `CheckoutStatus` is `open` (waiting on the customer), `processing` (customer done, money not arrived, can still fail), `complete`, `expired`, `failed`. `'complete'` means the provider's record says paid (Stripe: `payment_status: 'paid'`, not only `status`; Polar: `succeeded`; Polar `confirmed` and a finished-but-unpaid Stripe session are `processing`). Never fold `processing` into `open` or `complete`. `{CHECKOUT_ID}` in `successUrl` is filled in by the provider.
+## Writing
 
-Webhooks: `handler.webhook(provider, onEvent)` builds a route: the adapter's `verifyWebhook` checks the signature over the raw body (400 if it fails), the event is reduced to a `PaymentEvent` (`payment.processing | payment.succeeded | payment.failed | checkout.expired | unhandled`), and `onEvent` is awaited (a throw is a 500, so the provider retries). Webhook mappings must agree with the `retrieve` mappings for the same provider state. Core stores nothing: no dedupe, no queue.
+Anything a person reads follows [`docs/writing.md`](docs/writing.md): talk to the reader, active
+voice, start with something they can picture, no claims we can't stand behind, no em dashes.
+`pnpm test:words` checks what can be checked; read the page aloud for the rest.
 
-Response: `{ provider, id, status, url?, clientSecret? }` and nothing else. Adapter results pass through `parseCheckoutResult` on the server and again in the browser. Never return a PSP object from an adapter.
+## Commits and PRs
 
-### Catalog
-`Catalog.resolve(items, context)` turns `{ sku, quantity }` into name, `unitAmount` (integer, minor units) and currency. `createInlineCatalog`, `defineCatalog`, `createRemoteCatalog` in core; `createStripeCatalog`, `createPolarCatalog` read from the PSP. The handler takes `catalog` (default, and the `resolve` route) and `catalogs` (per provider).
+Conventional commits. Before a PR:
 
-## Conventions
+1. **Verify.** `pnpm check` on the commit you push; keep what it printed.
+2. **Review.** A reviewer with a fresh context runs the `payment-review` skill over
+   `git diff origin/main...HEAD`: findings with `file:line`, a concrete failure, and a tag
+   (Important, Nit, Pre-existing). Fix every Important one everywhere its kind occurs. At most
+   three rounds; record the counts.
+3. **Show it.** A change to `docs-site/` or `examples/` needs a before and an after screenshot
+   (`visual-evidence` skill). A library change shows one input and output, a type error, or a
+   test that failed and now passes.
+4. **Open it** with `.github/pull_request_template.md` (`open-pr` skill): under 100 visible words,
+   the rest in the collapsed block. `pr-rules` checks this.
 
-- ESM only (`"type": "module"` in all packages)
-- TypeScript strict mode with `noUncheckedIndexedAccess`; no `any`, no non-null assertions in `src/`. A cast where an adapter calls an SDK needs a comment saying why.
-- All exports use `.js` extensions in import paths (for ESM resolution)
-- Errors extend `TenderlaneError` with a `code`
-- Tests live in `__tests__/` directories mirroring `src/`; type tests use `.test-d.ts`
-- Use full, descriptive variable names — never abbreviations or single-letter initials (e.g. `provider` not `p`, `context` not `ctx`, `configuration` not `cfg`, `error` not `err`, `result` not `res`, `middleware` not `mw`, `parameters` not `params`)
-- Website and README copy: say what exists. Every code block on the website is a file under `docs-site/snippets/` or `examples/`, imported with `?raw`, so it is typechecked. Do not paste code into a page.
+Never approve or merge. Never use live provider keys.
 
-## Alpha Scope
-
-Implemented: rules router, headless client, React bindings, Stripe hosted + inline, Polar hosted, catalogs, middleware observers, typed errors, adapter entry point, Vue bindings for hosted flows.
-
-Not implemented: refund, dispute and subscription events (webhooks cover payment events only), webhook deduplication or storage, subscriptions, refunds, failover, other PSPs, Polar's embedded checkout, Solid/Svelte/Angular bindings, `lookup_key` for `createStripeCatalog`, catalog caching, npm releases. No test in CI runs against a live PSP: `pnpm test:live` (`e2e/live/`, Stripe test mode, one row per payment method) is run by hand with `STRIPE_TEST_SECRET_KEY`. Webhook signature tests use the providers' real signing code, not mocks. `docs-site/src/content/docs/limitations.mdx` is the public list; keep it in step with this one.
-
-## Workflow
-
-Every change goes through the same loop, whoever writes it.
-
-1. **Verify.** Run `pnpm check` and report what it printed. A change to `packages/*/src` needs a test that fails without it, and a changeset (`pnpm changeset`).
-2. **Review locally before pushing.** Start a reviewer subagent with a fresh context: give it `git diff origin/main...HEAD` and the `payment-review` skill, not your reasoning. It reports correctness and security problems first, each with `file:line` and a concrete failure (input, state, wrong result), tagged Important, Nit or Pre-existing. Fix every Important finding everywhere its kind occurs, then re-review only what changed. At most three rounds; record the counts in the PR.
-3. **Show it.** A change under `docs-site/` or `examples/` needs before and after screenshots, and a recording for an interactive flow (`visual-evidence` skill, `tools/shot.mjs`). A library change shows one concrete input and output, a type error, or a failing-then-passing test.
-4. **Open a slim PR.** Use `.github/pull_request_template.md` (`open-pr` skill). Under 100 visible words; everything else goes in the collapsed block. `pr-rules` in CI enforces this.
-
-Skills live in `.claude/skills/`: `payment-review`, `open-pr`, `visual-evidence`.
-
-Config files are code. `pnpm test:hidden-code` (first step of `pnpm check` and of CI) fails on a source line too long to have been written by hand; main was once force-pushed with a payload hidden after thousands of spaces in `next.config.ts` and `astro.config.mjs`. Read the whole line before trusting a config diff.
-
-Never: put a PSP SDK import in `@tenderlane/core` or a browser entry, send or trust an amount from the client, return a PSP object to the browser, skip or weaken a test to get green, add a default or privileged provider to core types, or describe on the website something that is not implemented.
+Config files are code: `main` was once force-pushed with a payload hidden after thousands of
+spaces in `next.config.ts` and `astro.config.mjs`. Read the whole line before trusting a config
+diff.

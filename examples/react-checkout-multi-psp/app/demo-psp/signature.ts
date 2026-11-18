@@ -1,5 +1,5 @@
 /**
- * The demo PSP signs its webhooks with HMAC-SHA256 over the raw body, the
+ * The demo provider signs its webhooks with HMAC-SHA256 over the raw body, the
  * way real providers do. The secret is hard-coded because the "provider" is
  * this same app; a real one gives you a secret per endpoint.
  */

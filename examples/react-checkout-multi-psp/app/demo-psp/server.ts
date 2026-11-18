@@ -8,14 +8,14 @@ import { findDemoSession, saveDemoSession } from './sessions';
 import { DEMO_SIGNATURE_HEADER, signDemoPayload } from './signature';
 
 /**
- * Server half of the demo PSP. A real adapter calls the PSP's API with a
+ * Server half of the demo provider. A real adapter calls the provider's API with a
  * secret key here. This one keeps its checkouts in memory and links to a page
  * inside the example (`/demo-psp/checkout`) that stands in for a hosted
  * checkout. It implements all three parts of the contract: create, look up,
  * and verify a webhook.
  *
  * `payload.items` was priced by the server's catalog. The amount the demo
- * PSP charges comes from there, not from the browser.
+ * provider charges comes from there, not from the browser.
  */
 export function demoServerAdapter() {
   return defineServerAdapter({
@@ -29,7 +29,7 @@ export function demoServerAdapter() {
         amount: payload.items.reduce((sum, item) => sum + item.unitAmount * item.quantity, 0),
         currency: payload.items[0]?.currency ?? 'usd',
         description: payload.items.map((item) => item.name).join(', '),
-        // The PSP fills in the checkout id, as Stripe and Polar do.
+        // The provider fills in the checkout id, as Stripe and Polar do.
         successUrl: payload.successUrl.replaceAll(CHECKOUT_ID_PLACEHOLDER, id),
         cancelUrl: payload.cancelUrl,
         paid: false,
@@ -42,7 +42,7 @@ export function demoServerAdapter() {
 
     async retrieve(id) {
       const session = findDemoSession(id);
-      if (!session) throw new ProviderError(`The demo PSP has no checkout "${id}".`, 'demo');
+      if (!session) throw new ProviderError(`The demo provider has no checkout "${id}".`, 'demo');
       return {
         provider: 'demo',
         id,
@@ -56,7 +56,7 @@ export function demoServerAdapter() {
       // Read as text: the signature covers the exact bytes that were sent.
       const body = await request.text();
       if (request.headers.get(DEMO_SIGNATURE_HEADER) !== (await signDemoPayload(body))) {
-        throw new WebhookVerificationError('The demo PSP signature did not verify.', 'demo');
+        throw new WebhookVerificationError('The demo provider signature did not verify.', 'demo');
       }
       const event: unknown = JSON.parse(body);
       const { id, type, checkout } = event as Record<string, unknown>;

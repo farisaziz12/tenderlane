@@ -2,7 +2,7 @@ import { findDemoSession } from '../sessions';
 import { DEMO_SIGNATURE_HEADER, signDemoPayload } from '../signature';
 
 /**
- * The demo PSP "takes the payment": it marks the checkout paid, notifies the
+ * The demo provider "takes the payment": it marks the checkout paid, notifies the
  * shop with a signed webhook, and sends the customer back.
  */
 export async function POST(request: Request): Promise<Response> {

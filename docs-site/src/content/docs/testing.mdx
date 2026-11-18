@@ -4,15 +4,16 @@ description: What the repository's tests prove, what they cannot, and how to run
 order: 7
 ---
 
-## Three layers
+## Four layers
 
-| Layer | Command | Talks to the PSP | Proves |
+| Layer | Command | Talks to the provider | Proves |
 | --- | --- | --- | --- |
-| Unit and cross-provider tests | `pnpm test` | No. The `stripe` and `@polar-sh/sdk` packages are mocked. | The library does what its authors believe the PSP does |
+| Unit and cross-provider tests | `pnpm test` | No. The `stripe` and `@polar-sh/sdk` packages are mocked. | The library does what its authors believe the provider does |
+| The example in a browser | `pnpm test:journey` | No. It pays through the demo provider. | The documented walkthrough really happens: routing in the browser, no amount in the request, the server's price, a webhook and a lookup that agree |
 | Webhook signature tests | `pnpm test` | No, but nothing is mocked: signatures are made and checked with the providers' own code | A genuine webhook verifies; a forged, altered or stale one does not |
 | Live suite | `pnpm test:live` | Yes, Stripe test mode | What Stripe actually does for each payment method |
 
-The first two run in CI. The third needs a key and is run by hand.
+All but the live suite run in CI. The live suite needs a key and is run by hand.
 
 :::caution
 At the time of writing the live suite has not been run: it was written in an environment that cannot reach Stripe. Treat a first run as the test of the suite as well as of the adapter.

@@ -1,7 +1,7 @@
 import { defineBrowserProvider, requestProviderAction } from '@tenderlane/core/adapters';
 
 /**
- * Browser half of the demo PSP: a complete provider adapter written with
+ * Browser half of the demo provider: a complete provider adapter written with
  * `@tenderlane/core/adapters`, the same entry point the Stripe and Polar
  * adapters use. It is not a payment provider and moves no money.
  */

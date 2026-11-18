@@ -22,10 +22,10 @@ order: 2
 
 | Package | Owns | Does not own |
 | --- | --- | --- |
-| `@tenderlane/core` | The contracts every other package implements, route evaluation, price resolution, the server handler | Any PSP SDK, any framework, any state |
+| `@tenderlane/core` | The contracts every other package implements, route evaluation, price resolution, the server handler | Any provider SDK, any framework, any state |
 | `@tenderlane/client` | The checkout state machine: route selection, `prepare`, `submit`, one submit at a time | Rendering, HTTP (providers do that) |
 | `@tenderlane/react` | Subscribing React to the client; calling `prepare` at the right time for inline flows | Business logic, markup |
-| `@tenderlane/stripe`, `@tenderlane/polar` | Translating between Tenderlane's contracts and one PSP | Routing, pricing |
+| `@tenderlane/stripe`, `@tenderlane/polar` | Translating between Tenderlane's contracts and one provider | Routing, pricing |
 | `@tenderlane/vue` | Subscribing Vue to the client | Inline payment elements (hosted flows only) |
 
 Dependencies point one way: adapters and the client depend on core, bindings depend on the client. Core imports nothing.
@@ -48,7 +48,7 @@ The split is enforced by `package.json` subpath exports, so importing the server
 4. inline only: prepare()     POST /api/payments { provider, action, payload: { items: [{ sku, quantity }], ... } }
 5. Handler (server)           validate → derive context → evaluate the same router
                               → price items from the catalog → call the server adapter
-6. Server adapter             PSP API call with the secret key
+6. Server adapter             provider API call with the secret key
 7. Response                   { provider, id, status, url? , clientSecret? }   nothing else
 8. Browser provider           hosted: redirect to url
                               inline: mount the element, submit() confirms it

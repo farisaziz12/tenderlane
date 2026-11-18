@@ -32,4 +32,20 @@ Files land in `.evidence/` (git-ignored) as `<name>_desktop.png` and `<name>_pho
 
 ## Embed
 
-Drag the files into the PR description, or attach them with `gh pr comment --attach` where available. Put the before and after under **Before → After**, phone captures inside the collapsed block. Never commit captures to the repository.
+Put one useful screenshot above anything that plays, so there is something to see before it
+loads. Desktop before and after go under **Before → After**; phone captures and extra pages go
+inside the collapsed block. Alt text says `before` or `after` and what the page is.
+
+Drag the files into the PR description where you can. Where you cannot upload (an agent without
+access to GitHub's attachment store), push them to an orphan branch named `pr-evidence/<number>`
+and link them as `https://github.com/<owner>/<repo>/raw/pr-evidence/<number>/<file>`. The branch
+shares no history with `main`; delete it after the merge. Never commit captures to a branch that
+will be merged.
+
+## The journey
+
+`pnpm test:journey` builds nothing: start the example first (`pnpm example`), then run it. It
+drives the checkout in a real browser against the demo provider, fails if a step does not behave,
+and writes `journey_*.png` (and a `.webm` where Playwright's ffmpeg is installed) to `.evidence/`.
+CI runs it on every PR and keeps the files as the `journey-evidence` artifact, so the captures
+come from the commit under review, not from someone's laptop.

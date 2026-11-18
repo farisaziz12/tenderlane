@@ -13,7 +13,7 @@ import { COUNTRIES, type Country } from './countries';
 import { providers } from './providers';
 import { routing } from './routing';
 
-/** Which real PSPs have keys on the server. The demo PSP always works. */
+/** Which real providers have keys on the server. The demo provider always works. */
 export interface Configured {
   readonly stripe: boolean;
   readonly polar: boolean;

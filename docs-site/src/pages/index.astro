@@ -107,7 +107,7 @@ client state machine ── submit() ──────────────�
    │                      items: [{ sku, qty }] } 2. derive the server's context
    │                                             3. same router: is this the right provider?
    │                                             4. price items from the catalog
-   │                                             5. server adapter ─► PSP API (secret key)
+   │                                             5. server adapter ─► provider API (secret key)
    ◄─────────── { id, status, url | clientSecret } ◄┘
    │
 hosted: redirect to url      inline: confirm in the provider's element`}</pre>
@@ -140,7 +140,7 @@ hosted: redirect to url      inline: confirm in the provider's element`}</pre>
           <li>Failover between providers</li>
           <li>Any provider other than Stripe and Polar</li>
           <li>npm releases of this API</li>
-          <li>A run against a live PSP in CI (a Stripe test-mode suite exists and is run by hand)</li>
+          <li>A run against a live provider in CI (a Stripe test-mode suite exists and is run by hand)</li>
         </ul>
       </div>
     </section>

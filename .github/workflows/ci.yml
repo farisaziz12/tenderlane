@@ -31,6 +31,9 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      # Copy rules: docs/writing.md.
+      - run: pnpm test:words
+
       # Fails on eval(), unused code and other correctness rules (.oxlintrc.json).
       - run: pnpm lint
 
@@ -45,3 +48,48 @@ jobs:
 
       # Each package's exports, types and files resolve for consumers.
       - run: pnpm test:build
+
+  # The example checkout in a real browser, against the demo provider: no keys, no network
+  # beyond localhost. What it captures is the PR's visual evidence (tools/journey.mjs).
+  journey:
+    name: Example in a browser
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - run: node tools/check-hidden-code.mjs
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm build
+
+      # ffmpeg is what lets the journey record a video as well as screenshots.
+      - run: pnpm exec playwright install --with-deps chromium ffmpeg
+
+      - name: Start the example
+        run: |
+          pnpm --filter nextjs-multi-psp-checkout-example start > example.log 2>&1 &
+          for attempt in $(seq 1 30); do
+            curl --silent --output /dev/null http://localhost:3000 && exit 0
+            sleep 1
+          done
+          cat example.log
+          exit 1
+
+      - run: pnpm test:journey
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: journey-evidence
+          path: |
+            .evidence/
+            example.log
+          if-no-files-found: ignore

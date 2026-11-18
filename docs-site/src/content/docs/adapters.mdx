@@ -41,13 +41,13 @@ import server from '../../../../examples/react-checkout-multi-psp/app/demo-psp/s
 
 ## Writing an adapter
 
-An adapter is two objects. The demo PSP in the example is a complete one, written only with `@tenderlane/core/adapters`, the entry point the Stripe and Polar adapters use.
+An adapter is two objects. The demo provider in the example is a complete one, written only with `@tenderlane/core/adapters`, the entry point the Stripe and Polar adapters use.
 
 The browser half declares what the provider can do and how to submit:
 
 <Source code={browser} file="examples/react-checkout-multi-psp/app/demo-psp/browser.ts" />
 
-The server half makes the PSP calls: `handle` creates the checkout from `payload.items`, which the server's catalog already priced; the optional `retrieve` reads its state back, and the optional `verifyWebhook` checks a webhook's signature and says what it means:
+The server half makes the provider calls: `handle` creates the checkout from `payload.items`, which the server's catalog already priced; the optional `retrieve` reads its state back, and the optional `verifyWebhook` checks a webhook's signature and says what it means:
 
 <Source code={server} file="examples/react-checkout-multi-psp/app/demo-psp/server.ts" />
 
@@ -66,6 +66,6 @@ Rules for an adapter:
 3. If the provider cannot represent the cart, throw a `CatalogError`. Do not approximate.
 4. Return `status: 'complete'` only when the provider says the payment is complete, from `handle` and from `retrieve`. Use `processing` when the customer has paid and the money has not arrived, and `open` when the customer still has something to do.
 5. In `verifyWebhook`, verify against the raw body and throw `WebhookVerificationError` when it fails. Report what you cannot interpret as `unhandled`; do not throw for it.
-6. Replace `{CHECKOUT_ID}` in `successUrl` with the checkout id, or with the PSP's own placeholder for it.
+6. Replace `{CHECKOUT_ID}` in `successUrl` with the checkout id, or with the provider's own placeholder for it.
 
-The repository's `e2e` test runs one checkout through Stripe, Polar and a third adapter written this way, against mocked PSP SDKs.
+The repository's `e2e` test runs one checkout through Stripe, Polar and a third adapter written this way, against mocked provider SDKs.

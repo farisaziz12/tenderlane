@@ -22,10 +22,12 @@
     "version-packages": "changeset version",
     "release": "pnpm build && changeset publish",
     "lint:fix": "oxlint --fix",
+    "test:journey": "node tools/journey.mjs",
     "test:live": "pnpm --filter @tenderlane/e2e test:live",
     "test:build": "pnpm -r --filter './packages/*' exec publint --strict",
     "test:workspace": "sherif",
-    "check": "pnpm test:hidden-code && pnpm lint && pnpm test:workspace && pnpm build && pnpm typecheck && pnpm test && pnpm test:build",
+    "test:words": "node tools/check-words.mjs",
+    "check": "pnpm test:hidden-code && pnpm test:words && pnpm lint && pnpm test:workspace && pnpm build && pnpm typecheck && pnpm test && pnpm test:build",
     "test:hidden-code": "node tools/check-hidden-code.mjs"
   },
   "devDependencies": {

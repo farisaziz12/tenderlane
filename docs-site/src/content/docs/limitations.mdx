@@ -20,8 +20,8 @@ order: 8
 
 ## Not verified
 
-- **No test in CI talks to a real PSP.** Unit tests and the cross-provider `e2e` test mock the `stripe` and `@polar-sh/sdk` packages. A live suite for Stripe test mode exists (`pnpm test:live`) and has not been run yet; see [Testing](/docs/testing). No automated check runs the Stripe or Polar code paths against the real APIs, so treat them as unverified until you have run them with your own test keys.
-- **The example's default path uses a demo PSP**, which is a stand-in inside the example app. It proves the routing, the wire format, server-side pricing and the redirect round trip. It proves nothing about a real provider.
+- **No test in CI talks to a real provider.** Unit tests and the cross-provider `e2e` test mock the `stripe` and `@polar-sh/sdk` packages. A live suite for Stripe test mode exists (`pnpm test:live`) and has not been run yet; see [Testing](/docs/testing). No automated check runs the Stripe or Polar code paths against the real APIs, so treat them as unverified until you have run them with your own test keys.
+- **The example's default path uses a demo provider**, which is a stand-in inside the example app. It proves the routing, the wire format, server-side pricing and the redirect round trip. It proves nothing about a real provider.
 - **No security review.** The server handler validates its input and has tests for tampering, but nobody outside the project has audited it.
 
 ## Yours to add
@@ -34,10 +34,10 @@ order: 8
 
 ## Sharp edges
 
-- **Malformed pass-through values become a 500.** A `customerEmail` the PSP rejects is reported as a provider failure, not a 400.
-- **Adapters ignore fields their PSP has no place for.** Polar ignores `cancelUrl`, `clientReferenceId`, `idempotencyKey` and `providerOptions`; Stripe's inline flow ignores `clientReferenceId`.
+- **Malformed pass-through values become a 500.** A `customerEmail` the provider rejects is reported as a provider failure, not a 400.
+- **Adapters ignore fields their provider has no place for.** Polar ignores `cancelUrl`, `clientReferenceId`, `idempotencyKey` and `providerOptions`; Stripe's inline flow ignores `clientReferenceId`.
 - **No settlement timeline.** `processing` and `paymentMethod` tell you a bank debit is in flight. How long to wait, and what to do if it fails after you shipped, is yours to decide and to schedule.
-- **Catalogs are not cached.** `createStripeCatalog` and `createPolarCatalog` call the PSP once per item on every request.
+- **Catalogs are not cached.** `createStripeCatalog` and `createPolarCatalog` call the provider once per item on every request.
 - **`createStripeCatalog` takes price ids only**, not lookup keys.
 - **Provider type checks need a literal provider list.** A provider array built at runtime widens to `string` and skips the check that routing targets a registered provider.
 - **The API will change.** This is `0.1.0-alpha`. Nothing is stable.

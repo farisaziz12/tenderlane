@@ -9,7 +9,7 @@ import { applyPaymentStatus, findOrder, recordOrder } from './orders';
 import type { Order, UpdateSource } from './orders';
 import { routing } from './routing';
 
-/** Real PSP adapters are registered only when their keys are present. */
+/** Real provider adapters are registered only when their keys are present. */
 function createHandler() {
   const providers: ServerProviderAdapter[] = [demoServerAdapter()];
   const catalogs: Record<string, Catalog> = {};

@@ -31,13 +31,13 @@ A page with three panels: the app state (a country select), the route the router
 
 1. With **United Kingdom** selected, the route panel reads `fallback / demo / hosted`.
 2. Press **Pay**. The browser posts `{ items: [{ sku: 'pro-plan', quantity: 1 }] }` to `/api/payments`. There is no amount in the request.
-3. The server prices the item from its catalog and returns a URL. You land on a page marked **Demo PSP** showing $29.00.
-4. Press **Pay** there. You return to `/success`, which reads **Payment confirmed**: the demo PSP sent the shop a signed webhook when you paid, and the page asked it again from the server. The **learned from** line shows both. Open the same URL for a checkout you did not pay and it reads **Payment not confirmed yet**.
+3. The server prices the item from its catalog and returns a URL. You land on a page marked **Demo provider** showing $29.00.
+4. Press **Pay** there. You return to `/success`, which reads **Payment confirmed**: the demo provider sent the shop a signed webhook when you paid, and the page asked it again from the server. The **learned from** line shows both. Open the same URL for a checkout you did not pay and it reads **Payment not confirmed yet**.
 
 Now change the country to **Switzerland**. The route panel changes to `ch-inline / stripe / inline` and the price to CHF 29.00, without a reload. Without Stripe keys the checkout panel tells you that route cannot be paid yet.
 
 :::note
-The demo PSP is a stand-in written with the same adapter API as the Stripe and Polar adapters. It exists so the whole flow can run without an account. It is not a payment provider and no money moves.
+The demo provider is a stand-in written with the same adapter API as the Stripe and Polar adapters. It exists so the whole flow can run without an account. It is not a payment provider and no money moves.
 :::
 
 ## Switch on Stripe test mode
@@ -74,7 +74,7 @@ The rules, imported by both the page and the API route:
 
 <Source code={routing} file="examples/react-checkout-multi-psp/app/checkout/routing.ts" />
 
-The server handler, mounted at `/api/payments`. It registers a real PSP adapter only when its key is present:
+The server handler, mounted at `/api/payments`. It registers a real provider adapter only when its key is present:
 
 <Source code={route} file="examples/react-checkout-multi-psp/app/checkout/server.ts" />
 
@@ -96,7 +96,7 @@ The checkout component is [`app/checkout/checkout.tsx`](https://github.com/faris
 pnpm check   # lint, build, typecheck, tests, package export checks
 ```
 
-The tests mock the PSP SDKs. No test in this repository talks to a live Stripe or Polar sandbox.
+The tests mock the provider SDKs. No test in this repository talks to a live Stripe or Polar sandbox.
 
 ## Next
 
