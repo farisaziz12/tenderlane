@@ -249,6 +249,9 @@ const repository = 'https://github.com/farisaziz12/tenderlane';
     if (fallback) fallback.style.opacity = route.source === 'rule' ? '0.55' : '1';
 
     renderRules(route.ruleId);
+    const list = document.getElementById('rules-list');
+    const active = list?.querySelector<HTMLElement>('.rule-active');
+    if (list) list.scrollTop = active ? Math.max(0, active.offsetTop - list.offsetTop - 8) : 0;
     renderMethods([...route.paymentMethods]);
   };
 
@@ -264,11 +267,34 @@ const repository = 'https://github.com/farisaziz12/tenderlane';
     padding-right: max(var(--side-pad), env(safe-area-inset-right));
     position: relative;
   }
+  /* The copy sits above the demo, which gets the full width: two code panes
+     next to a headline were squeezed at every common laptop size. */
   .hero-grid {
     display: grid;
-    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.25fr);
+    grid-template-columns: minmax(0, 1fr);
     gap: 56px;
-    align-items: center;
+  }
+  /* Wide screens: headline on the left, description and actions on the right. */
+  .hero-copy {
+    display: grid;
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+    column-gap: 64px;
+    align-items: start;
+  }
+  .hero-badges {
+    grid-column: 1 / -1;
+  }
+  .hero-headline {
+    grid-column: 1;
+    grid-row: 2 / span 4;
+    font-size: clamp(44px, 5.4vw, 76px);
+  }
+  .hero-tag,
+  .hero-today,
+  .hero-cta,
+  .install-pill {
+    grid-column: 2;
+    justify-self: start;
   }
   .hero-grid > * {
     min-width: 0;
@@ -287,7 +313,7 @@ const repository = 'https://github.com/farisaziz12/tenderlane';
     margin: 0 0 24px;
   }
   .hero-tag {
-    margin: 0 0 36px;
+    margin: 0 0 14px;
     max-width: 540px;
   }
   .hero-cta {
@@ -312,6 +338,8 @@ const repository = 'https://github.com/farisaziz12/tenderlane';
   }
   .hero-demo-wrap {
     position: relative;
+    /* The demo lays itself out by its own width, wherever it is placed. */
+    container-type: inline-size;
   }
   .hero-demo-glow {
     position: absolute;
@@ -342,9 +370,20 @@ const repository = 'https://github.com/farisaziz12/tenderlane';
     font-size: 13px;
     line-height: 1.7;
     color: var(--code-fg);
-    min-height: 360px;
     min-width: 0;
     overflow-x: auto;
+  }
+  /* Code does not wrap: a rule is read line by line. The list scrolls instead
+     of pushing the checkout preview off the screen. */
+  .rules-fallback,
+  :global(.rule) {
+    white-space: nowrap;
+  }
+  .rules-list {
+    max-height: 336px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
   }
   .rules-head {
     display: flex;
@@ -605,13 +644,23 @@ const repository = 'https://github.com/farisaziz12/tenderlane';
     font-size: 12px;
     font-family: var(--font-mono);
   }
-  @media (max-width: 1000px) {
-    .hero-grid {
-      grid-template-columns: minmax(0, 1fr);
-      gap: 48px;
-    }
+  @container (max-width: 760px) {
     .hero-demo {
       grid-template-columns: minmax(0, 1fr);
+    }
+    .rules-list {
+      max-height: 264px;
+    }
+  }
+  @media (max-width: 1000px) {
+    .hero-grid {
+      gap: 48px;
+    }
+    .hero-copy {
+      display: block;
+    }
+    .hero-headline {
+      font-size: clamp(38px, 9vw, 64px);
     }
   }
   @media (max-width: 768px) {
@@ -707,7 +756,7 @@ const repository = 'https://github.com/farisaziz12/tenderlane';
     }
   }
   .hero-today {
-    margin: 12px 0 0;
+    margin: 0 0 28px;
     font-size: 14px;
     color: var(--text-2);
     max-width: 520px;

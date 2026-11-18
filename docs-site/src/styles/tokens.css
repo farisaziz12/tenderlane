@@ -553,3 +553,10 @@ a {
   opacity: 1;
   pointer-events: auto;
 }
+
+/* Very narrow phones: the GitHub link is also in the menu drawer. */
+@media (max-width: 360px) {
+  .nav .nav-right .btn {
+    display: none;
+  }
+}
