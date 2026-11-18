@@ -7,12 +7,13 @@ import Source from '../../components/Source.astro';
 import server from '../../../snippets/server.ts?raw';
 import catalog from '../../../snippets/catalog.ts?raw';
 import confirm from '../../../snippets/confirm.ts?raw';
+import webhook from '../../../snippets/webhook.ts?raw';
 
 ## The handler
 
 <Source code={server} file="docs-site/snippets/server.ts" />
 
-`createTenderlaneHandler` returns `POST` and `resolve`, both `(request: Request) => Promise<Response>`, and `retrieve`, a function for your own server code. It runs wherever the Web `Request` and `Response` exist. The example mounts `POST` as a Next.js route handler.
+`createTenderlaneHandler` returns `POST` and `resolve`, both `(request: Request) => Promise<Response>`; `retrieve`, a function for your own server code; and `webhook`, which builds the route for a provider's webhook. It runs wherever the Web `Request` and `Response` exist. The example mounts `POST` as a Next.js route handler.
 
 ## What the browser may and may not decide
 
@@ -91,9 +92,41 @@ To get the id back on return, put the literal `{CHECKOUT_ID}` in `successUrl`: `
 
 `amountTotal` is what the provider charged. It can differ from the catalog price, because providers add tax and apply discounts.
 
+`retrieve` only runs when someone asks. A customer who pays and closes the tab never triggers it, and a bank debit settles days after they left. That is what the webhook is for.
+
+## Webhooks
+
+<Source code={webhook} file="docs-site/snippets/webhook.ts" />
+
+`handler.webhook(provider, onEvent)` returns a route. Mount it at a URL of its own, register that URL with the provider, and give the adapter the endpoint's signing secret (`webhookSecret`). For each request it:
+
+1. has the adapter verify the signature over the raw body. A request that does not verify gets 400 and `onEvent` is not called;
+2. reduces the provider's event to one of five types;
+3. awaits `onEvent`. If it resolves the answer is 200; if it throws, 500, which tells the provider to deliver again later.
+
+| `event.type` | Meaning | Stripe events | Polar `checkout.updated` status |
+| --- | --- | --- | --- |
+| `payment.processing` | Customer done, money not arrived | `checkout.session.completed` (unpaid), `payment_intent.processing` | `confirmed` |
+| `payment.succeeded` | Paid | `checkout.session.completed` (paid), `checkout.session.async_payment_succeeded`, `payment_intent.succeeded` | `succeeded` |
+| `payment.failed` | The attempt failed, possibly days later | `checkout.session.async_payment_failed`, `payment_intent.payment_failed` | `failed` |
+| `checkout.expired` | Expired or cancelled unpaid | `checkout.session.expired`, `payment_intent.canceled` | `expired` |
+| `unhandled` | Verified, and none of the above | everything else | everything else, including order events |
+
+Every event has `provider`, `eventId` and `providerEventType`; all but `unhandled` have `checkoutId`, the same id `onCheckoutCreated` gave you.
+
+What `onEvent` must cope with, because no library can do it without your database:
+
+- **Repeats.** Providers deliver at least once. `eventId` is stable across retries if you want to record what you have seen.
+- **Disorder.** A `succeeded` can arrive before the `processing` it follows. Reading the state back with `retrieve`, as the snippet does, sidesteps both problems: you store what is true now, not what an event said.
+- **Unknown ids.** A hosted Stripe checkout also emits PaymentIntent events, whose `pi_…` id you never recorded. Not finding an order is normal; return without throwing, or the provider retries for days.
+- **Slowness.** Providers time out. Do slow work (email, shipping) after acknowledging, on your own queue.
+
 :::caution
-`retrieve` only runs when the customer comes back. Someone who pays and closes the tab never triggers it, and a bank debit will still be `processing` when they return. It makes the success page truthful; it does not replace the provider's webhook, which Tenderlane does not handle yet.
+The route must receive the body exactly as sent. A framework or proxy that parses and re-serialises JSON before the handler sees it breaks every signature.
 :::
+
+Tenderlane has no queue, no scheduler and no storage. A sweep that calls `retrieve` for orders stuck in `processing` is worth running alongside the webhook: it is the same update function with a third trigger.
+
 
 ## Errors
 
@@ -105,5 +138,6 @@ To get the id back on return, put the literal `{CHECKOUT_ID}` in `successUrl`: `
 ## What the handler does not do
 
 - **Authentication, CSRF, rate limiting.** It is a plain route handler. Wrap it as you would any endpoint that creates billable objects.
-- **Webhooks.** `retrieve` answers when you ask. Nothing tells you when a payment settles while nobody is asking; that is the provider's webhook, which Tenderlane does not verify or interpret yet.
+- **Storage, deduplication, scheduling.** Webhook events are verified and interpreted, then handed to you. Remembering which you have processed, and retrying your own side effects, is yours.
+- **Refunds, disputes, subscriptions.** Their events arrive as `unhandled`.
 - **Idempotency.** `idempotencyKey` is forwarded to Stripe if the browser sends one. Tenderlane does not generate or store keys. The client refuses a second `submit()` while one is in flight, which prevents double clicks but not retries across page loads.

@@ -1,11 +1,18 @@
-import { CHECKOUT_ID_PLACEHOLDER, ProviderError, defineServerAdapter } from '@tenderlane/core/adapters';
+import {
+  CHECKOUT_ID_PLACEHOLDER,
+  ProviderError,
+  WebhookVerificationError,
+  defineServerAdapter,
+} from '@tenderlane/core/adapters';
 import { findDemoSession, saveDemoSession } from './sessions';
+import { DEMO_SIGNATURE_HEADER, signDemoPayload } from './signature';
 
 /**
  * Server half of the demo PSP. A real adapter calls the PSP's API with a
  * secret key here. This one keeps its checkouts in memory and links to a page
  * inside the example (`/demo-psp/checkout`) that stands in for a hosted
- * checkout.
+ * checkout. It implements all three parts of the contract: create, look up,
+ * and verify a webhook.
  *
  * `payload.items` was priced by the server's catalog. The amount the demo
  * PSP charges comes from there, not from the browser.
@@ -43,6 +50,20 @@ export function demoServerAdapter() {
         amountTotal: session.amount,
         currency: session.currency,
       };
+    },
+
+    async verifyWebhook(request) {
+      // Read as text: the signature covers the exact bytes that were sent.
+      const body = await request.text();
+      if (request.headers.get(DEMO_SIGNATURE_HEADER) !== (await signDemoPayload(body))) {
+        throw new WebhookVerificationError('The demo PSP signature did not verify.', 'demo');
+      }
+      const event: unknown = JSON.parse(body);
+      const { id, type, checkout } = event as Record<string, unknown>;
+      const base = { provider: 'demo', eventId: String(id), providerEventType: String(type) };
+      return type === 'checkout.paid' && typeof checkout === 'string'
+        ? { ...base, type: 'payment.succeeded', checkoutId: checkout }
+        : { ...base, type: 'unhandled' };
     },
   });
 }

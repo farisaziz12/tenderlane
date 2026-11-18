@@ -21,6 +21,8 @@ export type {
   CheckoutStatus,
   CheckoutResult,
   CheckoutDetails,
+  PaymentEvent,
+  PaymentEventType,
   Catalog,
   CatalogPhantomTypes,
   CatalogRequest,
@@ -84,5 +86,6 @@ export {
   ValidationError,
   UnsupportedCapabilityError,
   CatalogError,
+  WebhookVerificationError,
   hasErrorCode,
 } from './errors/errors.js';

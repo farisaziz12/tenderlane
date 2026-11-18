@@ -40,6 +40,7 @@ The example is one checkout form whose provider and flow follow a country select
 ```bash
 pnpm docs:dev    # the website and docs, http://localhost:4321
 pnpm check       # lint, build, typecheck, tests, package export checks
+pnpm test:live   # the Stripe adapter against Stripe test mode; needs STRIPE_TEST_SECRET_KEY
 ```
 
 ## What works
@@ -50,16 +51,16 @@ pnpm check       # lint, build, typecheck, tests, package export checks
 - Stripe: Checkout (hosted) and PaymentIntent with the Payment Element (inline)
 - Polar: hosted checkout, one product per checkout
 - Server-side pricing from a catalog you define, or read from Stripe or Polar
-- Server-side confirmation on return: `onCheckoutCreated` to record the order under the provider's id, `handler.retrieve()` to ask the provider if it was paid
+- Server-side confirmation: `onCheckoutCreated` records the order under the provider's id, `handler.retrieve()` asks the provider for its status, `handler.webhook()` verifies a provider's webhook and says what it means
 - An adapter API for other providers, used by the first-party adapters themselves
 
 ## What does not work yet
 
-- **Webhooks.** `handler.retrieve()` asks the provider whether a checkout was paid when the customer returns. Nothing handles a payment that settles while nobody is asking. The client's `success` is the browser SDK's report, for the UI only.
+- Refund, dispute and subscription events. Webhooks are verified and reduced to payment events; storing and deduplicating them is the app's job.
 - Subscriptions, refunds, saved payment methods, failover.
 - Providers other than Stripe and Polar. Polar is hosted-only.
 - Vue bindings cover hosted flows only and have no example.
-- No test runs against a live PSP sandbox. The PSP SDKs are mocked in every test.
+- No test in CI runs against a live PSP. A Stripe test-mode suite exists (`pnpm test:live`) and has not been run yet.
 - No npm release.
 
 The full list, including what an integrator must add, is in [`docs-site/src/content/docs/limitations.mdx`](./docs-site/src/content/docs/limitations.mdx).
@@ -126,6 +127,7 @@ Run `pnpm docs:dev`, or read the sources in `docs-site/src/content/docs/`:
 [Server and price integrity](./docs-site/src/content/docs/server.mdx) ·
 [Checkout state](./docs-site/src/content/docs/checkout-state.mdx) ·
 [Providers and adapters](./docs-site/src/content/docs/adapters.mdx) ·
+[Testing](./docs-site/src/content/docs/testing.mdx) ·
 [Limitations](./docs-site/src/content/docs/limitations.mdx)
 
 ## Contributing

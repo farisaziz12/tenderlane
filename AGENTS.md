@@ -28,6 +28,7 @@ pnpm lint         # oxlint, warnings are errors
 pnpm test:build   # publint --strict on every package
 pnpm check        # all of the above plus the hidden-code and workspace checks
 pnpm example      # build packages, run the example on :3000
+pnpm test:live    # Stripe adapter against Stripe test mode (needs STRIPE_TEST_SECRET_KEY); not in check or CI
 ```
 
 ## Key Patterns
@@ -52,7 +53,11 @@ Serializable JSON, first match wins. Operators: literal, `{ in }`, `{ notIn }`, 
 ### Wire format (load-bearing)
 Request: `{ provider, action, payload: CheckoutInput, paymentMethods }`. `CheckoutInput` is `{ items: [{ sku, quantity }], context?, successUrl, cancelUrl, customerEmail?, clientReferenceId?, metadata?, idempotencyKey? }`. **It has no amount, and nothing from the request may reach a PSP parameter that carries money.** The handler deletes any `unitAmount`, prices from its own catalog, and builds the adapter payload field by field from validated values. The client's `context` is untrusted: `resolveContext` derives the server's. The client names the `provider`: pass the handler the same `routing` so the server checks it.
 
-Confirmation: `onCheckoutCreated` hands the app the provider's checkout id and the server-priced items (record the order there; it fails closed). `handler.retrieve(provider, id)` asks the provider for `{ status, amountTotal?, currency?, paymentMethod? }` with the secret key; it is a server function, never a route. `CheckoutStatus` is `open` (waiting on the customer), `processing` (customer done, money not arrived, can still fail), `complete`, `expired`, `failed`. `'complete'` means the provider's record says paid (Stripe: `payment_status: 'paid'`, not only `status`; Polar: `succeeded`; Polar `confirmed` and a finished-but-unpaid Stripe session are `processing`). Never fold `processing` into `open` or `complete`. `{CHECKOUT_ID}` in `successUrl` is filled in by the provider.
+Confirmation: `onCheckoutCreated` hands the app the provider's checkout id and the server-priced items (record the order there; it fails closed). `handler.retrieve(provider, id)` asks the provider for `{ status, amountTotal?, currency?, paymentMethod? }` with the secret key; it is a server function, never a route.
+
+Statuses: `CheckoutStatus` is `open` (waiting on the customer), `processing` (customer done, money not arrived, can still fail), `complete`, `expired`, `failed`. `'complete'` means the provider's record says paid (Stripe: `payment_status: 'paid'`, not only `status`; Polar: `succeeded`; Polar `confirmed` and a finished-but-unpaid Stripe session are `processing`). Never fold `processing` into `open` or `complete`. `{CHECKOUT_ID}` in `successUrl` is filled in by the provider.
+
+Webhooks: `handler.webhook(provider, onEvent)` builds a route: the adapter's `verifyWebhook` checks the signature over the raw body (400 if it fails), the event is reduced to a `PaymentEvent` (`payment.processing | payment.succeeded | payment.failed | checkout.expired | unhandled`), and `onEvent` is awaited (a throw is a 500, so the provider retries). Webhook mappings must agree with the `retrieve` mappings for the same provider state. Core stores nothing: no dedupe, no queue.
 
 Response: `{ provider, id, status, url?, clientSecret? }` and nothing else. Adapter results pass through `parseCheckoutResult` on the server and again in the browser. Never return a PSP object from an adapter.
 
@@ -73,7 +78,7 @@ Response: `{ provider, id, status, url?, clientSecret? }` and nothing else. Adap
 
 Implemented: rules router, headless client, React bindings, Stripe hosted + inline, Polar hosted, catalogs, middleware observers, typed errors, adapter entry point, Vue bindings for hosted flows.
 
-Not implemented: webhooks (only the pull-based `retrieve` exists), subscriptions, refunds, failover, other PSPs, Polar's embedded checkout, Solid/Svelte/Angular bindings, `lookup_key` for `createStripeCatalog`, catalog caching, npm releases. No test runs against a live PSP. `docs-site/src/content/docs/limitations.mdx` is the public list; keep it in step with this one.
+Not implemented: refund, dispute and subscription events (webhooks cover payment events only), webhook deduplication or storage, subscriptions, refunds, failover, other PSPs, Polar's embedded checkout, Solid/Svelte/Angular bindings, `lookup_key` for `createStripeCatalog`, catalog caching, npm releases. No test in CI runs against a live PSP: `pnpm test:live` (`e2e/live/`, Stripe test mode, one row per payment method) is run by hand with `STRIPE_TEST_SECRET_KEY`. Webhook signature tests use the providers' real signing code, not mocks. `docs-site/src/content/docs/limitations.mdx` is the public list; keep it in step with this one.
 
 ## Workflow
 

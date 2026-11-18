@@ -76,3 +76,5 @@ export type {
   InferCatalogSkus,
   Expand,
 } from './utils.js';
+
+export type { PaymentEvent, PaymentEventType } from './webhook.js';

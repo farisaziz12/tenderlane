@@ -1,14 +1,14 @@
 ---
 title: Limitations
 description: Tenderlane is an alpha proof of concept. This page lists what is not built and what you would have to add before taking real payments with it.
-order: 7
+order: 8
 ---
 
 ## Not built
 
 | Area | State |
 | --- | --- |
-| Webhooks | None. `handler.retrieve()` asks the provider whether a checkout was paid, which covers a customer returning to your site. Nothing covers a payment that settles while nobody is asking. |
+| Webhooks | Verification and five event types (processing, succeeded, failed, expired, unhandled) for Stripe and Polar. Refunds, disputes and subscription events are not interpreted. Deduplication and storage are yours. |
 | Subscriptions | None. Stripe sessions are created in `payment` mode only. |
 | Refunds, captures, disputes | None. |
 | Saved payment methods, customers | None. |
@@ -20,13 +20,13 @@ order: 7
 
 ## Not verified
 
-- **No test talks to a real PSP.** Unit tests and the cross-provider `e2e` test mock the `stripe` and `@polar-sh/sdk` packages. No automated check runs the Stripe or Polar code paths against the real APIs, so treat them as unverified until you have run them with your own test keys.
+- **No test in CI talks to a real PSP.** Unit tests and the cross-provider `e2e` test mock the `stripe` and `@polar-sh/sdk` packages. A live suite for Stripe test mode exists (`pnpm test:live`) and has not been run yet; see [Testing](/docs/testing). No automated check runs the Stripe or Polar code paths against the real APIs, so treat them as unverified until you have run them with your own test keys.
 - **The example's default path uses a demo PSP**, which is a stand-in inside the example app. It proves the routing, the wire format, server-side pricing and the redirect round trip. It proves nothing about a real provider.
 - **No security review.** The server handler validates its input and has tests for tampering, but nobody outside the project has audited it.
 
 ## Yours to add
 
-- **Webhook handling.** Verify the provider's webhook signature yourself and fulfil from the webhook. `handler.retrieve()` is a sound check on return, but a customer who closes the tab never triggers it. Do not fulfil from the client's `success` status or from a visit to the success URL alone.
+- **An idempotent order update.** `handler.webhook()` verifies and interprets events and `handler.retrieve()` reads the current state; storing it, ignoring repeats, and doing slow work off the request are yours. Do not fulfil from the client's `success` status or from a visit to the success URL alone.
 - **Authentication, CSRF protection and rate limiting** on the endpoint.
 - **`routing` and `resolveContext`** on the handler. They are optional so that a first setup works; without them the browser has more say than it should. See [Server and price integrity](/docs/server).
 - **Idempotency keys** if a checkout can be retried across page loads.

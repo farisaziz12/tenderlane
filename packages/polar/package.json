@@ -46,7 +46,8 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@tenderlane/core": "workspace:*"
+    "@tenderlane/core": "workspace:*",
+    "standardwebhooks": "^1.0.0"
   },
   "peerDependencies": {
     "@polar-sh/sdk": ">=0.30.0"

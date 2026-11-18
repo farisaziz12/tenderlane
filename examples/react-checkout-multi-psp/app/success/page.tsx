@@ -1,6 +1,5 @@
-import { formatAmount } from '../checkout/catalog';
 import { findOrder } from '../checkout/orders';
-import { handler } from '../checkout/server';
+import { refreshOrder } from '../checkout/server';
 
 export const dynamic = 'force-dynamic';
 
@@ -32,21 +31,27 @@ export default async function SuccessPage({
     );
   }
 
-  const details = await handler.retrieve(order.provider, order.checkoutId).catch(() => null);
-  const paid = details?.status === 'complete';
-  const processing = details?.status === 'processing';
+  // Ask the provider again now that the customer is back. If its webhook
+  // already arrived, this changes nothing.
+  await refreshOrder(order, 'return').catch((error: unknown) => console.error('[success]', error));
+  const paid = order.status === 'complete';
+  const processing = order.status === 'processing';
 
   return (
     <main className="page narrow">
       <h1>
-        {paid ? 'Payment confirmed' : processing ? 'Payment processing' : 'Payment not confirmed yet'}
+        {paid
+          ? 'Payment confirmed'
+          : processing
+          ? 'Payment processing'
+          : 'Payment not confirmed yet'}
       </h1>
       <p className="lede">
         {paid
           ? `${order.provider} reports this checkout as paid. The page asked the provider from the server; it did not take the browser's word for it.`
           : processing
-            ? `${order.provider} has the payment and is waiting for the money. Bank debits can take several days and can still fail, so this shop would not ship yet.`
-            : `${order.provider} does not report this checkout as paid${details ? ` (status: ${details.status})` : ''}.`}
+          ? `${order.provider} has the payment and is waiting for the money. Bank debits can take several days and can still fail, so this shop would not ship yet.`
+          : `${order.provider} does not report this checkout as paid (status: ${order.status}).`}
       </p>
       <section className="panel">
         <dl>
@@ -57,24 +62,16 @@ export default async function SuccessPage({
           <dt>checkout</dt>
           <dd>{order.checkoutId}</dd>
           <dt>status</dt>
-          <dd data-testid="provider-status">{details?.status ?? 'lookup failed'}</dd>
-          {details?.paymentMethod && (
-            <>
-              <dt>method</dt>
-              <dd>{details.paymentMethod}</dd>
-            </>
-          )}
-          {details?.amountTotal !== undefined && details.currency && (
-            <>
-              <dt>charged</dt>
-              <dd>{formatAmount(details.amountTotal, details.currency)}</dd>
-            </>
-          )}
+          <dd data-testid="provider-status">{order.status}</dd>
+          <dt>learned from</dt>
+          <dd data-testid="sources">
+            {order.updates.map((update) => `${update.source}: ${update.status}`).join(', ')}
+          </dd>
         </dl>
       </section>
       <p className="hint">
-        This lookup only runs if the customer comes back. A real app also handles the
-        provider&apos;s webhook, which Tenderlane does not do yet.
+        The webhook arrives whether or not the customer comes back. The lookup on return covers a
+        webhook that is late or was never delivered. Both go through the same function.
       </p>
       <a className="button" href="/">
         Back to the checkout

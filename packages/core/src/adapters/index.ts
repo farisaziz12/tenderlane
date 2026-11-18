@@ -16,6 +16,7 @@ import type {
   ResolvedCheckoutInput,
 } from '../types/checkout.js';
 import type { ProviderPhantomTypes } from '../types/phantom.js';
+import type { PaymentEvent, PaymentEventType } from '../types/webhook.js';
 import type {
   BrowserPaymentProvider,
   ServerActionOptions,
@@ -45,7 +46,14 @@ export type {
 } from '../types/checkout.js';
 export type { ResolvedCatalogItem, ResolvedProviderRefs } from '../types/catalog.js';
 export type { SelectedPaymentRoute } from '../types/routing.js';
-export { ProviderError, CatalogError, UnsupportedCapabilityError } from '../errors/errors.js';
+export {
+  ProviderError,
+  CatalogError,
+  ConfigurationError,
+  UnsupportedCapabilityError,
+  WebhookVerificationError,
+} from '../errors/errors.js';
+export type { PaymentEvent, PaymentEventType } from '../types/webhook.js';
 
 /**
  * Define a browser provider. An identity function: it adds the `~types`
@@ -115,6 +123,7 @@ export function defineServerAdapter<
     options?: ServerActionOptions,
   ): Promise<CheckoutResult>;
   retrieve?(id: string): Promise<CheckoutDetails>;
+  verifyWebhook?(request: Request): Promise<PaymentEvent>;
 }): ServerProviderAdapter<TProviderId> {
   return adapter as ServerProviderAdapter<TProviderId>;
 }
@@ -229,6 +238,42 @@ export function parseCheckoutDetails(value: unknown, provider: string): Checkout
     ...(currency !== undefined ? { currency: currency.toLowerCase() } : {}),
     ...(paymentMethod !== undefined ? { paymentMethod } : {}),
   };
+}
+
+const PAYMENT_EVENT_TYPES: readonly PaymentEventType[] = [
+  'payment.processing',
+  'payment.succeeded',
+  'payment.failed',
+  'checkout.expired',
+  'unhandled',
+];
+
+/**
+ * Validate a value that claims to be a {@link PaymentEvent} and return only
+ * its known fields.
+ *
+ * @throws {ProviderError} When the value does not have the expected shape.
+ */
+export function parsePaymentEvent(value: unknown, provider: string): PaymentEvent {
+  const invalid = (detail: string) =>
+    new ProviderError(`Invalid payment event from "${provider}": ${detail}.`, provider);
+
+  if (typeof value !== 'object' || value === null) throw invalid('not an object');
+  const candidate = value as Record<string, unknown>;
+  const { eventId, providerEventType, checkoutId } = candidate;
+
+  const type = PAYMENT_EVENT_TYPES.find((known) => known === candidate.type);
+  if (!type) throw invalid('`type` is not a known event type');
+  if (typeof eventId !== 'string' || eventId.length === 0) {
+    throw invalid('`eventId` is not a non-empty string');
+  }
+  if (typeof providerEventType !== 'string') throw invalid('`providerEventType` is not a string');
+
+  if (type === 'unhandled') return { type, provider, eventId, providerEventType };
+  if (typeof checkoutId !== 'string' || checkoutId.length === 0) {
+    throw invalid('`checkoutId` is not a non-empty string');
+  }
+  return { type, provider, eventId, providerEventType, checkoutId };
 }
 
 export interface ProviderActionRequest {

@@ -16,4 +16,7 @@ export interface PolarServerConfig {
    * not the same host distinguished by key prefix. Default: `'production'`.
    */
   readonly server?: 'sandbox' | 'production';
+
+  /** The secret set on the Polar webhook endpoint. Needed only to verify webhooks. */
+  readonly webhookSecret?: string;
 }

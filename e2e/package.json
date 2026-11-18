@@ -6,7 +6,8 @@
   "description": "Cross-provider checkout tests against mocked PSPs. No keys, no network.",
   "scripts": {
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:live": "vitest run --config vitest.live.config.ts"
   },
   "dependencies": {
     "@tenderlane/client": "workspace:*",

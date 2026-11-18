@@ -39,6 +39,8 @@ Request errors are 400 with `{ error, code }`. Everything else is 500 with a gen
 
 `retrieve(provider, id)` is a function, not a route: `adapter.retrieve(id)` reduced by `parseCheckoutDetails`. Do not expose it over HTTP from core.
 
+`webhook(provider, onEvent)` validates the adapter when the route is built (so misconfiguration fails at startup), then per request: `adapter.verifyWebhook` → `parsePaymentEvent` → `onEvent`. `WEBHOOK_VERIFICATION_FAILED` is a 400; an `onEvent` throw is a 500 so the provider retries.
+
 `resolve` prices `{ items, context }` with the top-level `catalog` for display (`createRemoteCatalog`).
 
 ## Tests

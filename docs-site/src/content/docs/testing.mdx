@@ -1,0 +1,69 @@
+---
+title: Testing against real providers
+description: What the repository's tests prove, what they cannot, and how to run the adapters against Stripe's test mode one payment method at a time.
+order: 7
+---
+
+## Three layers
+
+| Layer | Command | Talks to the PSP | Proves |
+| --- | --- | --- | --- |
+| Unit and cross-provider tests | `pnpm test` | No. The `stripe` and `@polar-sh/sdk` packages are mocked. | The library does what its authors believe the PSP does |
+| Webhook signature tests | `pnpm test` | No, but nothing is mocked: signatures are made and checked with the providers' own code | A genuine webhook verifies; a forged, altered or stale one does not |
+| Live suite | `pnpm test:live` | Yes, Stripe test mode | What Stripe actually does for each payment method |
+
+The first two run in CI. The third needs a key and is run by hand.
+
+:::caution
+At the time of writing the live suite has not been run: it was written in an environment that cannot reach Stripe. Treat a first run as the test of the suite as well as of the adapter.
+:::
+
+## The live suite
+
+```bash
+STRIPE_TEST_SECRET_KEY=sk_test_... pnpm test:live
+```
+
+It refuses any key that does not start with `sk_test_` or `rk_test_`, and is skipped without one. It creates real test-mode objects, which appear in your Stripe test dashboard and cost nothing.
+
+`e2e/live/stripe.live.ts` is a table. Each row takes one payment method to one outcome and checks the status Tenderlane reports:
+
+| Case | Expected status |
+| --- | --- |
+| Card, paid at once | `complete` |
+| Card, declined | `failed` |
+| Card, 3D Secure required | `open` |
+| Card, authorised with manual capture | `processing` |
+| SEPA debit that will succeed | `processing`, then `complete` |
+| SEPA debit that will bounce | `processing`, then `failed` |
+| Hosted checkout: created, read back, expired | `open`, then `expired` |
+
+No browser is needed for the inline cases. The adapter creates the PaymentIntent, the test confirms it server-side with one of Stripe's test payment methods (which is what the Payment Element does for the customer), and the adapter's `retrieve` reads the result. Hosted Checkout cannot be paid without a browser, so only its creation, lookup and expiry are covered.
+
+### Adding a payment method
+
+1. Enable the method in the Stripe test-mode dashboard.
+2. Find its test data in Stripe's documentation: the [testing page](https://docs.stripe.com/testing) for cards, and the method's own page for bank debits, redirects and vouchers. Most have one value that succeeds and one that fails, and some that do so after a delay.
+3. Add a row to `CASES`: the currency, the Tenderlane method id, the confirm parameters, and the status you expect at once and after it settles.
+
+Redirect methods (iDEAL, PayPal, Alipay) stop at `open` after confirmation, with a URL the customer would be sent to. In test mode that URL is a Stripe page with an authorise and a fail button, which needs a browser; the live suite does not drive it.
+
+## Webhooks from a real provider
+
+The signature tests cover verification. To see real events arrive at the example, use the Stripe CLI, which forwards them to localhost and prints the signing secret to use:
+
+```bash
+stripe listen --forward-to localhost:3000/api/webhooks/stripe
+# put the printed whsec_... in .env.local as STRIPE_WEBHOOK_SECRET, restart, then:
+stripe trigger payment_intent.succeeded
+```
+
+These commands are from memory of the Stripe CLI and were not run here; check `stripe listen --help` if they differ.
+
+## What not to use
+
+[stripe-mock](https://github.com/stripe/stripe-mock) is a stateless server that returns fixed, type-correct responses. By its own description it does not reproduce Stripe's behaviour: a payment never changes status and errors cannot be provoked. It can check that a request is well formed and nothing about the questions on this page.
+
+## Polar
+
+There is no live suite for Polar yet. Its sandbox (`sandbox.polar.sh`) has separate credentials; the adapter's `server: 'sandbox'` selects it. Two things in the Polar adapter rest on reading the SDK and have not been confirmed against the sandbox: that `confirmed` means a payment in progress, and that `checkout.updated` is delivered for each status change.

@@ -37,6 +37,7 @@ Narrow the alpha to what is demonstrated, and tighten the types and the wire for
 
 **Added**
 
+- `handler.webhook(provider, onEvent)` and `ServerProviderAdapter.verifyWebhook`: verify a provider's webhook and reduce it to a `PaymentEvent` (`payment.processing`, `payment.succeeded`, `payment.failed`, `checkout.expired`, `unhandled`). Implemented for Stripe (`webhookSecret`, Checkout Session and PaymentIntent events) and Polar (`webhookSecret`, `checkout.updated`). `WebhookVerificationError`, `parsePaymentEvent`. `@tenderlane/polar` now depends on `standardwebhooks`.
 - `onCheckoutCreated` on the handler: record the order under the provider's checkout id with the server's prices. Fails closed.
 - `handler.retrieve(provider, id)` and `ServerProviderAdapter.retrieve`: ask the provider whether a checkout was paid. Implemented for Stripe (Checkout Session and PaymentIntent) and Polar. `{CHECKOUT_ID}` in `successUrl` is replaced with the checkout id.
 - Stripe: a finished Checkout Session with `payment_status: 'unpaid'` is `processing`, not `complete`. Polar: `confirmed` is `processing`, not `complete`.

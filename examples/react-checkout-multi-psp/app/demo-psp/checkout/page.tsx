@@ -39,7 +39,9 @@ export default async function DemoPspCheckout({
         </section>
       ) : (
         <section className="panel">
-          <p>The demo PSP has no such checkout. It keeps them in memory, so a restart loses them.</p>
+          <p>
+            The demo PSP has no such checkout. It keeps them in memory, so a restart loses them.
+          </p>
           <a className="button secondary" href="/">
             Back to the checkout
           </a>

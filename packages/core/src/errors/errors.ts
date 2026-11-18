@@ -156,6 +156,18 @@ export class CatalogError extends TenderlaneError {
 }
 
 /**
+ * A webhook request whose signature did not verify: it did not come from the
+ * provider, the secret is wrong, or the body was altered or re-serialised on
+ * the way. The handler answers it with 400.
+ */
+export class WebhookVerificationError extends TenderlaneError {
+  constructor(message: string, provider: string, options?: { cause?: unknown }) {
+    super(message, 'WEBHOOK_VERIFICATION_FAILED', { provider, cause: options?.cause });
+    this.name = 'WebhookVerificationError';
+  }
+}
+
+/**
  * Whether a value is a Tenderlane error with the given `code`.
  *
  * Prefer this to `instanceof` wherever an error can cross a package boundary:

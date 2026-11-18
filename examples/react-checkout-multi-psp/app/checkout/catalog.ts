@@ -29,5 +29,8 @@ export const catalog = createInlineCatalog({
 });
 
 export function formatAmount(amount: number, currency: string): string {
-  return (amount / 100).toLocaleString('en', { style: 'currency', currency: currency.toUpperCase() });
+  return (amount / 100).toLocaleString('en', {
+    style: 'currency',
+    currency: currency.toUpperCase(),
+  });
 }

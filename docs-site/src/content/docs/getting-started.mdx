@@ -32,7 +32,7 @@ A page with three panels: the app state (a country select), the route the router
 1. With **United Kingdom** selected, the route panel reads `fallback / demo / hosted`.
 2. Press **Pay**. The browser posts `{ items: [{ sku: 'pro-plan', quantity: 1 }] }` to `/api/payments`. There is no amount in the request.
 3. The server prices the item from its catalog and returns a URL. You land on a page marked **Demo PSP** showing $29.00.
-4. Press **Pay** there. You return to `/success`, which reads **Payment confirmed**: the page asked the demo PSP from the server. Open the same URL for a checkout you did not pay and it reads **Payment not confirmed yet**.
+4. Press **Pay** there. You return to `/success`, which reads **Payment confirmed**: the demo PSP sent the shop a signed webhook when you paid, and the page asked it again from the server. The **learned from** line shows both. Open the same URL for a checkout you did not pay and it reads **Payment not confirmed yet**.
 
 Now change the country to **Switzerland**. The route panel changes to `ch-inline / stripe / inline` and the price to CHF 29.00, without a reload. Without Stripe keys the checkout panel tells you that route cannot be paid yet.
 
@@ -66,6 +66,7 @@ The Polar route (**United States**) needs a Polar sandbox token and product id; 
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Stripe inline route | Yes, by design |
 | `POLAR_ACCESS_TOKEN`, `POLAR_PRODUCT_ID` | Polar route | No |
 | `POLAR_ENVIRONMENT` | `sandbox` (default) or `production` | No |
+| `STRIPE_WEBHOOK_SECRET`, `POLAR_WEBHOOK_SECRET` | Receiving that provider's webhooks at `/api/webhooks/<provider>` | No |
 
 ## The two files that matter
 
@@ -100,4 +101,5 @@ The tests mock the PSP SDKs. No test in this repository talks to a live Stripe o
 ## Next
 
 - [Architecture](/docs/architecture): the packages and the data flow.
+- [Testing against real providers](/docs/testing): the live suite for Stripe test mode.
 - [Limitations](/docs/limitations): what is missing before this could be used for real payments.

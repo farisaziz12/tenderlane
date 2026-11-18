@@ -32,7 +32,7 @@ idle ─► evaluating ─► ready ─(inline: preparing ─► prepared)─►
 `canSubmit` is derived (and is not a discriminant: narrow on `status`, not on `canSubmit`): a route is selected, nothing is in flight or settled, and an inline flow has its session. `selectedProvider` is `route.provider` or `null`.
 
 :::caution
-`success` is a client-side signal from the provider's SDK, meant for the UI. It is not proof of payment. Confirm on the server with `handler.retrieve()` or the provider's webhook before fulfilling. A hosted checkout never reaches `success` in this tab at all: the customer pays on the provider's page and comes back to your `successUrl`.
+`success` is a client-side signal from the provider's SDK, meant for the UI. It is not proof of payment. Confirm on the server with `handler.retrieve()` or `handler.webhook()` before fulfilling. A hosted checkout never reaches `success` in this tab at all: the customer pays on the provider's page and comes back to your `successUrl`.
 :::
 
 ## Reading the state in React

@@ -5,7 +5,9 @@ import type {
   ResolvedCheckoutInput,
   ServerProviderAdapter,
 } from '@tenderlane/core';
-import { ProviderError, CatalogError } from '@tenderlane/core';
+import type { PaymentEvent } from '@tenderlane/core';
+import { ProviderError, CatalogError, ConfigurationError } from '@tenderlane/core';
+import { mapPolarEvent, verifyPolarSignature } from './webhook.js';
 import type { PolarServerConfig } from './types.js';
 import {
   mapToPolarCheckoutParams,
@@ -72,6 +74,19 @@ export function polarServerAdapter(
       } catch (error) {
         throw toProviderError(error);
       }
+    },
+
+    async verifyWebhook(request: Request): Promise<PaymentEvent> {
+      if (!config.webhookSecret) {
+        throw new ConfigurationError(
+          'polarServerAdapter needs `webhookSecret` (the secret set on the webhook endpoint) to verify webhooks.',
+        );
+      }
+      // The signature covers the exact bytes Polar sent.
+      const body = await request.text();
+      const headers = Object.fromEntries(request.headers);
+      const payload = verifyPolarSignature(body, headers, config.webhookSecret);
+      return mapPolarEvent(payload, headers['webhook-id'] ?? '');
     },
   };
 }

@@ -88,3 +88,21 @@ test('onCheckoutCreated receives a provider id that retrieve accepts', () => {
     },
   });
 });
+
+test('a webhook event narrows on its type and carries a registered provider id', () => {
+  const handler = createTenderlaneHandler({ providers: [stripeAdapter] });
+
+  handler.webhook('stripe', (event) => {
+    expectTypeOf(event.provider).toEqualTypeOf<'stripe'>();
+    if (event.type === 'unhandled') {
+      // @ts-expect-error an unhandled event is not about a checkout
+      void event.checkoutId;
+    } else {
+      expectTypeOf(event.checkoutId).toEqualTypeOf<string>();
+      void handler.retrieve(event.provider, event.checkoutId);
+    }
+  });
+
+  // @ts-expect-error 'polar' is not a registered adapter
+  handler.webhook('polar', () => undefined);
+});

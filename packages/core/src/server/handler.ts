@@ -9,7 +9,12 @@ import type { TenderlaneContext } from '../types/context.js';
 import type { TenderlaneMiddleware } from '../types/middleware.js';
 import type { Router } from '../types/routing.js';
 import { resolveCatalogItems } from '../catalog/runner.js';
-import { parseCheckoutDetails, parseCheckoutResult } from '../adapters/index.js';
+import {
+  parseCheckoutDetails,
+  parseCheckoutResult,
+  parsePaymentEvent,
+} from '../adapters/index.js';
+import type { PaymentEvent } from '../types/webhook.js';
 import { runMiddlewareHook } from '../middleware/runner.js';
 import {
   ConfigurationError,
@@ -144,6 +149,27 @@ export interface TenderlaneHandler<TProviderId extends string = string> {
    * @throws {ProviderError} If the provider call fails or the id is unknown.
    */
   retrieve(provider: TProviderId, id: string): Promise<CheckoutDetails>;
+  /**
+   * Build the route for one provider's webhook. Mount what it returns at a
+   * URL of its own and register that URL with the provider.
+   *
+   * For each request it verifies the signature with the adapter, reduces the
+   * event to a {@link PaymentEvent} and awaits `onEvent`:
+   *
+   * - signature does not verify: 400, `onEvent` is not called;
+   * - `onEvent` resolves: 200, the provider considers the event delivered;
+   * - `onEvent` throws: 500, so the provider retries later.
+   *
+   * Delivery is at least once and unordered, so `onEvent` has to be
+   * idempotent. Events that are not about a payment arrive as `unhandled`.
+   *
+   * @throws {ConfigurationError} If no adapter is registered under `provider`.
+   * @throws {UnsupportedCapabilityError} If the adapter cannot verify webhooks.
+   */
+  webhook(
+    provider: TProviderId,
+    onEvent: (event: PaymentEvent<TProviderId>) => void | Promise<void>,
+  ): (request: Request) => Promise<Response>;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -495,5 +521,54 @@ export function createTenderlaneHandler<
     return parseCheckoutDetails(await adapter.retrieve(id), providerId);
   }
 
-  return { POST, resolve, retrieve };
+  function webhook(
+    providerId: string,
+    onEvent: (event: PaymentEvent<AdapterIds<TAdapters>>) => void | Promise<void>,
+  ): (request: Request) => Promise<Response> {
+    // Checked when the route is built, so a misconfiguration fails at startup
+    // and not on the first payment.
+    const adapter = providerMap.get(providerId);
+    if (!adapter) {
+      throw new ConfigurationError(
+        `Cannot build a webhook route for "${providerId}": no adapter with that id is registered.`,
+      );
+    }
+    const verify = adapter.verifyWebhook?.bind(adapter);
+    if (!verify) {
+      throw new UnsupportedCapabilityError(
+        `Provider "${providerId}" cannot verify webhooks.`,
+        providerId,
+      );
+    }
+
+    return async (request) => {
+      let event: PaymentEvent;
+      try {
+        event = parsePaymentEvent(await verify(request), providerId);
+      } catch (error) {
+        if (hasErrorCode(error, 'WEBHOOK_VERIFICATION_FAILED')) {
+          return Response.json(
+            { error: 'Webhook signature verification failed.', code: error.code },
+            { status: 400 },
+          );
+        }
+        return errorResponse(error);
+      }
+
+      try {
+        // `providerId` is a registered id (see above); the map is keyed by string.
+        await onEvent(event as PaymentEvent<AdapterIds<TAdapters>>);
+      } catch (error) {
+        // A 5xx asks the provider to deliver the event again.
+        config.onError?.(error);
+        return Response.json(
+          { error: 'Webhook handler failed.', code: 'INTERNAL_ERROR' },
+          { status: 500 },
+        );
+      }
+      return Response.json({ received: true }, { status: 200 });
+    };
+  }
+
+  return { POST, resolve, retrieve, webhook };
 }

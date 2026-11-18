@@ -8,6 +8,7 @@ import type {
 import type { TenderlaneContext } from './context.js';
 import type { ProviderPhantomTypes } from './phantom.js';
 import type { SelectedPaymentRoute } from './routing.js';
+import type { PaymentEvent } from './webhook.js';
 
 /**
  * What `createSession()` returns for an inline flow: the data the provider's
@@ -67,6 +68,13 @@ export interface ServerProviderAdapter<TProviderId extends string = string> {
    * cannot look a checkout up omits it.
    */
   retrieve?(id: string): Promise<CheckoutDetails>;
+  /**
+   * Verify that a webhook request came from the provider and say what it
+   * means. Must read the raw body: signatures cover the exact bytes.
+   *
+   * @throws {WebhookVerificationError} If the signature does not verify.
+   */
+  verifyWebhook?(request: Request): Promise<PaymentEvent>;
 }
 
 /** Any browser provider, for use in generic constraints. */

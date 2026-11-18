@@ -22,6 +22,7 @@
     "version-packages": "changeset version",
     "release": "pnpm build && changeset publish",
     "lint:fix": "oxlint --fix",
+    "test:live": "pnpm --filter @tenderlane/e2e test:live",
     "test:build": "pnpm -r --filter './packages/*' exec publint --strict",
     "test:workspace": "sherif",
     "check": "pnpm test:hidden-code && pnpm lint && pnpm test:workspace && pnpm build && pnpm typecheck && pnpm test && pnpm test:build",

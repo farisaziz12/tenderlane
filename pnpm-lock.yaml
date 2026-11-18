@@ -183,6 +183,9 @@ importers:
       '@tenderlane/core':
         specifier: workspace:*
         version: link:../core
+      standardwebhooks:
+        specifier: ^1.0.0
+        version: 1.0.0
     devDependencies:
       '@polar-sh/sdk':
         specifier: ^0.34.0

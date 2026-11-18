@@ -9,4 +9,9 @@
 export interface StripeServerConfig {
   readonly secretKey: string;
   readonly apiVersion?: string;
+  /**
+   * The signing secret of the webhook endpoint (`whsec_...`), from the Stripe
+   * dashboard or printed by `stripe listen`. Needed only to verify webhooks.
+   */
+  readonly webhookSecret?: string;
 }

@@ -122,19 +122,19 @@ hosted: redirect to url      inline: confirm in the provider's element`}</pre>
           <li>Stripe: Checkout (hosted) and Payment Element (inline)</li>
           <li>Polar: hosted checkout, one product per checkout</li>
           <li>Server-side pricing from a catalog you define, or from Stripe or Polar</li>
-          <li>Server-side confirmation on return: an order hook and a status lookup</li>
+          <li>Server-side confirmation: an order hook, a status lookup and verified webhooks</li>
           <li>An adapter API for other providers</li>
         </ul>
       </div>
       <div>
         <h2>Does not exist yet</h2>
         <ul>
-          <li>Webhooks: a server-side status lookup exists, push notification does not</li>
+          <li>Refund, dispute and subscription events; webhook deduplication and storage</li>
           <li>Subscriptions, refunds, saved payment methods</li>
           <li>Failover between providers</li>
           <li>Any provider other than Stripe and Polar</li>
           <li>npm releases of this API</li>
-          <li>A test against a live PSP sandbox in CI (the PSP SDKs are mocked)</li>
+          <li>A run against a live PSP in CI (a Stripe test-mode suite exists and is run by hand)</li>
         </ul>
       </div>
     </section>

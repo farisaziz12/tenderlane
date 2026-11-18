@@ -6,7 +6,14 @@ import type {
   ResolvedCheckoutInput,
   CheckoutResult,
 } from '@tenderlane/core';
-import { CatalogError, ProviderError } from '@tenderlane/core';
+import type { PaymentEvent } from '@tenderlane/core';
+import {
+  CatalogError,
+  ConfigurationError,
+  ProviderError,
+  WebhookVerificationError,
+} from '@tenderlane/core';
+import { mapStripeEvent } from './webhook.js';
 import type { StripeServerConfig } from './types.js';
 import {
   mapToStripeSessionParams,
@@ -26,6 +33,8 @@ import {
  * - `create-payment-intent` — Creates a Stripe PaymentIntent and returns the `clientSecret`.
  *
  * `retrieve(id)` reads a Checkout Session or a PaymentIntent back from Stripe.
+ * `verifyWebhook(request)` verifies a webhook with `webhookSecret` and says
+ * what it means for a payment.
  *
  * This function imports the `stripe` npm package and must only be used in
  * server-side code. The browser entry (`@tenderlane/stripe`) never imports this module.
@@ -121,6 +130,27 @@ export function stripeServerAdapter(
       } catch (error) {
         throw toProviderError(error);
       }
+    },
+
+    async verifyWebhook(request: Request): Promise<PaymentEvent> {
+      if (!config.webhookSecret) {
+        throw new ConfigurationError(
+          'stripeServerAdapter needs `webhookSecret` (the endpoint signing secret, `whsec_...`) to verify webhooks.',
+        );
+      }
+      // The signature covers the exact bytes Stripe sent, so the body is read
+      // as text and never parsed and re-serialised first.
+      const body = await request.text();
+      const signature = request.headers.get('stripe-signature') ?? '';
+      let event: Stripe.Event;
+      try {
+        event = await stripe.webhooks.constructEventAsync(body, signature, config.webhookSecret);
+      } catch (error) {
+        throw new WebhookVerificationError('The Stripe webhook signature did not verify.', 'stripe', {
+          cause: error,
+        });
+      }
+      return mapStripeEvent(event);
     },
   };
 }

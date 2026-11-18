@@ -20,5 +20,6 @@ src/
 - Sandbox and production are different hosts with separate tokens (`server: 'sandbox' | 'production'`).
 - The mapper's request and response types are `Pick`s of the SDK's `CheckoutCreate` and `Checkout`. Do not cast at the SDK boundary: a cast hid `success_url` (dropped by the SDK, which takes `successUrl`) behind mocked tests.
 - Only `succeeded` maps to `complete`. `confirmed` maps to `processing`.
+- `server/webhook.ts` verifies with `standardwebhooks` directly (the key is the UTF-8 bytes of the secret, as in the SDK's `validateEvent`) and reads only `type`, `data.id` and `data.status`. Do not switch to `validateEvent`: it rejects a genuine event whenever Polar's payload drifts from the SDK's generated schema.
 
-Tests mock the Polar SDK. Nothing here is verified against the live API in CI.
+Tests mock the Polar SDK's API client; webhook tests sign and verify for real. Nothing here is verified against the live API.
