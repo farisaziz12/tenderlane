@@ -3,37 +3,22 @@ import { packageVersion } from '../../lib/version';
 import Icon from '../Icons.astro';
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 
+// What Tenderlane is for. The line under it says how much of that exists today.
 const tagline =
-  'Reactive payment orchestration for modern web apps. The right provider, the right methods, the right flow — picked in the browser, the moment your app knows enough to decide. Headless, typed, MIT.';
-
-const fallbackVersion = packageVersion;
-let coreVersion = fallbackVersion;
-try {
-  const response = await fetch('https://registry.npmjs.org/@tenderlane/core/latest', {
-    headers: { Accept: 'application/json' },
-  });
-  if (response.ok) {
-    const data = (await response.json()) as { version?: string };
-    if (typeof data.version === 'string' && data.version.length > 0) {
-      coreVersion = data.version;
-    }
-  }
-} catch {
-  coreVersion = fallbackVersion;
-}
+  'Reactive payment orchestration for modern web apps. The right provider, the right methods, the right flow, picked in the browser the moment your app knows enough to decide. Headless, typed, MIT.';
+const today =
+  'Today: Stripe and Polar, with React bindings. More providers and payment methods are planned.';
+const repository = 'https://github.com/farisaziz12/tenderlane';
 ---
 
 <section class="hero glow-bg">
   <div class="container hero-grid">
     <div class="hero-copy">
       <div class="hero-badges">
-        <a class="badge alpha link-badge" href="https://github.com/farisaziz12/tenderlane/releases" title="View all releases on GitHub">
-          <span class="dot"></span>v{coreVersion} · pre-1.0 alpha
+        <a class="badge alpha link-badge" href={`${base}/docs/limitations`} title="What is not built yet">
+          <span class="dot"></span>v{packageVersion} · alpha
         </a>
-        <a class="badge link-badge" href={`https://www.npmjs.com/package/@tenderlane/core`} title="@tenderlane/core on npm">
-          <span style="color:var(--text-2)">npm</span>
-          <Icon name="arrowExt" size={11} />
-        </a>
+        <span class="badge"><span style="color:var(--text-2)">not on npm yet</span></span>
         <span class="badge"><span style="color:var(--text-2)">MIT</span></span>
       </div>
       <h1 class="t-display t-h1 hero-headline">
@@ -42,19 +27,16 @@ try {
         Zero vendor lock.
       </h1>
       <p class="t-body-lg hero-tag">{tagline}</p>
+      <p class="hero-today">{today}</p>
       <div class="hero-cta">
-        <a href={`${base}/docs/getting-started/quick-start`} class="btn btn-primary">
-          Read the 5-minute quickstart <Icon name="arrow" size={12} />
+        <a href={`${base}/docs/getting-started`} class="btn btn-primary">
+          Run the example <Icon name="arrow" size={12} />
         </a>
-        <a href={`${base}/why`} class="btn btn-ghost">Why Tenderlane</a>
+        <a href={`${base}/playground`} class="btn btn-ghost">Open the playground</a>
       </div>
       <div class="install-pill">
         <span style="color:var(--text-3)">$</span>
-        <span><span style="color:var(--accent)">pnpm</span> add @tenderlane/core @tenderlane/react @tenderlane/stripe</span>
-        <span style="width:1px;height:14px;background:var(--line-2)"></span>
-        <button class="btn btn-link" style="padding:0;color:var(--text-2)" aria-label="Copy install command">
-          <Icon name="copy" size={13} />
-        </button>
+        <span><span style="color:var(--accent)">git</span> clone {repository}</span>
       </div>
     </div>
     <div class="hero-demo-wrap">
@@ -72,12 +54,12 @@ try {
             <span class="country-token">
               <span>'</span>
               <select id="country-select" aria-label="Choose country">
-                <option value="US">US</option>
                 <option value="CH" selected>CH</option>
                 <option value="NL">NL</option>
                 <option value="DE">DE</option>
+                <option value="GB">GB</option>
+                <option value="US">US</option>
                 <option value="BR">BR</option>
-                <option value="JP">JP</option>
               </select>
               <span>'</span>
             </span>
@@ -89,14 +71,14 @@ try {
             <span class="tok-n">2900</span>
             <span class="tok-pu">{' }'}</span>
           </div>
-          <div class="rules-comment">// rules · first-match-wins</div>
+          <div class="rules-comment">// rules · first match wins</div>
           <div class="rules-list" id="rules-list"></div>
           <div class="rules-comment">// fallback</div>
           <div class="rules-fallback" id="rules-fallback">
-            <span class="tok-pu">{'{ '}</span><span class="tok-p">flow</span><span class="tok-pu">:</span>
-            <span class="tok-s">'checkout-session'</span><span class="tok-pu">, </span>
-            <span class="tok-p">methods</span><span class="tok-pu">:</span> <span class="tok-pu">[</span>
-            <span class="tok-s">'card'</span><span class="tok-pu">]</span><span class="tok-pu">{' }'}</span>
+            <span class="tok-pu">{'{ '}</span><span class="tok-p">provider</span><span class="tok-pu">:</span>
+            <span class="tok-s">'stripe'</span><span class="tok-pu">, </span>
+            <span class="tok-p">flow</span><span class="tok-pu">:</span>
+            <span class="tok-s">'hosted'</span><span class="tok-pu">{' }'}</span>
           </div>
         </div>
         {/* Right: live UI */}
@@ -115,11 +97,11 @@ try {
             <div class="ui-grid">
               <div>
                 <div class="ui-grid-label">Flow</div>
-                <div class="ui-grid-value" id="flow-out">payment-intent</div>
+                <div class="ui-grid-value" id="flow-out">inline</div>
               </div>
               <div>
                 <div class="ui-grid-label">Provider</div>
-                <div class="ui-grid-value">stripe</div>
+                <div class="ui-grid-value" id="provider-out">stripe</div>
               </div>
             </div>
             <button class="pay-btn" id="pay-btn">Pay CHF 29.00</button>
@@ -130,54 +112,47 @@ try {
         <span class="hint-dot"></span>
         Try it · change country
       </div>
+      <p class="demo-note">
+        The rules run through the real router, in your browser. The checkout is a preview: no
+        provider is called.
+      </p>
     </div>
   </div>
   <div class="container trusted">
-    <span class="t-cap">Currently shipping with</span>
+    <span class="t-cap">Works today with</span>
     <div class="logos">
-      {['Stripe', 'Polar', 'React', 'Next.js', 'Bun', 'Deno', 'Vite'].map((p) => (
-        <span class="logo-name">{p}</span>
+      {['Stripe', 'Polar', 'React', 'Next.js'].map((name) => (
+        <span class="logo-name">{name}</span>
       ))}
     </div>
-    <a href={`${base}/docs`} class="roadmap-link">docs →</a>
+    <a href={`${base}/docs/limitations`} class="roadmap-link">what is not built yet</a>
   </div>
 </section>
 
 <script>
-  type Currency = 'usd' | 'chf' | 'eur' | 'brl' | 'jpy';
-  type Country = 'US' | 'CH' | 'NL' | 'DE' | 'BR' | 'JP';
+  // The demo runs the same router and the same rules the docs show
+  // (docs-site/snippets/markets.ts). Only the checkout preview on the right is
+  // not real: it calls no provider.
+  import { rules, routing } from '../../../snippets/markets';
 
-  interface Rule {
-    id: string;
-    country: Country;
-    currency: Currency;
-    methods: string[];
-    flow: string;
-  }
-
-  const rules: Rule[] = [
-    { id: 'ch-inline', country: 'CH', currency: 'chf', flow: 'payment-intent', methods: ['card', 'twint'] },
-    { id: 'nl-ideal', country: 'NL', currency: 'eur', flow: 'payment-intent', methods: ['card', 'ideal', 'sepa'] },
-    { id: 'br-pix', country: 'BR', currency: 'brl', flow: 'payment-intent', methods: ['card', 'pix'] },
-    { id: 'eu-inline', country: 'DE', currency: 'eur', flow: 'payment-intent', methods: ['card', 'sepa', 'klarna'] },
-  ];
+  type Country = 'CH' | 'NL' | 'DE' | 'GB' | 'US' | 'BR';
+  type Currency = 'chf' | 'eur' | 'gbp' | 'usd' | 'brl';
 
   const countryToCurrency: Record<Country, Currency> = {
-    US: 'usd',
     CH: 'chf',
     NL: 'eur',
     DE: 'eur',
+    GB: 'gbp',
+    US: 'usd',
     BR: 'brl',
-    JP: 'jpy',
   };
 
   const methodMeta: Record<string, { label: string; sub: string; color: string; letter: string; dark?: boolean }> = {
     card: { label: 'Card', sub: 'Visa · Mastercard · Amex', color: '#3b3f49', letter: 'C', dark: false },
     twint: { label: 'TWINT', sub: 'Pay with your phone (CH)', color: '#ED1C24', letter: 'T' },
     ideal: { label: 'iDEAL', sub: 'Dutch bank transfer', color: '#CC0066', letter: 'i' },
-    sepa: { label: 'SEPA Direct', sub: 'Bank debit (EU)', color: '#0033A0', letter: 'S' },
+    sepa_debit: { label: 'SEPA Direct Debit', sub: 'Bank debit (EU)', color: '#0033A0', letter: 'S' },
     klarna: { label: 'Klarna', sub: 'Pay later or in 3', color: '#FFB3C7', letter: 'K', dark: true },
-    pix: { label: 'Pix', sub: 'Instant transfer (BR)', color: '#32BCAD', letter: 'P' },
   };
 
   const formatTotal = (currency: Currency): string => {
@@ -188,8 +163,8 @@ try {
         return '€29.00';
       case 'brl':
         return 'R$ 145.00';
-      case 'jpy':
-        return '¥3,200';
+      case 'gbp':
+        return '£23.00';
       default:
         return '$29.00';
     }
@@ -197,23 +172,25 @@ try {
 
   const escape = (s: string) => s.replace(/[<>&]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c] ?? c));
 
-  const renderRules = (active: string) => {
+  const token = (value: string) => `<span class="tok-s">'${escape(value)}'</span>`;
+  const punctuation = (value: string) => `<span class="tok-pu">${value}</span>`;
+  const property = (name: string) => `<span class="tok-p">${name}</span>${punctuation(':')}`;
+
+  const renderRules = (activeRuleId: string | undefined) => {
     const list = document.getElementById('rules-list');
     if (!list) return;
     list.innerHTML = rules
       .map((rule) => {
-        const isActive = rule.id === active;
-        const methodsList = rule.methods
-          .map(
-            (method, index) =>
-              `${index > 0 ? '<span class="tok-pu">, </span>' : ''}<span class="tok-s">'${method}'</span>`,
-          )
-          .join('');
+        const when = Object.entries(rule.when)
+          .map(([key, value]) => `${property(key)} ${token(String(value))}`)
+          .join(punctuation(', '));
+        const methods = rule.use.paymentMethods.map(token).join(punctuation(', '));
         return `
-          <div class="rule${isActive ? ' rule-active' : ''}">
-            <div><span class="tok-pu">{ </span><span class="tok-p">id</span><span class="tok-pu">:</span> <span class="tok-s">'${rule.id}'</span><span class="tok-pu">,</span></div>
-            <div style="padding-left:16px"><span class="tok-p">when</span><span class="tok-pu">:</span> <span class="tok-pu">{ </span><span class="tok-p">country</span><span class="tok-pu">:</span> <span class="tok-s">'${rule.country}'</span><span class="tok-pu">, </span><span class="tok-p">currency</span><span class="tok-pu">:</span> <span class="tok-s">'${rule.currency}'</span><span class="tok-pu"> },</span></div>
-            <div style="padding-left:16px"><span class="tok-p">use</span><span class="tok-pu">:</span> <span class="tok-pu">{ </span><span class="tok-p">flow</span><span class="tok-pu">:</span> <span class="tok-s">'${rule.flow}'</span><span class="tok-pu">, </span><span class="tok-p">methods</span><span class="tok-pu">:</span> <span class="tok-pu">[</span>${methodsList}<span class="tok-pu">] } },</span></div>
+          <div class="rule${rule.id === activeRuleId ? ' rule-active' : ''}">
+            <div>${punctuation('{ ')}${property('id')} ${token(rule.id)}${punctuation(',')}</div>
+            <div style="padding-left:16px">${property('when')} ${punctuation('{ ')}${when}${punctuation(' },')}</div>
+            <div style="padding-left:16px">${property('use')} ${punctuation('{ ')}${property('provider')} ${token(rule.use.provider)}${punctuation(', ')}${property('flow')} ${token(rule.use.flow)}${punctuation(',')}</div>
+            <div style="padding-left:32px">${property('paymentMethods')} ${punctuation('[')}${methods}${punctuation('] } },')}</div>
           </div>`;
       })
       .join('');
@@ -249,12 +226,8 @@ try {
     if (!select) return;
     const country = select.value as Country;
     const currency = countryToCurrency[country];
-    const match = rules.find((rule) => rule.country === country && rule.currency === currency);
-    const route = match ?? {
-      id: 'fallback',
-      flow: 'checkout-session',
-      methods: ['card'],
-    };
+    // The real thing: evaluate the rules for this context.
+    const route = routing.evaluate({ country, currency, amount: 2900 });
 
     const currencyOut = document.getElementById('currency-out');
     const curLabel = document.getElementById('cur-label');
@@ -269,12 +242,17 @@ try {
     const total = formatTotal(currency);
     if (uiAmount) uiAmount.textContent = total;
     if (payBtn) payBtn.textContent = `Pay ${total}`;
-    if (routeId) routeId.textContent = route.id;
+    if (routeId) routeId.textContent = route.ruleId ?? 'fallback';
+    const providerOut = document.getElementById('provider-out');
+    if (providerOut) providerOut.textContent = route.provider;
     if (flowOut) flowOut.textContent = route.flow;
-    if (fallback) fallback.style.opacity = match ? '0.55' : '1';
+    if (fallback) fallback.style.opacity = route.source === 'rule' ? '0.55' : '1';
 
-    renderRules(route.id);
-    renderMethods(route.methods);
+    renderRules(route.ruleId);
+    const list = document.getElementById('rules-list');
+    const active = list?.querySelector<HTMLElement>('.rule-active');
+    if (list) list.scrollTop = active ? Math.max(0, active.offsetTop - list.offsetTop - 8) : 0;
+    renderMethods([...route.paymentMethods]);
   };
 
   const select = document.getElementById('country-select');
@@ -289,11 +267,34 @@ try {
     padding-right: max(var(--side-pad), env(safe-area-inset-right));
     position: relative;
   }
+  /* The copy sits above the demo, which gets the full width: two code panes
+     next to a headline were squeezed at every common laptop size. */
   .hero-grid {
     display: grid;
-    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.25fr);
+    grid-template-columns: minmax(0, 1fr);
     gap: 56px;
-    align-items: center;
+  }
+  /* Wide screens: headline on the left, description and actions on the right. */
+  .hero-copy {
+    display: grid;
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+    column-gap: 64px;
+    align-items: start;
+  }
+  .hero-badges {
+    grid-column: 1 / -1;
+  }
+  .hero-headline {
+    grid-column: 1;
+    grid-row: 2 / span 4;
+    font-size: clamp(44px, 5.4vw, 76px);
+  }
+  .hero-tag,
+  .hero-today,
+  .hero-cta,
+  .install-pill {
+    grid-column: 2;
+    justify-self: start;
   }
   .hero-grid > * {
     min-width: 0;
@@ -312,7 +313,7 @@ try {
     margin: 0 0 24px;
   }
   .hero-tag {
-    margin: 0 0 36px;
+    margin: 0 0 14px;
     max-width: 540px;
   }
   .hero-cta {
@@ -337,6 +338,8 @@ try {
   }
   .hero-demo-wrap {
     position: relative;
+    /* The demo lays itself out by its own width, wherever it is placed. */
+    container-type: inline-size;
   }
   .hero-demo-glow {
     position: absolute;
@@ -367,9 +370,20 @@ try {
     font-size: 13px;
     line-height: 1.7;
     color: var(--code-fg);
-    min-height: 360px;
     min-width: 0;
     overflow-x: auto;
+  }
+  /* Code does not wrap: a rule is read line by line. The list scrolls instead
+     of pushing the checkout preview off the screen. */
+  .rules-fallback,
+  :global(.rule) {
+    white-space: nowrap;
+  }
+  .rules-list {
+    max-height: 336px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
   }
   .rules-head {
     display: flex;
@@ -630,13 +644,23 @@ try {
     font-size: 12px;
     font-family: var(--font-mono);
   }
-  @media (max-width: 1000px) {
-    .hero-grid {
-      grid-template-columns: minmax(0, 1fr);
-      gap: 48px;
-    }
+  @container (max-width: 760px) {
     .hero-demo {
       grid-template-columns: minmax(0, 1fr);
+    }
+    .rules-list {
+      max-height: 264px;
+    }
+  }
+  @media (max-width: 1000px) {
+    .hero-grid {
+      gap: 48px;
+    }
+    .hero-copy {
+      display: block;
+    }
+    .hero-headline {
+      font-size: clamp(38px, 9vw, 64px);
     }
   }
   @media (max-width: 768px) {
@@ -730,5 +754,17 @@ try {
       width: 100%;
       justify-content: center;
     }
+  }
+  .hero-today {
+    margin: 0 0 28px;
+    font-size: 14px;
+    color: var(--text-2);
+    max-width: 520px;
+  }
+  .demo-note {
+    margin: 12px 4px 0;
+    font-size: 12px;
+    color: var(--text-3);
+    max-width: 640px;
   }
 </style>

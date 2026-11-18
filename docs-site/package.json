@@ -6,6 +6,7 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
+    "typecheck": "tsc --noEmit -p snippets",
     "astro": "astro"
   },
   "dependencies": {
@@ -13,5 +14,16 @@
     "astro": "^5.8.0",
     "remark-directive": "^4.0.0",
     "unist-util-visit": "^5.0.0"
+  },
+  "devDependencies": {
+    "@tenderlane/client": "workspace:*",
+    "@tenderlane/core": "workspace:*",
+    "@tenderlane/react": "workspace:*",
+    "@tenderlane/stripe": "workspace:*",
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.1.0",
+    "react": "^19.1.0",
+    "stripe": "^17.0.0",
+    "typescript": "^5.7.0"
   }
 }

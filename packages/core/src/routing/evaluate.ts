@@ -4,7 +4,7 @@ import type { RuleConditions } from '../types/routing.js';
  * Resolves a dot-separated path against a nested object, returning the value
  * at that path or `undefined` if any segment is missing.
  *
- * @param obj - The object to resolve the path against.
+ * @param source - The object to resolve the path against.
  * @param path - A dot-separated key path (e.g. `"experiment.variant"`).
  * @returns The value at the resolved path, or `undefined` if not found.
  *
@@ -13,12 +13,12 @@ import type { RuleConditions } from '../types/routing.js';
  * resolvePath(context, "experiment.variant"); // => "a"
  * resolvePath(context, "experiment.missing"); // => undefined
  */
-export function resolvePath(obj: Record<string, unknown>, path: string): unknown {
+export function resolvePath(source: object, path: string): unknown {
   const segments = path.split('.');
-  let current: unknown = obj;
-  for (const seg of segments) {
+  let current: unknown = source;
+  for (const segment of segments) {
     if (current == null || typeof current !== 'object') return undefined;
-    current = (current as Record<string, unknown>)[seg];
+    current = (current as Record<string, unknown>)[segment];
   }
   return current;
 }
@@ -33,7 +33,7 @@ function isComparisonOperator(
   const keys = Object.keys(value);
   return (
     keys.length > 0 &&
-    keys.every((k) => k === 'gt' || k === 'gte' || k === 'lt' || k === 'lte')
+    keys.every((key) => key === 'gt' || key === 'gte' || key === 'lt' || key === 'lte')
   );
 }
 
@@ -102,9 +102,10 @@ export function matchConditionValue(contextValue: unknown, conditionValue: unkno
     typeof contextValue === 'object' &&
     contextValue != null
   ) {
-    const condObj = conditionValue as Record<string, unknown>;
-    const ctxObj = contextValue as Record<string, unknown>;
-    return Object.entries(condObj).every(([key, val]) => matchConditionValue(ctxObj[key], val));
+    const contextRecord = contextValue as Record<string, unknown>;
+    return Object.entries(conditionValue).every(([key, nested]) =>
+      matchConditionValue(contextRecord[key], nested),
+    );
   }
 
   // Exact match (primitive equality)
@@ -129,7 +130,7 @@ export function matchConditionValue(contextValue: unknown, conditionValue: unkno
  * matchRuleConditions(context, conditions); // true
  */
 export function matchRuleConditions(
-  context: Record<string, unknown>,
+  context: object,
   conditions: RuleConditions,
 ): boolean {
   for (const [key, conditionValue] of Object.entries(conditions)) {

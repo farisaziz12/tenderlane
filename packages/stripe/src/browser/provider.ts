@@ -1,13 +1,12 @@
 import type {
   BrowserPaymentProvider,
-  TenderlaneContext,
   PaymentMethodDescriptor,
   CheckoutInput,
   CheckoutResult,
   SelectedPaymentRoute,
   ProviderSession,
 } from '@tenderlane/core';
-import { ProviderError } from '@tenderlane/core';
+import { ProviderError, requestProviderAction } from '@tenderlane/core/adapters';
 import {
   STRIPE_CAPABILITIES,
   STRIPE_METHOD_DESCRIPTORS,
@@ -15,13 +14,12 @@ import {
 } from '../shared/capabilities.js';
 import type { StripePhantomTypes } from '../shared/metadata.js';
 import type { StripeProviderOptions } from './types.js';
-
-// Import types only — the actual @stripe/stripe-js module is lazy-loaded at runtime
-import type { Stripe, StripeElements } from '@stripe/stripe-js';
+// Types only: @stripe/stripe-js itself is loaded on demand.
+import type { PaymentIntent, Stripe, StripeElements } from '@stripe/stripe-js';
 
 /**
- * Extended browser provider interface with Stripe-specific methods
- * needed by the StripePaymentElement React wrapper.
+ * The Stripe browser provider, plus the two methods `StripePaymentElement`
+ * uses to share the Stripe.js instance and the mounted Elements with it.
  */
 export interface StripeBrowserProvider
   extends BrowserPaymentProvider<'stripe', StripeCapabilities, StripeProviderOptions> {
@@ -30,27 +28,27 @@ export interface StripeBrowserProvider
 }
 
 /**
- * Create a Stripe browser payment provider.
- * Supports both redirect (checkout-session) and inline (payment-intent) flows.
+ * Create the Stripe browser provider.
  *
- * @stripe/stripe-js is lazy-loaded via dynamic import() — importing this module
- * adds zero bytes of Stripe.js to the bundle.
+ * - `hosted`: asks the server for a Checkout Session and redirects to it.
+ * - `inline`: asks the server for a PaymentIntent, then confirms it with the
+ *   Payment Element mounted by `StripePaymentElement`.
+ *
+ * `@stripe/stripe-js` is loaded with a dynamic `import()` the first time the
+ * inline flow needs it. A hosted-only checkout never loads Stripe.js.
  */
-export function stripeProvider(
-  options: StripeProviderOptions,
-): StripeBrowserProvider {
-  const { publishableKey, serverEndpoint, stripeAccount, locale } = options;
+export function stripeProvider(options: StripeProviderOptions): StripeBrowserProvider {
+  const { publishableKey, serverEndpoint, stripeAccount } = options;
 
   let stripeInstance: Stripe | null = null;
   let elementsInstance: StripeElements | null = null;
+  // The secret of the PaymentIntent the mounted element belongs to.
+  let currentClientSecret: string | null = null;
 
   async function getStripeInstance(): Promise<Stripe> {
     if (!stripeInstance) {
       const { loadStripe } = await import('@stripe/stripe-js');
-      const instance = await loadStripe(publishableKey, {
-        stripeAccount,
-        locale: locale as Parameters<typeof loadStripe>[1] extends { locale?: infer L } ? L : never,
-      });
+      const instance = await loadStripe(publishableKey, stripeAccount ? { stripeAccount } : undefined);
       if (!instance) {
         throw new ProviderError('Failed to load Stripe.js', 'stripe');
       }
@@ -59,49 +57,27 @@ export function stripeProvider(
     return stripeInstance;
   }
 
-  function setElements(elements: StripeElements | null) {
-    elementsInstance = elements;
-  }
-
-  async function submitCheckoutSession(
+  async function submitHosted(
     input: CheckoutInput,
     route: SelectedPaymentRoute,
   ): Promise<CheckoutResult> {
-    const response = await fetch(serverEndpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        provider: 'stripe',
-        action: 'checkout',
-        payload: input,
-        paymentMethods: route.paymentMethods,
-      }),
+    const result = await requestProviderAction({
+      endpoint: serverEndpoint,
+      provider: 'stripe',
+      action: 'checkout',
+      input,
+      route,
     });
-
-    if (!response.ok) {
-      const body = await response.text().catch(() => '');
-      throw new ProviderError(
-        `Stripe checkout failed (${response.status}): ${body}`,
-        'stripe',
-        { cause: new Error(body) },
-      );
-    }
-
-    const result = (await response.json()) as CheckoutResult;
-
     if (result.url && typeof window !== 'undefined') {
       window.location.href = result.url;
     }
-
     return result;
   }
 
-  async function submitPaymentIntent(
-    input: CheckoutInput,
-  ): Promise<CheckoutResult> {
+  async function submitInline(input: CheckoutInput): Promise<CheckoutResult> {
     if (!elementsInstance) {
       throw new ProviderError(
-        'Stripe Elements not mounted. Render the payment element before calling submit().',
+        'Stripe Elements is not mounted. Render StripePaymentElement before calling submit().',
         'stripe',
       );
     }
@@ -109,88 +85,96 @@ export function stripeProvider(
     const stripe = await getStripeInstance();
     const { error, paymentIntent } = await stripe.confirmPayment({
       elements: elementsInstance,
-      confirmParams: {
-        return_url: input.successUrl,
-      },
+      confirmParams: { return_url: input.successUrl },
       redirect: 'if_required',
     });
 
     if (error) {
-      throw new ProviderError(
-        error.message ?? 'Payment confirmation failed',
-        'stripe',
-        { providerCode: error.code },
-      );
+      // A card or validation error is Stripe's definite answer. Any other
+      // error (a dropped connection, a timeout) leaves the outcome unknown:
+      // the confirmation may have reached Stripe. Ask before reporting a
+      // failure the customer would answer by paying again.
+      const definite = error.type === 'card_error' || error.type === 'validation_error';
+      const actual = definite ? undefined : await lookUpPaymentIntent(stripe);
+      if (actual && toStatus(actual) !== 'open') {
+        return toResult(actual);
+      }
+      throw new ProviderError(error.message ?? 'Payment confirmation failed', 'stripe', {
+        providerCode: error.code,
+      });
+    }
+    if (!paymentIntent) {
+      throw new ProviderError('Stripe returned neither a PaymentIntent nor an error.', 'stripe');
     }
 
+    return toResult(paymentIntent);
+  }
+
+  function toResult(paymentIntent: PaymentIntent): CheckoutResult {
     return {
       provider: 'stripe',
-      id: paymentIntent!.id,
-      status: paymentIntent!.status === 'succeeded' ? 'complete' : 'open',
-      raw: paymentIntent,
+      id: paymentIntent.id,
+      status: toStatus(paymentIntent),
     };
+  }
+
+  /** Anything short of `succeeded` is not a completed payment. */
+  function toStatus(paymentIntent: PaymentIntent): 'complete' | 'processing' | 'open' {
+    switch (paymentIntent.status) {
+      case 'succeeded':
+        return 'complete';
+      // `requires_capture`: authorised, waiting for the merchant to capture.
+      case 'processing':
+      case 'requires_capture':
+        return 'processing';
+      default:
+        return 'open';
+    }
+  }
+
+  async function lookUpPaymentIntent(stripe: Stripe): Promise<PaymentIntent | undefined> {
+    if (!currentClientSecret) return undefined;
+    try {
+      const { paymentIntent } = await stripe.retrievePaymentIntent(currentClientSecret);
+      return paymentIntent;
+    } catch {
+      return undefined;
+    }
   }
 
   return {
     '~types': {} as StripePhantomTypes,
-    id: 'stripe' as const,
+    id: 'stripe',
     capabilities: STRIPE_CAPABILITIES,
     getStripeInstance,
-    setElements,
+    setElements(elements) {
+      elementsInstance = elements;
+    },
 
-    getAvailablePaymentMethods(_context: TenderlaneContext): PaymentMethodDescriptor[] {
+    getAvailablePaymentMethods(): PaymentMethodDescriptor[] {
       return Object.values(STRIPE_METHOD_DESCRIPTORS);
     },
 
-    async createSession(
-      input: CheckoutInput,
-      route: SelectedPaymentRoute,
-    ): Promise<ProviderSession> {
-      const response = await fetch(serverEndpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          provider: 'stripe',
-          action: 'create-payment-intent',
-          payload: input,
-          paymentMethods: route.paymentMethods,
-        }),
+    async createSession(input, route): Promise<ProviderSession> {
+      const result = await requestProviderAction({
+        endpoint: serverEndpoint,
+        provider: 'stripe',
+        action: 'create-payment-intent',
+        input,
+        route,
       });
-
-      if (!response.ok) {
-        const body = await response.text().catch(() => '');
+      if (!result.clientSecret) {
         throw new ProviderError(
-          `Stripe session creation failed (${response.status}): ${body}`,
-          'stripe',
-          { cause: new Error(body) },
-        );
-      }
-
-      const result = (await response.json()) as CheckoutResult;
-      const clientSecret = (result.raw as { clientSecret?: string })?.clientSecret;
-
-      if (!clientSecret) {
-        throw new ProviderError(
-          'Stripe server did not return a clientSecret for the PaymentIntent',
+          'The server did not return a clientSecret for the PaymentIntent.',
           'stripe',
         );
       }
-
-      return {
-        flow: route.flow,
-        clientSecret,
-        sessionId: result.id,
-      };
+      currentClientSecret = result.clientSecret;
+      return { flow: route.flow, clientSecret: result.clientSecret, sessionId: result.id };
     },
 
-    async submit(
-      input: CheckoutInput,
-      route: SelectedPaymentRoute,
-    ): Promise<CheckoutResult> {
-      if (route.flow === 'payment-intent') {
-        return submitPaymentIntent(input);
-      }
-      return submitCheckoutSession(input, route);
+    submit(input, route) {
+      return route.flow === 'inline' ? submitInline(input) : submitHosted(input, route);
     },
   };
 }

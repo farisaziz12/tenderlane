@@ -1,0 +1,34 @@
+---
+import { Code } from 'astro:components';
+import Section from '../Section.astro';
+import typeErrors from '../../../snippets/type-errors.ts?raw';
+
+// The part of the file that carries the errors; the imports add nothing here.
+const code = typeErrors.slice(typeErrors.indexOf('createRulesRouter({')).trim();
+---
+
+<Section
+  alt={true}
+  eyebrow="Works today"
+  title="The compiler knows which providers you registered."
+  kicker="A rule that names any other provider does not compile. Neither does a mistyped currency or flow. These are real errors: the file only compiles because each one is marked as expected."
+>
+  <div class="code">
+    <div class="code-head">
+      <span style="font-family:var(--font-mono);font-size:12px;color:var(--text-2)">docs-site/snippets/type-errors.ts</span>
+    </div>
+    <div class="code-body real-code">
+      <Code code={code} lang="ts" theme="github-dark-default" />
+    </div>
+  </div>
+</Section>
+
+<style>
+  .real-code :global(pre) {
+    margin: 0;
+    padding: 0;
+    background: transparent !important;
+    font: 13px/1.6 var(--font-mono);
+    overflow-x: auto;
+  }
+</style>

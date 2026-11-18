@@ -10,21 +10,17 @@ describe('polarProvider (browser)', () => {
     vi.restoreAllMocks();
   });
 
-  it('has provider id "polar" and declares the checkout-session flow only', () => {
+  it('has provider id "polar" and declares the hosted flow only', () => {
     const provider = polarProvider({
-      organizationId: 'org_test',
       serverEndpoint: '/api/payments/polar',
     });
 
     expect(provider.id).toBe('polar');
-    expect(provider.capabilities.flows).toEqual(['checkout-session']);
-    expect(provider.capabilities.supports.embedded).toBe(false);
-    expect(provider.capabilities.supports.redirect).toBe(true);
+    expect(provider.capabilities.flows).toEqual(['hosted']);
   });
 
   it('exposes the configured payment methods as descriptors tagged "polar"', () => {
     const provider = polarProvider({
-      organizationId: 'org_test',
       serverEndpoint: '/api/payments/polar',
     });
 
@@ -45,7 +41,6 @@ describe('polarProvider (browser)', () => {
     );
 
     const provider = polarProvider({
-      organizationId: 'org_test',
       serverEndpoint: '/api/payments/polar',
     });
 
@@ -60,7 +55,7 @@ describe('polarProvider (browser)', () => {
       },
       {
         provider: 'polar',
-        flow: 'checkout-session',
+        flow: 'hosted',
         paymentMethods: ['card'],
         source: 'rule',
       },
@@ -84,7 +79,6 @@ describe('polarProvider (browser)', () => {
     );
 
     const provider = polarProvider({
-      organizationId: 'org_test',
       serverEndpoint: '/api/payments/polar',
     });
     const originalWindow = globalThis.window;
@@ -98,7 +92,7 @@ describe('polarProvider (browser)', () => {
       },
       {
         provider: 'polar',
-        flow: 'checkout-session',
+        flow: 'hosted',
         paymentMethods: ['card'],
         source: 'rule',
       },
@@ -115,7 +109,6 @@ describe('polarProvider (browser)', () => {
     vi.mocked(fetch).mockResolvedValue(new Response('boom', { status: 500 }));
 
     const provider = polarProvider({
-      organizationId: 'org_test',
       serverEndpoint: '/api/payments/polar',
     });
 
@@ -128,11 +121,11 @@ describe('polarProvider (browser)', () => {
         },
         {
           provider: 'polar',
-          flow: 'checkout-session',
+          flow: 'hosted',
           paymentMethods: ['card'],
           source: 'rule',
         },
       ),
-    ).rejects.toThrow('Polar checkout failed');
+    ).rejects.toThrow('polar checkout failed (500)');
   });
 });

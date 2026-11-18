@@ -1,7 +1,7 @@
 // Capture PR evidence: desktop and phone screenshots of one URL, and optionally a recording.
 //
-//   node tools/shot.mjs http://localhost:4321/playground before_playground
-//   node tools/shot.mjs http://localhost:4321/playground currency_switch --record
+//   node tools/shot.mjs http://localhost:4321/ before_home
+//   node tools/shot.mjs http://localhost:3000/ country_switch --record
 //
 // Output: .evidence/<name>_desktop.png, .evidence/<name>_phone.png, .evidence/<name>.webm
 // With --record, the page stays open for RECORD_MS (default 8000) while the recording runs;

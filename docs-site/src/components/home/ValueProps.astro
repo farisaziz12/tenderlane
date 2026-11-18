@@ -5,17 +5,20 @@ const props = [
   {
     n: '01',
     title: 'Adapts the second your app does.',
-    copy: 'When the customer changes country, currency, or cart — the checkout reroutes in the same render. Right provider. Right methods. Right flow. No reload. No server round-trip.',
+    copy: 'When the customer changes country, currency or cart, the checkout re-routes in the same render: provider, payment methods and flow. No reload, and no request to your server to decide.',
+    status: 'Works today',
   },
   {
     n: '02',
-    title: 'Your UI. Your stack. Any PSP.',
-    copy: 'Headless components, framework-agnostic core, swappable adapters. Start on Stripe. Add Polar for subscriptions. Drop in your local PSP. The router does not care.',
+    title: 'Your UI. Your stack. Any provider.',
+    copy: 'Headless components, a core that knows no framework, and adapters you can swap. Start on Stripe. Add Polar as your merchant of record. Write an adapter for your local provider with the same API ours use.',
+    status: 'Stripe, Polar and React today · more providers and frameworks planned',
   },
   {
     n: '03',
     title: 'Routing rules are data, not code.',
-    copy: 'A JSON shape with first-match-wins semantics. Edit them in a dashboard. Store them in a DB. Ship them from a feature flag. Catch the typo in "gpb" at compile time.',
+    copy: 'A JSON shape where the first match wins. Store rules in a database, ship them from a feature flag, and catch the typo in "gpb" at compile time.',
+    status: 'Works today · no rule editor yet',
   },
 ];
 ---
@@ -23,7 +26,7 @@ const props = [
 <Section
   eyebrow="What's different"
   title="A checkout that knows what your app knows."
-  kicker="Every modern SDK lets you take a payment. Tenderlane decides which payment to take, in the browser, the moment context changes — with types that hold across providers, markets, and methods."
+  kicker="Every payment SDK lets you take a payment. Tenderlane decides which payment to take, in the browser, the moment the context changes, with types that hold across providers, markets and methods."
 >
   <div class="vp-grid">
     {props.map((p) => (
@@ -112,6 +115,7 @@ const props = [
         <div class="t-cap" style="color:var(--accent);margin-bottom:12px">{p.n}</div>
         <h3 class="t-display t-h4" style="margin:0 0 12px">{p.title}</h3>
         <p class="t-body" style="margin:0;font-size:14px">{p.copy}</p>
+        <p class="t-cap" style="margin:14px 0 0;color:var(--text-2)">{p.status}</p>
       </div>
     ))}
   </div>

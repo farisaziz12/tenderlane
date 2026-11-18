@@ -1,0 +1,47 @@
+---
+title: Limitations
+description: Tenderlane is an alpha proof of concept. This page lists what is not built and what you would have to add before taking real payments with it.
+order: 8
+---
+
+## Not built
+
+| Area | State |
+| --- | --- |
+| Webhooks | Verification and five event types (processing, succeeded, failed, expired, unhandled) for Stripe and Polar. Refunds, disputes and subscription events are not interpreted. Deduplication and storage are yours. |
+| Subscriptions | None. Stripe sessions are created in `payment` mode only. |
+| Refunds, captures, disputes | None. |
+| Saved payment methods, customers | None. |
+| Failover | None. If the selected provider fails, the checkout is in `error`; it does not try another. |
+| Providers | Stripe and Polar. No Adyen, PayPal, Braintree, Mollie or Paddle. |
+| Polar inline checkout | Not supported. Hosted only, one product per checkout. |
+| Frameworks | React is complete for both flows. Vue covers hosted flows only and has no example. No Solid, Svelte or Angular bindings. |
+| Releases | The API on this branch is not published to npm. |
+
+## Not verified
+
+- **No test in CI talks to a real provider.** Unit tests and the cross-provider `e2e` test mock the `stripe` and `@polar-sh/sdk` packages. A live suite for Stripe test mode exists (`pnpm test:live`) and has not been run yet; see [Testing](/docs/testing). No automated check runs the Stripe or Polar code paths against the real APIs, so treat them as unverified until you have run them with your own test keys.
+- **The example's default path uses a demo provider**, which is a stand-in inside the example app. It proves the routing, the wire format, server-side pricing and the redirect round trip. It proves nothing about a real provider.
+- **No security review.** The server handler validates its input and has tests for tampering, but nobody outside the project has audited it.
+
+## Yours to add
+
+- **An idempotent order update.** `handler.webhook()` verifies and interprets events and `handler.retrieve()` reads the current state; storing it, ignoring repeats, and doing slow work off the request are yours. Do not fulfil from the client's `success` status or from a visit to the success URL alone.
+- **Authentication, CSRF protection and rate limiting** on the endpoint.
+- **`routing` and `resolveContext`** on the handler. They are optional so that a first setup works; without them the browser has more say than it should. See [Server and price integrity](/docs/server).
+- **Idempotency keys** if a checkout can be retried across page loads.
+- **Tax, currency conversion and rounding.** Amounts are integers in minor units and are passed through untouched.
+
+## Sharp edges
+
+- **Malformed pass-through values become a 500.** A `customerEmail` the provider rejects is reported as a provider failure, not a 400.
+- **Adapters ignore fields their provider has no place for.** Polar ignores `cancelUrl`, `clientReferenceId`, `idempotencyKey` and `providerOptions`; Stripe's inline flow ignores `clientReferenceId`.
+- **No settlement timeline.** `processing` and `paymentMethod` tell you a bank debit is in flight. How long to wait, and what to do if it fails after you shipped, is yours to decide and to schedule.
+- **Catalogs are not cached.** `createStripeCatalog` and `createPolarCatalog` call the provider once per item on every request.
+- **`createStripeCatalog` takes price ids only**, not lookup keys.
+- **Provider type checks need a literal provider list.** A provider array built at runtime widens to `string` and skips the check that routing targets a registered provider.
+- **The API will change.** This is `0.1.0-alpha`. Nothing is stable.
+
+## Status of the project
+
+Tenderlane is an independent open-source project. It has been put forward as a possible starting point for a payments library in the TanStack ecosystem. It is not a TanStack project and is not endorsed by TanStack.

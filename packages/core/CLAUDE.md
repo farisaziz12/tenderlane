@@ -1,77 +1,48 @@
 # @tenderlane/core
 
-Provider-agnostic foundation package. Zero external runtime dependencies.
-
-## Structure
+Contracts and provider-neutral logic. No runtime dependencies.
 
 ```
 src/
-  types/          # All type definitions and contracts
-    context.ts    # TenderlaneContext (extensible payment context)
-    provider.ts   # BrowserPaymentProvider, ServerProviderAdapter interfaces
-    phantom.ts    # ProviderPhantomTypes for ~types pattern
-    capabilities.ts # ProviderCapabilities, PaymentMethodDescriptor, PaymentFlow
-    routing.ts    # RoutingRule, SelectedPaymentRoute, condition operators
-    checkout.ts   # CheckoutInput, CheckoutResult, CheckoutLineItem
-    catalog.ts    # (in design) Catalog, CatalogRequest, ResolvedCatalogItem, CatalogPhantomTypes
-    middleware.ts # TenderlaneMiddleware lifecycle hooks interface
-    utils.ts      # InferProviderId, InferProviderIds, InferCapabilities, InferCatalogSkus (planned)
-  routing/        # Route evaluation engine
-    evaluate.ts   # Core: resolvePath (dot-paths), matchConditionValue (operators), matchRuleConditions
-    rules-router.ts  # createRulesRouter() - declarative, serializable, first-match-wins
-    auto-router.ts   # createAutoRouter() - remote endpoint + AbortController timeout + fallback
-  catalog/        # (in design) Catalog resolution primitives
-    inline.ts     # createInlineCatalog() - pure, isomorphic, shareable code
-    remote.ts     # createRemoteCatalog() - client stub posting to /resolve
-    define.ts     # defineCatalog() - server-only custom resolver (DB, CMS)
-    runner.ts     # resolveCatalog() helper + lineItems auto-wrap shim
-  middleware/
-    runner.ts     # runMiddlewareHook() - iterates middleware array, calls named hooks, catches errors
-  errors/
-    errors.ts     # TenderlaneError hierarchy: Configuration, Routing, Provider, Validation, UnsupportedCapability, Catalog (planned)
-  server/
-    handler.ts    # createTenderlaneHandler() - Web Request/Response, provider dispatch + catalog resolution (planned)
-    catalog-route.ts # (in design) Built-in POST /resolve route — target for createRemoteCatalog
+  types/        every shared contract (context, routing, checkout, provider, catalog, middleware)
+  routing/      rules-router.ts (createRulesRouter), evaluate.ts (condition matching)
+  catalog/      inline.ts, define.ts, remote.ts, runner.ts
+  middleware/   runner.ts (runMiddlewareHook: calls observers, logs and swallows their errors)
+  errors/       TenderlaneError and subclasses, hasErrorCode
+  server/       handler.ts (createTenderlaneHandler)   → exported as @tenderlane/core/server
+  adapters/     defineBrowserProvider, defineServerAdapter,
+                requestProviderAction, parseCheckoutResult → exported as @tenderlane/core/adapters
 ```
 
-## Key Design Rules
+## Rules
 
-- This package must NEVER import any provider SDK (Stripe, Adyen, etc.)
-- All types should be exported from `src/types/index.ts` and re-exported from `src/index.ts`
-- The `server/` subpath is exported separately via `@tenderlane/core/server` (see `tsup.config.ts` entries and `package.json` exports)
-- Routing rules use serializable condition objects, not functions. The `predicates` map is the only function-based escape hatch
-- Condition evaluation uses dot-path resolution for nested access (e.g., `experiment.checkoutRouting`)
-- **Price integrity**: the server handler MUST strip any client-supplied `unitAmount` before catalog resolution. Client → server wire carries `{ items: [{ sku, quantity }], context }`, never amounts. Server's `catalog.resolve()` is canonical; the PSP session is created with server-derived amounts.
+- Never import a PSP SDK, and never name a provider in logic. `KnownProviderId` is autocomplete only.
+- `PaymentFlow` is `'hosted' | 'inline'`. Do not add a flow without an adapter that implements it.
+- `Router<TProviderId>` carries the provider ids a router can select. `createRulesRouter` infers them; the client and the handler constrain them to the registered providers. Keep that inference intact when touching these signatures (`__tests__/types/routing.test-d.ts`, and `client.test-d.ts` in the client package).
+- The three entry points must share one copy of the error classes (`splitting: true` in `tsup.config.ts`). Errors that come from another package are matched with `hasErrorCode`, not `instanceof`.
 
-## Catalog Dispatch Order (in server/handler.ts)
+## The handler (`server/handler.ts`)
 
-1. Parse `{ provider, action, payload }`; defensively strip `payload.unitAmount` and any nested `items[].unitAmount` (the `lineItems` subtree is preserved — no catalog overrides it).
-2. Pick the catalog: `catalogs[body.provider]` if configured, else top-level `catalog`.
-3. If `payload.lineItems` is set and `payload.items` is not → wrap into an ephemeral inline catalog (deprecated shim path).
-4. `const resolved = await catalog.resolve(payload.items, payload.context)`.
-5. Fire `onCatalogResolved({ context, resolved })` middleware hook.
-6. Dispatch `adapter.handle(action, { ...payload, items: resolved })`.
+Order of operations in `POST`, each step covered by `__tests__/server/`:
 
-The `/resolve` route is a separate POST that runs only steps 1, 3–5 against the top-level `catalog` (no provider context) — this is what `createRemoteCatalog` targets for preview.
+1. Parse JSON; delete every `unitAmount` and `__proto__` key at any depth.
+2. Validate `provider`, `action`, `items`, `successUrl`, `cancelUrl` (absolute, on `allowedRedirectOrigins`, default the request's origin), optional strings, `metadata`.
+3. `resolveContext(request, clientContext)`.
+4. With `routing`: evaluate it, reject a provider mismatch, take payment methods from the route.
+5. `catalogs[provider] ?? catalog` resolves the items. No catalog is a `ConfigurationError` (500).
+6. `onCatalogResolved` middleware.
+7. Build the adapter payload field by field from validated values. Nothing else from the body is forwarded.
+8. `adapter.handle(...)`, then `parseCheckoutResult`: only `{ provider, id, status, url?, clientSecret? }` is returned.
+9. `onCheckoutCreated({ request, provider, action, result, items, context })`. A throw is a 500: an unrecorded checkout is not handed out.
 
-`createTenderlaneHandler` config:
-- `providers` — required, the registered server adapters
-- `catalog?` — optional default catalog used when no per-provider entry matches; also used by the `/resolve` route
-- `catalogs?: Record<ProviderId, Catalog>` — optional per-provider map. When the wire payload's `provider` matches a key, that catalog is used. PSP-sourced catalogs (`createStripeCatalog`, `createPolarCatalog`) live here.
-- `middleware?` — lifecycle hooks (currently only `onCatalogResolved` fires server-side)
+Request errors are 400 with `{ error, code }`. Everything else is 500 with a generic message and goes to `onError`.
 
-## Condition Operators
+`retrieve(provider, id)` is a function, not a route: `adapter.retrieve(id)` reduced by `parseCheckoutDetails`. Do not expose it over HTTP from core.
 
-- Exact: `"CH"` matches `=== "CH"`
-- In: `{ in: ["CH", "DE"] }` matches if value is in array
-- NotIn: `{ notIn: ["RU"] }` matches if value is NOT in array
-- Numeric: `{ gte: 1000, lt: 50000 }` all specified bounds must be satisfied
-- Nested objects: `{ variant: "a" }` recursively matches each key
+`webhook(provider, onEvent)` validates the adapter when the route is built (so misconfiguration fails at startup), then per request: `adapter.verifyWebhook` → `parsePaymentEvent` → `onEvent`. `WEBHOOK_VERIFICATION_FAILED` is a 400; an `onEvent` throw is a 500 so the provider retries.
 
-## Testing
+`resolve` prices `{ items, context }` with the top-level `catalog` for display (`createRemoteCatalog`).
 
-- `__tests__/routing/` - Evaluation engine, rules router, auto router (mocked fetch)
-- `__tests__/middleware/` - Hook execution order, error handling
-- `__tests__/errors.test.ts` - Error hierarchy and properties
-- `__tests__/server/` - Server handler routing and error responses
-- `__tests__/types/inference.test-d.ts` - Type-level tests using `expectTypeOf`
+## Tests
+
+`__tests__/` mirrors `src/`. Type tests are `*.test-d.ts` and run with the suite (`typecheck.enabled` in `vitest.config.ts`).

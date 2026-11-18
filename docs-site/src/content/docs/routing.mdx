@@ -1,0 +1,66 @@
+---
+title: Routing
+description: Rules map application state to a provider and a flow. They are plain data, checked by the compiler against the providers you registered.
+order: 3
+---
+import Source from '../../components/Source.astro';
+import routing from '../../../snippets/routing.ts?raw';
+import predicates from '../../../snippets/predicates.ts?raw';
+import typeErrors from '../../../snippets/type-errors.ts?raw';
+
+## A router
+
+<Source code={routing} file="docs-site/snippets/routing.ts" />
+
+`createRulesRouter` returns an object with one method, `evaluate(context)`. Rules are tried in order; the first whose `when` matches wins; otherwise `fallback`. Evaluation is synchronous.
+
+The result carries what was selected and why: `provider`, `flow`, `paymentMethods`, plus `source` (`'rule'` or `'fallback'`), `ruleId` and `reason`.
+
+## Context
+
+The context is whatever state your rules read. `TenderlaneContext` declares the common fields (`country`, `currency`, `amount`, `locale`, `customer`, `experiment`, `metadata`); all are optional.
+
+`amount` in a context is an integer in the currency's minor unit and is used for routing only. It is never the price that is charged.
+
+## Conditions
+
+All conditions in one `when` must match.
+
+| Form | Example | Matches when |
+| --- | --- | --- |
+| Literal | `country: 'CH'` | the value is equal |
+| `in` | `country: { in: ['DE', 'FR'] }` | the value is in the list |
+| `notIn` | `country: { notIn: ['US'] }` | the value is not in the list |
+| Range | `amount: { gte: 1000, lt: 50_000 }` | every bound holds |
+| Nested | `customer: { isLoggedIn: true }` | every nested condition matches |
+
+`experiment` is a free-form record, which makes an A/B test a rule: `when: { experiment: { checkout: 'inline' } }`.
+
+For a condition that data cannot express, register a function under the rule's id. It replaces that rule's `when`:
+
+<Source code={predicates} file="docs-site/snippets/predicates.ts" />
+
+## Flows
+
+There are two flows.
+
+- `hosted`: the server creates a checkout on the provider's page and the browser is redirected there. Stripe Checkout, Polar checkout.
+- `inline`: the server creates a session, your page mounts the provider's payment element, and `submit()` confirms it in place. Stripe PaymentIntent with the Payment Element.
+
+Polar supports `hosted` only.
+
+## What the compiler checks
+
+<Source code={typeErrors} file="docs-site/snippets/type-errors.ts" />
+
+`country`, `currency` and `locale` conditions accept known ISO codes only, so a typo is an error. The context itself accepts any string for those fields, because real input is not limited to a list.
+
+The check applies to `createTenderlaneHandler` on the server too: `routing`, `catalogs` and `providerOptions` must refer to adapters in `providers`. If you build the provider list at runtime (as the example does, depending on which keys are set), its type widens to `string` and the check is skipped for that call.
+
+## Updating the route
+
+In React, pass a new `context` to `TenderlaneProvider`. Outside React, call `client.updateContext(context)`. A structurally equal context is ignored. A context change during a submit is applied after the submit settles.
+
+## Custom routers
+
+Any object with `evaluate(context)` is a router, and `evaluate` may return a promise. While an async router is deciding, the client status is `evaluating`. Nothing in the repository ships an async router; the rules router is the only implementation.

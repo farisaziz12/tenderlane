@@ -6,34 +6,31 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 
 const cards = [
   {
-    eyebrow: 'Live',
+    eyebrow: 'Live · real router',
     title: 'Reactive routing playground',
-    blurb: 'Change country, currency, and amount — watch the route, methods, and total update in real time.',
+    blurb: 'Change country, currency and plan. Edit the rules. Watch the route, the methods and the total follow. The checkout itself is a preview.',
     href: `${base}/playground`,
-    external: false,
-    snippet: `<span class="tok-pu">{ </span><span class="tok-p">country</span><span class="tok-pu">: </span><span class="tok-s">'CH'</span><span class="tok-pu">, </span><span class="tok-p">currency</span><span class="tok-pu">: </span><span class="tok-s">'chf'</span><span class="tok-pu"> }</span>
-<span class="tok-c">// → ch-inline · card, twint</span>`,
-    label: 'open playground',
+    snippet: `{ country: 'CH', currency: 'chf' }
+// → ch-inline · stripe · card, twint`,
+    label: 'open the playground',
   },
   {
-    eyebrow: 'Cookbook',
-    title: 'Country-based routing',
-    blurb: 'TWINT in Switzerland, iDEAL in the Netherlands, Pix in Brazil. One rules table, declarative and serializable.',
-    href: `${base}/docs/cookbooks/country-based-routing`,
-    external: false,
-    snippet: `<span class="tok-p">when</span><span class="tok-pu">: </span><span class="tok-pu">{ </span><span class="tok-p">country</span><span class="tok-pu">: </span><span class="tok-pu">{ </span><span class="tok-p">in</span><span class="tok-pu">: </span><span class="tok-pu">[</span><span class="tok-s">'NL'</span><span class="tok-pu">, </span><span class="tok-s">'BE'</span><span class="tok-pu">] } }</span>
-<span class="tok-c">// → ideal, bancontact</span>`,
-    label: 'read cookbook',
+    eyebrow: 'Runs locally · no keys',
+    title: 'The example checkout',
+    blurb: 'A Next.js app that pays through a labelled demo provider: server-side pricing, a hosted page, a signed webhook and a confirmed order. Add Stripe test keys for the real thing.',
+    href: `${base}/docs/getting-started`,
+    snippet: `pnpm install
+pnpm example   # http://localhost:3000`,
+    label: 'run the example',
   },
   {
-    eyebrow: 'Cookbook',
-    title: 'Stripe Checkout redirect',
-    blurb: 'Wire the Stripe provider, register routing rules, hand the user off — the typed way.',
-    href: `${base}/docs/cookbooks/stripe-checkout-redirect`,
-    external: false,
-    snippet: `<span class="tok-k">await</span> <span class="tok-p">checkout</span><span class="tok-pu">.</span><span class="tok-f">submit</span><span class="tok-pu">({ </span><span class="tok-p">items</span><span class="tok-pu">, </span><span class="tok-p">successUrl</span> <span class="tok-pu">});</span>
-<span class="tok-c">// → redirect to Stripe-hosted page</span>`,
-    label: 'read cookbook',
+    eyebrow: 'Docs',
+    title: 'Write your own adapter',
+    blurb: 'A provider is two small objects. The demo provider in the example is a complete one, written with the same entry point the Stripe and Polar adapters use.',
+    href: `${base}/docs/adapters`,
+    snippet: `defineBrowserProvider({ id: 'acme', ... })
+defineServerAdapter({ id: 'acme', ... })`,
+    label: 'read how adapters work',
   },
 ];
 ---
@@ -42,7 +39,7 @@ const cards = [
   id="showcase"
   eyebrow="Showcase"
   title="See it route, before you ship it."
-  kicker="A live playground and two cookbooks that match the patterns most teams reach for first."
+  kicker="A playground that runs the real router, an example you can pay through without an account, and the adapter guide."
 >
   <div class="showcase-grid">
     {cards.map((c) => (

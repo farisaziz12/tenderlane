@@ -7,12 +7,6 @@ export interface PolarServerConfig {
   readonly accessToken: string;
 
   /**
-   * The Polar organization ID this adapter targets. Used to scope checkout
-   * sessions to the correct merchant.
-   */
-  readonly organizationId: string;
-
-  /**
    * Which Polar environment to talk to.
    *
    * - `'sandbox'` → `https://sandbox-api.polar.sh`
@@ -22,4 +16,7 @@ export interface PolarServerConfig {
    * not the same host distinguished by key prefix. Default: `'production'`.
    */
   readonly server?: 'sandbox' | 'production';
+
+  /** The secret set on the Polar webhook endpoint. Needed only to verify webhooks. */
+  readonly webhookSecret?: string;
 }

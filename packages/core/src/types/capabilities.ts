@@ -1,9 +1,13 @@
-export type PaymentFlow =
-  | 'checkout-session'
-  | 'payment-intent'
-  | 'embedded-checkout'
-  | 'redirect'
-  | 'custom';
+/**
+ * How the customer pays once a route is selected.
+ *
+ * - `'hosted'`: the server creates a checkout on the provider's own page and
+ *   the browser is redirected to it (Stripe Checkout, Polar checkout).
+ * - `'inline'`: the server creates a provider session, the app mounts the
+ *   provider's payment element, and `submit()` confirms it in place
+ *   (Stripe PaymentIntent with the Payment Element).
+ */
+export type PaymentFlow = 'hosted' | 'inline';
 
 /**
  * Well-known payment method IDs across all providers.
@@ -48,23 +52,12 @@ export type KnownPaymentMethodId =
  */
 export type PaymentMethodId = KnownPaymentMethodId | (string & {});
 
-/**
- * Well-known payment provider IDs.
- * Provides IntelliSense autocomplete for provider names in routing rules.
- */
-export type KnownProviderId =
-  | 'stripe'
-  | 'adyen'
-  | 'polar'
-  | 'revolut'
-  | 'braintree'
-  | 'paypal'
-  | 'mollie'
-  | 'square';
+/** Provider ids with a first-party adapter. Used for autocomplete only. */
+export type KnownProviderId = 'stripe' | 'polar';
 
 /**
- * Provider identifier. Autocompletes with known providers but accepts
- * any string for custom/internal PSPs.
+ * Provider identifier. Autocompletes the first-party ids but accepts any
+ * string: core has no privileged provider.
  */
 export type ProviderId = KnownProviderId | (string & {});
 
@@ -119,24 +112,14 @@ export type KnownLocale =
 export type Locale = KnownLocale | (string & {});
 
 /**
- * Capabilities declared by a provider adapter.
- * Generic `TPaymentMethods` preserves literal method IDs through the type system.
+ * What a provider adapter can do. Generic `TPaymentMethods` preserves the
+ * literal method ids through the type system.
  */
 export interface ProviderCapabilities<
   TPaymentMethods extends PaymentMethodId = PaymentMethodId,
 > {
-  readonly provider: ProviderId;
   readonly flows: readonly PaymentFlow[];
   readonly paymentMethods: readonly TPaymentMethods[];
-  readonly currencies?: readonly CurrencyCode[];
-  readonly countries?: readonly CountryCode[];
-  readonly supports: {
-    readonly redirect?: boolean;
-    readonly embedded?: boolean;
-    readonly subscriptions?: boolean;
-    readonly refunds?: boolean;
-    readonly webhooks?: boolean;
-  };
 }
 
 export interface PaymentMethodDescriptor {

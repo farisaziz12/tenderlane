@@ -4,6 +4,7 @@
     "noEmit": true
   },
   "include": [
-    "__tests__"
+    "__tests__",
+    "live"
   ]
 }

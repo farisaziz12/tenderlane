@@ -11,11 +11,11 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
       Just <span style="color:var(--accent)">read the code</span>.
     </h2>
     <p class="t-body-lg" style="margin:0 auto 36px;max-width:560px">
-      MIT. On npm. On GitHub. No sales call. No "talk to us." If you have an hour and a Stripe account, you can have a multi-region routed checkout running this afternoon.
+      MIT and on GitHub. No sales call, no "talk to us". It is an alpha: clone it, run the example without an account, then add Stripe test keys and route a real test payment.
     </p>
     <div class="cta-buttons">
-      <a href={`${base}/docs/getting-started/quick-start`} class="btn btn-primary">
-        Start the quickstart <Icon name="arrow" size={12} />
+      <a href={`${base}/docs/getting-started`} class="btn btn-primary">
+        Run the example <Icon name="arrow" size={12} />
       </a>
       <a href="https://github.com/farisaziz12/tenderlane" class="btn btn-ghost">
         <Icon name="github" size={16} /> GitHub
@@ -23,11 +23,7 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
     </div>
     <div class="install-bar">
       <span style="color:var(--text-3)">$</span>
-      <span><span style="color:var(--accent)">pnpm</span> add @tenderlane/core @tenderlane/react @tenderlane/stripe</span>
-      <span style="width:1px;height:14px;background:var(--line-2)"></span>
-      <button class="btn btn-link" style="padding:0;color:var(--text-2)" aria-label="Copy install command">
-        <Icon name="copy" size={13} />
-      </button>
+      <span><span style="color:var(--accent)">git</span> clone https://github.com/farisaziz12/tenderlane</span>
     </div>
   </div>
 </section>

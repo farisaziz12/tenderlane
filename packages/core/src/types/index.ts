@@ -24,11 +24,11 @@ export type {
 } from './phantom.js';
 
 export type {
-  CheckoutLineItem,
   CheckoutInput,
   ResolvedCheckoutInput,
   CheckoutStatus,
   CheckoutResult,
+  CheckoutDetails,
 } from './checkout.js';
 
 export type {
@@ -51,7 +51,7 @@ export type {
   RouteTarget,
   SelectedPaymentRoute,
   RulesRouterConfig,
-  AutoRouterConfig,
+  RulesRouter,
   Router,
 } from './routing.js';
 
@@ -59,6 +59,7 @@ export type {
   ProviderSession,
   BrowserPaymentProvider,
   ServerProviderAdapter,
+  ServerActionOptions,
   AnyBrowserProvider,
 } from './provider.js';
 
@@ -75,3 +76,5 @@ export type {
   InferCatalogSkus,
   Expand,
 } from './utils.js';
+
+export type { PaymentEvent, PaymentEventType } from './webhook.js';

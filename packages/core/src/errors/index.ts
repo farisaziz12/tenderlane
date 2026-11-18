@@ -5,4 +5,7 @@ export {
   ProviderError,
   ValidationError,
   UnsupportedCapabilityError,
+  CatalogError,
+  WebhookVerificationError,
+  hasErrorCode,
 } from './errors.js';

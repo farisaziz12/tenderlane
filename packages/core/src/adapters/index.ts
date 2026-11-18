@@ -8,15 +8,27 @@
  * @packageDocumentation
  */
 import type { ProviderCapabilities } from '../types/capabilities.js';
-import type { CheckoutInput, CheckoutResult, ResolvedCheckoutInput } from '../types/checkout.js';
+import type {
+  CheckoutDetails,
+  CheckoutInput,
+  CheckoutResult,
+  CheckoutStatus,
+  ResolvedCheckoutInput,
+} from '../types/checkout.js';
 import type { ProviderPhantomTypes } from '../types/phantom.js';
-import type { BrowserPaymentProvider, ServerProviderAdapter } from '../types/provider.js';
+import type { PaymentEvent, PaymentEventType } from '../types/webhook.js';
+import type {
+  BrowserPaymentProvider,
+  ServerActionOptions,
+  ServerProviderAdapter,
+} from '../types/provider.js';
 import type { SelectedPaymentRoute } from '../types/routing.js';
 import { ProviderError } from '../errors/errors.js';
 
 export type {
   BrowserPaymentProvider,
   ServerProviderAdapter,
+  ServerActionOptions,
   ProviderSession,
 } from '../types/provider.js';
 export type {
@@ -28,12 +40,20 @@ export type { ProviderPhantomTypes } from '../types/phantom.js';
 export type {
   CheckoutInput,
   CheckoutResult,
+  CheckoutDetails,
   CheckoutStatus,
   ResolvedCheckoutInput,
 } from '../types/checkout.js';
 export type { ResolvedCatalogItem, ResolvedProviderRefs } from '../types/catalog.js';
 export type { SelectedPaymentRoute } from '../types/routing.js';
-export { ProviderError, CatalogError, UnsupportedCapabilityError } from '../errors/errors.js';
+export {
+  ProviderError,
+  CatalogError,
+  ConfigurationError,
+  UnsupportedCapabilityError,
+  WebhookVerificationError,
+} from '../errors/errors.js';
+export type { PaymentEvent, PaymentEventType } from '../types/webhook.js';
 
 /**
  * Define a browser provider. An identity function: it adds the `~types`
@@ -100,10 +120,160 @@ export function defineServerAdapter<
   handle(
     action: TActions[number],
     payload: ResolvedCheckoutInput,
-    options?: Record<string, unknown>,
+    options?: ServerActionOptions,
   ): Promise<CheckoutResult>;
+  retrieve?(id: string): Promise<CheckoutDetails>;
+  verifyWebhook?(request: Request): Promise<PaymentEvent>;
 }): ServerProviderAdapter<TProviderId> {
   return adapter as ServerProviderAdapter<TProviderId>;
+}
+
+const CHECKOUT_STATUSES: readonly CheckoutStatus[] = [
+  'open',
+  'processing',
+  'complete',
+  'expired',
+  'failed',
+];
+
+function isHttpUrl(value: string): boolean {
+  try {
+    const protocol = new URL(value).protocol;
+    return protocol === 'https:' || protocol === 'http:';
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Validate a value that claims to be a {@link CheckoutResult} and return only
+ * its known fields. Used on both sides of the wire: the server handler passes
+ * every adapter result through it, so nothing else from a PSP response reaches
+ * the browser, and the browser checks the response before acting on it. A
+ * `url` must be an absolute http(s) URL, because the browser navigates to it.
+ *
+ * @throws {ProviderError} When the value does not have the expected shape.
+ */
+export function parseCheckoutResult(value: unknown, provider: string): CheckoutResult {
+  const invalid = (detail: string) =>
+    new ProviderError(`Invalid checkout result from "${provider}": ${detail}.`, provider);
+
+  if (typeof value !== 'object' || value === null) throw invalid('not an object');
+  const candidate = value as Record<string, unknown>;
+
+  if (typeof candidate.provider !== 'string') throw invalid('`provider` is not a string');
+  if (typeof candidate.id !== 'string' || candidate.id.length === 0) {
+    throw invalid('`id` is not a non-empty string');
+  }
+  const status = CHECKOUT_STATUSES.find((known) => known === candidate.status);
+  if (!status) throw invalid('`status` is not a known checkout status');
+  if (candidate.url !== undefined && (typeof candidate.url !== 'string' || !isHttpUrl(candidate.url))) {
+    throw invalid('`url` is not an absolute http(s) URL');
+  }
+  if (candidate.clientSecret !== undefined && typeof candidate.clientSecret !== 'string') {
+    throw invalid('`clientSecret` is not a string');
+  }
+
+  return {
+    provider: candidate.provider,
+    id: candidate.id,
+    status,
+    ...(candidate.url !== undefined ? { url: candidate.url } : {}),
+    ...(candidate.clientSecret !== undefined ? { clientSecret: candidate.clientSecret } : {}),
+  };
+}
+
+/** The handler answers errors as `{ error, code }`; show the message, not the JSON. */
+function readErrorMessage(body: string): string {
+  try {
+    const parsed: unknown = JSON.parse(body);
+    if (typeof parsed === 'object' && parsed !== null && 'error' in parsed) {
+      const message = parsed.error;
+      if (typeof message === 'string') return message;
+    }
+  } catch {
+    // Not JSON: fall through to the raw text.
+  }
+  return body;
+}
+
+/**
+ * The placeholder a `successUrl` may contain. The provider replaces it with
+ * the checkout id when it sends the customer back. Adapters translate it to
+ * their PSP's own placeholder, or substitute the id themselves.
+ */
+export const CHECKOUT_ID_PLACEHOLDER = '{CHECKOUT_ID}';
+
+/**
+ * Validate a value that claims to be {@link CheckoutDetails} and return only
+ * its known fields.
+ *
+ * @throws {ProviderError} When the value does not have the expected shape.
+ */
+export function parseCheckoutDetails(value: unknown, provider: string): CheckoutDetails {
+  const result = parseCheckoutResult(value, provider);
+  const candidate = value as Record<string, unknown>;
+  const invalid = (detail: string) =>
+    new ProviderError(`Invalid checkout details from "${provider}": ${detail}.`, provider);
+
+  const { amountTotal, currency, paymentMethod } = candidate;
+  if (
+    amountTotal !== undefined &&
+    (typeof amountTotal !== 'number' || !Number.isSafeInteger(amountTotal) || amountTotal < 0)
+  ) {
+    throw invalid('`amountTotal` is not a non-negative integer');
+  }
+  if (currency !== undefined && typeof currency !== 'string') {
+    throw invalid('`currency` is not a string');
+  }
+  if (paymentMethod !== undefined && typeof paymentMethod !== 'string') {
+    throw invalid('`paymentMethod` is not a string');
+  }
+
+  return {
+    provider: result.provider,
+    id: result.id,
+    status: result.status,
+    ...(amountTotal !== undefined ? { amountTotal } : {}),
+    ...(currency !== undefined ? { currency: currency.toLowerCase() } : {}),
+    ...(paymentMethod !== undefined ? { paymentMethod } : {}),
+  };
+}
+
+const PAYMENT_EVENT_TYPES: readonly PaymentEventType[] = [
+  'payment.processing',
+  'payment.succeeded',
+  'payment.failed',
+  'checkout.expired',
+  'unhandled',
+];
+
+/**
+ * Validate a value that claims to be a {@link PaymentEvent} and return only
+ * its known fields.
+ *
+ * @throws {ProviderError} When the value does not have the expected shape.
+ */
+export function parsePaymentEvent(value: unknown, provider: string): PaymentEvent {
+  const invalid = (detail: string) =>
+    new ProviderError(`Invalid payment event from "${provider}": ${detail}.`, provider);
+
+  if (typeof value !== 'object' || value === null) throw invalid('not an object');
+  const candidate = value as Record<string, unknown>;
+  const { eventId, providerEventType, checkoutId } = candidate;
+
+  const type = PAYMENT_EVENT_TYPES.find((known) => known === candidate.type);
+  if (!type) throw invalid('`type` is not a known event type');
+  if (typeof eventId !== 'string' || eventId.length === 0) {
+    throw invalid('`eventId` is not a non-empty string');
+  }
+  if (typeof providerEventType !== 'string') throw invalid('`providerEventType` is not a string');
+
+  if (type === 'unhandled') return { type, provider, eventId, providerEventType };
+  if (typeof checkoutId !== 'string' || checkoutId.length === 0) {
+    throw invalid('`checkoutId` is not a non-empty string');
+  }
+  return { type, provider, eventId, providerEventType, checkoutId };
 }
 
 export interface ProviderActionRequest {
@@ -121,10 +291,10 @@ export interface ProviderActionRequest {
 
 /**
  * POST one provider action to the app's Tenderlane handler, in the wire
- * format the handler expects, and return the normalized result. Throws a
- * `ProviderError` carrying the HTTP status when the handler answers non-2xx.
+ * format the handler expects, and return the validated result. Throws a
+ * `ProviderError` when the handler answers non-2xx or with an unexpected body.
  *
- * Browser providers use this for redirect flows and for session creation.
+ * Browser providers use this for hosted checkouts and for session creation.
  * It does not navigate: redirecting to `result.url` is the provider's call.
  */
 export async function requestProviderAction(
@@ -145,11 +315,12 @@ export async function requestProviderAction(
   if (!response.ok) {
     const body = await response.text().catch(() => '');
     throw new ProviderError(
-      `${request.provider} ${request.action} failed (${response.status}): ${body}`,
+      `${request.provider} ${request.action} failed (${response.status}): ${readErrorMessage(body)}`,
       request.provider,
       { cause: new Error(body) },
     );
   }
 
-  return (await response.json()) as CheckoutResult;
+  const body: unknown = await response.json().catch(() => undefined);
+  return parseCheckoutResult(body, request.provider);
 }

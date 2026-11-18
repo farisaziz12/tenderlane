@@ -3,23 +3,23 @@ import { Code } from 'astro:components';
 import '../styles/tokens.css';
 import Logo from '../components/Logo.astro';
 import Icon from '../components/Icons.astro';
+import { fallback, rules } from '../../snippets/markets';
+import ROUTING_TS from '../../snippets/markets.ts?raw';
+import CHECKOUT_TSX from '../../snippets/checkout.tsx?raw';
+import SERVER_TS from '../../snippets/server.ts?raw';
 
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 
 const PLANS = [
   { id: 'starter', name: 'Starter', copy: 'For solo builders', features: ['1 project', '5GB storage', 'Community support'] },
-  { id: 'pro', name: 'Pro', copy: 'For small teams', features: ['Unlimited projects', '50GB storage', 'Priority support', 'Webhooks'] },
-  { id: 'team', name: 'Team', copy: 'For growing studios', features: ['Everything in Pro', 'SSO', 'SOC2 reports', 'Audit logs'] },
+  { id: 'pro', name: 'Pro', copy: 'For small teams', features: ['Unlimited projects', '50GB storage', 'Priority support'] },
+  { id: 'team', name: 'Team', copy: 'For growing studios', features: ['Everything in Pro', 'SSO', 'Audit logs'] },
 ];
 
-const RULES = [
-  { id: 'ch-inline', when: { country: 'CH', currency: 'chf' }, use: { provider: 'stripe', flow: 'payment-intent', paymentMethods: ['card', 'twint'] } },
-  { id: 'nl-ideal', when: { country: 'NL', currency: 'eur' }, use: { provider: 'stripe', flow: 'payment-intent', paymentMethods: ['card', 'ideal', 'sepa'] } },
-  { id: 'de-klarna', when: { country: 'DE', currency: 'eur' }, use: { provider: 'stripe', flow: 'payment-intent', paymentMethods: ['card', 'sepa', 'klarna'] } },
-  { id: 'br-pix', when: { country: 'BR', currency: 'brl' }, use: { provider: 'stripe', flow: 'payment-intent', paymentMethods: ['card', 'pix'] } },
-  { id: 'gb-card', when: { country: 'GB', currency: 'gbp' }, use: { provider: 'stripe', flow: 'payment-intent', paymentMethods: ['card'] } },
-];
-const FALLBACK = { provider: 'stripe', flow: 'checkout-session', paymentMethods: ['card'] };
+// The rules the playground starts with are a real, typechecked file, and the
+// "routing.ts" tab shows that same file.
+const RULES = rules;
+const FALLBACK = fallback;
 
 const COUNTRIES = [
   { code: 'US', flag: '🇺🇸', cur: 'usd' },
@@ -33,141 +33,6 @@ const COUNTRIES = [
 
 const DATA_JSON = JSON.stringify({ PLANS, RULES, FALLBACK, COUNTRIES });
 
-const CHECKOUT_TSX = `import { TenderlaneProvider, TenderlaneCheckoutForm } from '@tenderlane/react';
-import { createRulesRouter } from '@tenderlane/core';
-import { stripeProvider } from '@tenderlane/stripe';
-import { StripePaymentElement } from '@tenderlane/stripe/react';
-
-import { rules, fallback } from './routing';
-import { useAppContext } from './context';
-
-const stripe = stripeProvider({
-  publishableKey: import.meta.env.STRIPE_PK,
-  serverEndpoint: '/api/pay',
-});
-
-export function Checkout({ plan }: { plan: Plan }) {
-  const context = useAppContext();
-
-  return (
-    <TenderlaneProvider
-      config={{
-        context,
-        providers: [stripe],
-        routing: createRulesRouter({ rules, fallback }),
-      }}
-    >
-      <OrderSummary plan={plan} />
-      <TenderlaneCheckoutForm
-        input={{
-          items: [{ sku: plan.id, quantity: 1 }],
-          successUrl: '/thanks',
-        }}
-        elements={{ stripe: StripePaymentElement }}
-      >
-        {({ canSubmit, submit, status }) => (
-          <button disabled={!canSubmit} onClick={submit}>
-            {status === 'submitting' ? 'Processing…' : 'Pay'}
-          </button>
-        )}
-      </TenderlaneCheckoutForm>
-    </TenderlaneProvider>
-  );
-}
-`;
-
-const ROUTING_TS = `import type { RoutingRule, Route } from '@tenderlane/core';
-
-// First-match-wins. Rules are plain JSON — serializable, swappable at runtime.
-export const rules: RoutingRule[] = [
-  {
-    id: 'ch-inline',
-    when: { country: 'CH', currency: 'chf' },
-    use: {
-      provider: 'stripe',
-      flow: 'payment-intent',
-      paymentMethods: ['card', 'twint'],
-    },
-  },
-  {
-    id: 'nl-ideal',
-    when: { country: 'NL', currency: 'eur' },
-    use: {
-      provider: 'stripe',
-      flow: 'payment-intent',
-      paymentMethods: ['card', 'ideal', 'sepa'],
-    },
-  },
-  {
-    id: 'de-klarna',
-    when: { country: 'DE', currency: 'eur' },
-    use: {
-      provider: 'stripe',
-      flow: 'payment-intent',
-      paymentMethods: ['card', 'sepa', 'klarna'],
-    },
-  },
-  {
-    id: 'br-pix',
-    when: { country: 'BR', currency: 'brl' },
-    use: {
-      provider: 'stripe',
-      flow: 'payment-intent',
-      paymentMethods: ['card', 'pix'],
-    },
-  },
-  {
-    id: 'gb-card',
-    when: { country: 'GB', currency: 'gbp' },
-    use: {
-      provider: 'stripe',
-      flow: 'payment-intent',
-      paymentMethods: ['card'],
-    },
-  },
-];
-
-export const fallback: Route = {
-  provider: 'stripe',
-  flow: 'checkout-session',
-  paymentMethods: ['card'],
-};
-`;
-
-const CONTEXT_TS = `import { createContext, useContext, useState } from 'react';
-
-export interface AppContext {
-  country: string;
-  currency: 'usd' | 'eur' | 'chf' | 'brl' | 'jpy' | 'gbp';
-  plan: 'starter' | 'pro' | 'team';
-  tier: 'free' | 'starter' | 'pro' | 'team';
-  flag_inline: boolean;
-  flag_threeds: boolean;
-  flag_localized: boolean;
-}
-
-const AppCtx = createContext<AppContext | null>(null);
-
-export function AppProvider({ children }: { children: React.ReactNode }) {
-  const [context] = useState<AppContext>({
-    country: 'CH',
-    currency: 'chf',
-    plan: 'pro',
-    tier: 'free',
-    flag_inline: true,
-    flag_threeds: true,
-    flag_localized: false,
-  });
-
-  return <AppCtx.Provider value={context}>{children}</AppCtx.Provider>;
-}
-
-export function useAppContext(): AppContext {
-  const context = useContext(AppCtx);
-  if (!context) throw new Error('AppProvider missing in tree');
-  return context;
-}
-`;
 ---
 
 <!doctype html>
@@ -176,7 +41,7 @@ export function useAppContext(): AppContext {
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>Playground · Tenderlane</title>
-    <meta name="description" content="Try Tenderlane in your browser — change context, watch routing decide." />
+    <meta name="description" content="Change the context and edit the rules; the real Tenderlane router decides the route in your browser." />
     <link rel="icon" href={`${base}/favicon.svg`} type="image/svg+xml" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -197,12 +62,12 @@ export function useAppContext(): AppContext {
           <span class="t-cap pg-eyebrow">PLAYGROUND</span>
           <span class="pg-status">
             <span class="pg-status-dot"></span>
-            connected · test-mode
+            real router · preview checkout
           </span>
         </div>
         <div class="pg-top-right">
           <div class="pg-scenario" role="tablist" aria-label="Scenario">
-            <button data-scenario="subscription" data-active="true" class="pg-scenario-btn">Subscription</button>
+            <button data-scenario="subscription" data-active="true" class="pg-scenario-btn">Plan upgrade</button>
             <button data-scenario="cart" class="pg-scenario-btn">Marketplace cart</button>
             <button data-scenario="donation" class="pg-scenario-btn">Donation</button>
           </div>
@@ -210,10 +75,9 @@ export function useAppContext(): AppContext {
           <a class="btn btn-ghost pg-fork" href="https://github.com/farisaziz12/tenderlane" target="_blank" rel="noopener">
             <Icon name="arrowExt" size={11} /> Fork on GitHub
           </a>
-          <button class="btn btn-primary pg-install" id="pg-install" aria-label="Copy install command">
-            <span class="t-mono">npx create-tenderlane-app</span>
-            <Icon name="copy" size={12} />
-          </button>
+          <a class="btn btn-primary pg-install" href={`${base}/docs/getting-started`}>
+            <span class="t-mono">Run the example</span>
+          </a>
         </div>
       </header>
 
@@ -225,7 +89,7 @@ export function useAppContext(): AppContext {
             <div class="pg-preview-meta">
               <span class="t-cap" style="color:var(--text-3)">PREVIEW</span>
               <span class="badge pg-pill"><span class="dot"></span>route · <span id="pg-route-id">ch-inline</span></span>
-              <span class="badge pg-pill">flow · <span id="pg-route-flow">payment-intent</span></span>
+              <span class="badge pg-pill">flow · <span id="pg-route-flow">inline</span></span>
             </div>
             <div class="pg-device" role="group" aria-label="Viewport size">
               <button data-device="desktop" data-active="true" class="pg-device-btn" aria-label="Desktop">
@@ -267,7 +131,7 @@ export function useAppContext(): AppContext {
                     <div class="sf-order-head">
                       <div>
                         <div class="sf-order-row-name"><span id="sf-order-name">Pro</span> <span id="sf-order-suffix">· monthly</span></div>
-                        <div class="sf-order-row-sub" id="sf-order-sub">Renews monthly · cancel anytime</div>
+                        <div class="sf-order-row-sub" id="sf-order-sub">One-time payment</div>
                       </div>
                       <div class="sf-order-row-amt t-mono" id="sf-price-top">CHF 27.00</div>
                     </div>
@@ -372,7 +236,7 @@ export function useAppContext(): AppContext {
                 <div class="pg-add-rule-grid">
                   <label class="pg-add-rule-field">
                     <span>id</span>
-                    <input name="id" placeholder="jp-konbini" required autocomplete="off" />
+                    <input name="id" placeholder="at-eps" required autocomplete="off" />
                   </label>
                   <label class="pg-add-rule-field">
                     <span>country</span>
@@ -388,11 +252,11 @@ export function useAppContext(): AppContext {
                   </label>
                   <label class="pg-add-rule-field">
                     <span>flow</span>
-                    <input name="flow" placeholder="payment-intent" value="payment-intent" autocomplete="off" />
+                    <input name="flow" placeholder="inline or hosted" value="inline" autocomplete="off" />
                   </label>
                   <label class="pg-add-rule-field pg-add-rule-field-wide">
                     <span>paymentMethods</span>
-                    <input name="paymentMethods" placeholder="card, konbini" autocomplete="off" />
+                    <input name="paymentMethods" placeholder="card, eps" autocomplete="off" />
                   </label>
                 </div>
                 <div class="pg-add-rule-error" id="pg-add-rule-error" hidden></div>
@@ -450,9 +314,9 @@ export function useAppContext(): AppContext {
                 <div class="pg-field-label">flags</div>
                 <div class="pg-flags">
                   {[
-                    { k: 'flag_inline', l: 'inline-checkout · ramp 64%', def: true },
-                    { k: 'flag_threeds', l: '3ds-always · ramp 100%', def: true },
-                    { k: 'flag_localized', l: 'localized-receipts · ramp 12%', def: false },
+                    { k: 'flag_inline', l: 'inline-checkout', def: true },
+                    { k: 'flag_threeds', l: '3ds-always', def: true },
+                    { k: 'flag_localized', l: 'localized-receipts', def: false },
                   ].map((f) => (
                     <div class="pg-flag-row">
                       <span class="t-mono pg-flag-label">{f.l}</span>
@@ -503,7 +367,7 @@ export function useAppContext(): AppContext {
                 <div class="pg-code-tabs">
                   <button data-file="checkout.tsx" data-active="true">Checkout.tsx</button>
                   <button data-file="routing.ts">routing.ts</button>
-                  <button data-file="context.ts">context.ts</button>
+                  <button data-file="server.ts">server.ts</button>
                 </div>
                 <div class="pg-code-body">
                   <div data-file="checkout.tsx" data-active="true" class="pg-code-pane">
@@ -512,8 +376,8 @@ export function useAppContext(): AppContext {
                   <div data-file="routing.ts" class="pg-code-pane">
                     <Code code={ROUTING_TS} lang="ts" />
                   </div>
-                  <div data-file="context.ts" class="pg-code-pane">
-                    <Code code={CONTEXT_TS} lang="tsx" />
+                  <div data-file="server.ts" class="pg-code-pane">
+                    <Code code={SERVER_TS} lang="ts" />
                   </div>
                 </div>
               </div>
@@ -521,7 +385,6 @@ export function useAppContext(): AppContext {
                 <a class="btn btn-ghost pg-mini-btn" href="https://github.com/farisaziz12/tenderlane" target="_blank" rel="noopener">
                   <Icon name="github" size={12} /> View on GitHub
                 </a>
-                <a class="btn btn-ghost pg-mini-btn" href="#" aria-disabled="true">↗ Open in StackBlitz</a>
                 <a class="btn btn-ghost pg-mini-btn" href="#" aria-disabled="true">↗ Open in CodeSandbox</a>
               </div>
             </div>
@@ -533,7 +396,12 @@ export function useAppContext(): AppContext {
     <script is:inline set:html={`
       window.__PG = ${DATA_JSON};
     `}></script>
-    <script is:inline>
+    <script>
+      // The route is decided by the real router from @tenderlane/core, with the
+      // rules as they are edited on this page. Only the checkout on the left is
+      // a preview: it calls no provider.
+      import { createRulesRouter } from '@tenderlane/core';
+
       // ───────── state ─────────
       const { PLANS, RULES, FALLBACK, COUNTRIES } = window.__PG;
       const state = {
@@ -558,7 +426,7 @@ export function useAppContext(): AppContext {
       const CUR_SYM = { usd: '$', eur: '€', chf: 'CHF', brl: 'R$', jpy: '¥', gbp: '£' };
 
       const SCENARIOS = {
-        subscription: { eyebrow: 'UPGRADING TO', planSuffix: 'plan', orderSuffix: '· monthly', orderSub: 'Renews monthly · cancel anytime' },
+        subscription: { eyebrow: 'UPGRADING TO', planSuffix: 'plan', orderSuffix: '· one-time', orderSub: 'One-time payment · subscriptions are planned' },
         cart:         { eyebrow: 'YOUR CART',    planSuffix: 'bundle', orderSuffix: '· 1 item', orderSub: 'Ships in 2 business days' },
         donation:     { eyebrow: 'ONE-TIME GIFT', planSuffix: 'tier',  orderSuffix: '· donation', orderSub: 'Tax-deductible · one-time' },
       };
@@ -567,14 +435,13 @@ export function useAppContext(): AppContext {
         card:    { label: 'Card', sub: 'Visa · Mastercard · Amex',   color: '#3b3f49', letter: 'C', dark: false },
         twint:   { label: 'TWINT', sub: 'Pay with your phone (CH)',  color: '#ED1C24', letter: 'T' },
         ideal:   { label: 'iDEAL', sub: 'Dutch bank transfer',        color: '#CC0066', letter: 'i' },
-        sepa:    { label: 'SEPA Direct', sub: 'Bank debit (EU)',      color: '#0033A0', letter: 'S' },
+        sepa_debit: { label: 'SEPA Direct Debit', sub: 'Bank debit (EU)', color: '#0033A0', letter: 'S' },
         klarna:  { label: 'Klarna', sub: 'Pay later or in 3',         color: '#FFB3C7', letter: 'K', dark: true },
-        pix:     { label: 'Pix', sub: 'Instant transfer (BR)',        color: '#32BCAD', letter: 'P' },
-        konbini: { label: 'Konbini', sub: 'Convenience-store cash (JP)', color: '#7c4dff', letter: 'K' },
+        eps:     { label: 'EPS', sub: 'Austrian bank transfer', color: '#C8036F', letter: 'E' },
       };
 
       function priceFmt(amount, cur) {
-        if (amount == null) return (CUR_SYM[cur] || '') + ' —';
+        if (amount == null) return (CUR_SYM[cur] || '') + ' n/a';
         if (cur === 'jpy') return '¥' + amount.toLocaleString();
         if (cur === 'chf') return 'CHF ' + amount + '.00';
         if (cur === 'brl') return 'R$ ' + amount + '.00';
@@ -590,10 +457,8 @@ export function useAppContext(): AppContext {
       }
 
       function matchRoute(ctx) {
-        const rule = state.rules.find((r) =>
-          Object.entries(r.when).every(([key, value]) => ctx[key] === value),
-        );
-        return rule ? { id: rule.id, ...rule.use } : { id: 'fallback', ...state.fallback };
+        const route = createRulesRouter({ rules: state.rules, fallback: state.fallback }).evaluate(ctx);
+        return { id: route.ruleId ?? 'fallback', ...route };
       }
 
       // ───────── live event log ─────────
@@ -608,13 +473,12 @@ export function useAppContext(): AppContext {
       function seedInitialEvents() {
         const route = matchRoute(state.ctx);
         const ctx = state.ctx;
-        state.startedAt = performance.now() - 320;
+        state.startedAt = performance.now() - 20;
         state.events = [
           { t: 0,   kind: 'context:set',     detail: 'country = ' + ctx.country + ', currency = ' + ctx.currency, cls: 'ev-ctx' },
           { t: 12,  kind: 'route:eval',      detail: state.rules.length + ' rules tested → matched \'' + route.id + '\'', cls: 'ev-route' },
           { t: 14,  kind: 'route:resolved',  detail: 'provider: ' + route.provider + ' · flow: ' + route.flow + ' · methods: [' + route.paymentMethods.join(', ') + ']', cls: 'ev-default' },
-          { t: 18,  kind: 'adapter:load',    detail: 'lazy: @tenderlane/' + route.provider + ' (5.8kb)', cls: 'ev-adapter' },
-          { t: 280, kind: 'state:idle→ready', detail: 'PaymentElement mounted', cls: 'ev-state' },
+          { t: 15,  kind: 'preview',         detail: 'checkout preview rendered · no provider called', cls: 'ev-state' },
         ];
         state.lastRouteId = route.id;
       }
@@ -931,7 +795,7 @@ export function useAppContext(): AppContext {
         const country = String(formData.get('country') || '').trim().toUpperCase();
         const currency = String(formData.get('currency') || '').trim().toLowerCase();
         const provider = String(formData.get('provider') || 'stripe').trim() || 'stripe';
-        const flow = String(formData.get('flow') || 'payment-intent').trim() || 'payment-intent';
+        const flow = String(formData.get('flow') || 'inline').trim() === 'hosted' ? 'hosted' : 'inline';
         const paymentMethods = String(formData.get('paymentMethods') || '')
           .split(',')
           .map((s) => s.trim().toLowerCase())
@@ -990,18 +854,15 @@ export function useAppContext(): AppContext {
       // ───────── pay button (demo) ─────────
       document.getElementById('sf-pay-btn')?.addEventListener('click', () => {
         const route = matchRoute(state.ctx);
-        pushEvent('submit:start', "provider '" + route.provider + "' · " + route.flow, 'ev-state');
+        pushEvent('preview:pay', "provider '" + route.provider + "' · " + route.flow, 'ev-state');
         setTimeout(() => {
-          pushEvent('submit:success', 'redirect ' + (route.flow === 'checkout-session' ? 'to hosted page' : 'confirmed inline'), 'ev-state');
+          pushEvent('preview:pay', 'preview only · a real checkout would ' + (route.flow === 'hosted' ? 'redirect to the hosted page' : 'confirm inline'), 'ev-state');
         }, 700);
       });
 
       // ───────── copy buttons ─────────
       document.getElementById('pg-ctx-copy')?.addEventListener('click', () => {
         navigator.clipboard?.writeText(JSON.stringify(state.ctx, null, 2)).catch(() => {});
-      });
-      document.getElementById('pg-install')?.addEventListener('click', () => {
-        navigator.clipboard?.writeText('npx create-tenderlane-app').catch(() => {});
       });
 
       // ───────── keyboard shortcuts ─────────

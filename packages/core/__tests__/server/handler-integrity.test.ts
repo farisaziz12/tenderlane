@@ -22,7 +22,7 @@ function captureAdapter(id = 'mock') {
     async (_action: string, _payload: ResolvedCheckoutInput): Promise<CheckoutResult> => ({
       provider: id,
       id: 'session_123',
-      status: 'created',
+      status: 'open',
     }),
   );
   const adapter: ServerProviderAdapter = { id, actions: ['checkout'], handle };
@@ -30,7 +30,7 @@ function captureAdapter(id = 'mock') {
 }
 
 function post(body: unknown, headers: Record<string, string> = {}): Request {
-  return new Request('http://localhost/api/payments', {
+  return new Request('https://shop.example/api/payments', {
     method: 'POST',
     headers,
     body: typeof body === 'string' ? body : JSON.stringify(body),
@@ -227,7 +227,7 @@ describe('request validation', () => {
     const foreign = await handler.POST(
       post(checkout({ items, successUrl: 'https://evil.example/s' })),
     );
-    const relative = await handler.POST(post(checkout({ items, cancelUrl: '/cancel' })));
+    const relative = await handler.POST(post(checkout({ items, cancelUrl: 'http://localhost/cancel' })));
 
     expect(allowed.status).toBe(200);
     expect(foreign.status).toBe(400);
@@ -258,7 +258,7 @@ describe('server-side routing', () => {
   const routing = {
     evaluate: (context: Record<string, unknown>) => ({
       provider: context.country === 'CH' ? 'stripe' : 'polar',
-      flow: 'checkout-session' as const,
+      flow: 'hosted' as const,
       paymentMethods: ['card'],
       source: 'rule' as const,
     }),
@@ -346,3 +346,138 @@ describe('errors from another copy of core', () => {
     expect((await response.json()).error).toContain('no quantity');
   });
 });
+
+describe('defaults that protect an unconfigured handler', () => {
+  it('rejects a redirect URL on another origin when allowedRedirectOrigins is not set', async () => {
+    const { adapter, handle } = captureAdapter();
+    const handler = createTenderlaneHandler({ providers: [adapter], catalog });
+    const items = [{ sku: 'pro', quantity: 1 }];
+
+    const sameOrigin = await handler.POST(post(checkout({ items })));
+    const foreign = await handler.POST(
+      post(checkout({ items, successUrl: 'https://evil.example/thanks' })),
+    );
+
+    expect(sameOrigin.status).toBe(200);
+    expect(foreign.status).toBe(400);
+    expect((await foreign.json()).error).toContain('https://shop.example');
+    expect(handle).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not let a __proto__ key supply fields the body does not own', async () => {
+    const { adapter, handle } = captureAdapter();
+    const resolveContext = vi.fn((_request: Request, context: Record<string, unknown>) => context);
+    const handler = createTenderlaneHandler({ providers: [adapter], catalog, resolveContext });
+
+    // Written as text: an object literal would set the prototype instead of
+    // creating the own "__proto__" key that JSON.parse produces.
+    const smuggledContext = await handler.POST(
+      post(
+        `{"provider":"mock","action":"checkout","payload":{"items":[{"sku":"pro","quantity":1}],
+          "successUrl":"https://shop.example/s","cancelUrl":"https://shop.example/c",
+          "context":{"__proto__":{"country":"IN"}}}}`,
+      ),
+    );
+    const smuggledPayload = await handler.POST(
+      post(
+        `{"provider":"mock","action":"checkout","payload":{"__proto__":{"items":[{"sku":"pro","quantity":1}],
+          "successUrl":"https://shop.example/s","cancelUrl":"https://shop.example/c"}}}`,
+      ),
+    );
+
+    expect(smuggledContext.status).toBe(200);
+    expect(resolveContext.mock.calls[0]?.[1].country).toBeUndefined();
+    expect(handle.mock.calls[0]?.[1].items[0]?.unitAmount).toBe(2900);
+    expect(smuggledPayload.status).toBe(400);
+    expect(handle).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('onCheckoutCreated', () => {
+  it('receives the provider id and the server prices, not what the browser sent', async () => {
+    const { adapter } = captureAdapter();
+    const onCheckoutCreated = vi.fn();
+    const handler = createTenderlaneHandler({
+      providers: [adapter],
+      catalog,
+      resolveContext: () => ({ country: 'CH' }),
+      onCheckoutCreated,
+    });
+
+    const response = await handler.POST(
+      post(
+        checkout({
+          items: [{ sku: 'pro', quantity: 2, unitAmount: 1 }],
+          context: { country: 'IN' },
+          clientReferenceId: 'order-chosen-by-the-browser',
+        }),
+      ),
+    );
+
+    expect(response.status).toBe(200);
+    expect(onCheckoutCreated).toHaveBeenCalledOnce();
+    const event = onCheckoutCreated.mock.calls[0]?.[0];
+    expect(event).toMatchObject({
+      provider: 'mock',
+      action: 'checkout',
+      result: { provider: 'mock', id: 'session_123', status: 'open' },
+      context: { country: 'CH' },
+    });
+    expect(event.items).toMatchObject([{ sku: 'pro', quantity: 2, unitAmount: 2900 }]);
+  });
+
+  it('does not hand out a checkout the app failed to record', async () => {
+    const { adapter } = captureAdapter();
+    const onError = vi.fn();
+    const handler = createTenderlaneHandler({
+      providers: [adapter],
+      catalog,
+      onCheckoutCreated: () => {
+        // Shaped like a request error, with a driver-style code: neither may
+        // turn this into a 400 or reach the browser.
+        throw Object.assign(new Error('insert into orders failed'), { code: 'VALIDATION_ERROR' });
+      },
+      onError,
+    });
+
+    const response = await handler.POST(post(checkout({ items: [{ sku: 'pro', quantity: 1 }] })));
+
+    expect(response.status).toBe(500);
+    expect(await response.json()).toEqual({ error: 'Checkout request failed.', code: 'INTERNAL_ERROR' });
+    expect(onError).toHaveBeenCalledOnce();
+  });
+});
+
+describe('retrieve', () => {
+  it("returns the adapter's details reduced to the known fields", async () => {
+    const { adapter } = captureAdapter();
+    const retrieve = vi.fn(async (id: string) => ({
+      provider: 'mock',
+      id,
+      status: 'complete' as const,
+      amountTotal: 3132,
+      currency: 'USD',
+      customer: { email: 'someone@example.com' },
+    }));
+    const handler = createTenderlaneHandler({ providers: [{ ...adapter, retrieve }], catalog });
+
+    expect(await handler.retrieve('mock', 'session_123')).toEqual({
+      provider: 'mock',
+      id: 'session_123',
+      status: 'complete',
+      amountTotal: 3132,
+      currency: 'usd',
+    });
+  });
+
+  it('fails clearly for an unknown provider and for an adapter that cannot look up', async () => {
+    const { adapter } = captureAdapter();
+    const handler = createTenderlaneHandler({ providers: [adapter], catalog });
+
+    await expect(handler.retrieve('nope', 'x')).rejects.toMatchObject({ code: 'CONFIGURATION_ERROR' });
+    await expect(handler.retrieve('mock', 'x')).rejects.toMatchObject({
+      code: 'UNSUPPORTED_CAPABILITY',
+    });
+  });
+});
+

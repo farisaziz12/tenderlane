@@ -1,32 +1,47 @@
 import Stripe from 'stripe';
 import type {
+  CheckoutDetails,
+  ServerActionOptions,
   ServerProviderAdapter,
   ResolvedCheckoutInput,
   CheckoutResult,
 } from '@tenderlane/core';
-import { CatalogError, ProviderError } from '@tenderlane/core';
+import type { PaymentEvent } from '@tenderlane/core';
+import {
+  CatalogError,
+  ConfigurationError,
+  ProviderError,
+  WebhookVerificationError,
+} from '@tenderlane/core';
+import { mapStripeEvent } from './webhook.js';
 import type { StripeServerConfig } from './types.js';
 import {
   mapToStripeSessionParams,
   mapFromStripeSession,
   mapToStripePaymentIntentParams,
   mapFromStripePaymentIntent,
+  mapStripeSessionDetails,
+  mapStripePaymentIntentDetails,
 } from './mapper.js';
 
 /**
  * Create a Stripe server-side provider adapter.
  *
- * Supports both Checkout Session (redirect) and PaymentIntent (Elements) flows.
+ * Supports the hosted (Checkout Session) and inline (PaymentIntent) flows.
  * The adapter handles two actions:
  * - `checkout` — Creates a Stripe Checkout Session and returns a redirect URL.
  * - `create-payment-intent` — Creates a Stripe PaymentIntent and returns the `clientSecret`.
+ *
+ * `retrieve(id)` reads a Checkout Session or a PaymentIntent back from Stripe.
+ * `verifyWebhook(request)` verifies a webhook with `webhookSecret` and says
+ * what it means for a payment.
  *
  * This function imports the `stripe` npm package and must only be used in
  * server-side code. The browser entry (`@tenderlane/stripe`) never imports this module.
  *
  * @example
  * ```ts
- * import { createTenderlaneHandler } from '@tenderlane/core';
+ * import { createTenderlaneHandler } from '@tenderlane/core/server';
  * import { stripeServerAdapter } from '@tenderlane/stripe/server';
  *
  * const handler = createTenderlaneHandler({
@@ -58,9 +73,9 @@ export function stripeServerAdapter(
     async handle(
       action: string,
       payload: ResolvedCheckoutInput,
-      options?: Record<string, unknown>,
+      options?: ServerActionOptions,
     ): Promise<CheckoutResult> {
-      const paymentMethods = options?.paymentMethods as string[] | undefined;
+      const paymentMethods = options?.paymentMethods;
 
       try {
         if (action === 'checkout') {
@@ -88,22 +103,70 @@ export function stripeServerAdapter(
           'stripe',
         );
       } catch (error) {
-        if (error instanceof ProviderError || error instanceof CatalogError) throw error;
-
-        if (error instanceof Stripe.errors.StripeError) {
-          throw new ProviderError(
-            `Stripe error: ${error.message}`,
-            'stripe',
-            { providerCode: error.code, cause: error },
-          );
-        }
-
-        throw new ProviderError(
-          error instanceof Error ? error.message : 'Unknown Stripe error',
-          'stripe',
-          { cause: error },
-        );
+        throw toProviderError(error);
       }
     },
+
+    async retrieve(id: string): Promise<CheckoutDetails> {
+      try {
+        // The id says which object it is: `handle` returned a Checkout
+        // Session id for the hosted flow and a PaymentIntent id for inline.
+        if (id.startsWith('cs_')) {
+          return mapStripeSessionDetails(
+            await stripe.checkout.sessions.retrieve(id, {
+              expand: ['payment_intent.payment_method'],
+            }),
+          );
+        }
+        if (id.startsWith('pi_')) {
+          return mapStripePaymentIntentDetails(
+            await stripe.paymentIntents.retrieve(id, { expand: ['payment_method'] }),
+          );
+        }
+        throw new ProviderError(
+          `"${id}" is neither a Checkout Session id nor a PaymentIntent id.`,
+          'stripe',
+        );
+      } catch (error) {
+        throw toProviderError(error);
+      }
+    },
+
+    async verifyWebhook(request: Request): Promise<PaymentEvent> {
+      if (!config.webhookSecret) {
+        throw new ConfigurationError(
+          'stripeServerAdapter needs `webhookSecret` (the endpoint signing secret, `whsec_...`) to verify webhooks.',
+        );
+      }
+      // The signature covers the exact bytes Stripe sent, so the body is read
+      // as text and never parsed and re-serialised first.
+      const body = await request.text();
+      const signature = request.headers.get('stripe-signature') ?? '';
+      let event: Stripe.Event;
+      try {
+        event = await stripe.webhooks.constructEventAsync(body, signature, config.webhookSecret);
+      } catch (error) {
+        throw new WebhookVerificationError('The Stripe webhook signature did not verify.', 'stripe', {
+          cause: error,
+        });
+      }
+      return mapStripeEvent(event);
+    },
   };
+}
+
+/** Tenderlane errors pass through; anything else becomes a ProviderError. */
+function toProviderError(error: unknown): unknown {
+  if (error instanceof ProviderError || error instanceof CatalogError) return error;
+
+  if (error instanceof Stripe.errors.StripeError) {
+    return new ProviderError(`Stripe error: ${error.message}`, 'stripe', {
+      providerCode: error.code,
+      cause: error,
+    });
+  }
+
+  return new ProviderError(error instanceof Error ? error.message : 'Unknown Stripe error', 'stripe', {
+    cause: error,
+  });
 }

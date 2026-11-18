@@ -22,7 +22,7 @@ function createProvider() {
   const createSession = vi.fn(async () => {
     sessions += 1;
     return {
-      flow: 'payment-intent' as const,
+      flow: 'inline' as const,
       clientSecret: `secret_${sessions}`,
       sessionId: `pi_${sessions}`,
     };
@@ -31,10 +31,8 @@ function createProvider() {
     '~types': {} as never,
     id: 'mock',
     capabilities: {
-      provider: 'mock',
-      flows: ['payment-intent'],
+      flows: ['hosted', 'inline'],
       paymentMethods: ['card', 'twint'],
-      supports: {},
     } as ProviderCapabilities,
     getAvailablePaymentMethods: () => [
       { id: 'card', label: 'Card', type: 'card', provider: 'mock' },
@@ -49,7 +47,7 @@ function createProvider() {
 const routing: Router = {
   evaluate: () => ({
     provider: 'mock',
-    flow: 'payment-intent',
+    flow: 'inline',
     paymentMethods: [],
     ruleId: 'inline',
     source: 'rule',
@@ -150,7 +148,7 @@ describe('TenderlaneCheckoutForm after a failed prepare', () => {
     const createSession = vi
       .fn()
       .mockRejectedValueOnce(new Error('503'))
-      .mockResolvedValueOnce({ flow: 'payment-intent', clientSecret: 'secret_ok' });
+      .mockResolvedValueOnce({ flow: 'inline', clientSecret: 'secret_ok' });
     provider.createSession = createSession;
     let retry!: () => void;
 
@@ -196,7 +194,7 @@ describe('TenderlaneProvider back/forward cache', () => {
     const redirectRouting: Router = {
       evaluate: () => ({
         provider: 'mock',
-        flow: 'checkout-session',
+        flow: 'hosted',
         paymentMethods: [],
         source: 'rule',
       }),

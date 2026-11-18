@@ -19,13 +19,13 @@ describe('stripeProvider', () => {
     expect(provider.id).toBe('stripe');
   });
 
-  it('declares checkout-session flow', () => {
+  it('declares the hosted flow', () => {
     const provider = stripeProvider({
       publishableKey: 'pk_test_123',
       serverEndpoint: '/api/payments/stripe',
     });
 
-    expect(provider.capabilities.flows).toContain('checkout-session');
+    expect(provider.capabilities.flows).toContain('hosted');
   });
 
   it('returns all supported payment methods', () => {
@@ -51,7 +51,7 @@ describe('stripeProvider', () => {
     const mockResult = {
       provider: 'stripe',
       id: 'cs_test_123',
-      status: 'created',
+      status: 'open',
       url: 'https://checkout.stripe.com/c/pay/cs_test_123',
     };
 
@@ -76,7 +76,7 @@ describe('stripeProvider', () => {
       },
       {
         provider: 'stripe',
-        flow: 'checkout-session',
+        flow: 'hosted',
         paymentMethods: ['card'],
         source: 'rule',
       },
@@ -91,7 +91,7 @@ describe('stripeProvider', () => {
     expect(result).toMatchObject({
       provider: 'stripe',
       id: 'cs_test_123',
-      status: 'created',
+      status: 'open',
     });
 
     // Restore window
@@ -117,11 +117,39 @@ describe('stripeProvider', () => {
         },
         {
           provider: 'stripe',
-          flow: 'checkout-session',
+          flow: 'hosted',
           paymentMethods: ['card'],
           source: 'rule',
         },
       ),
-    ).rejects.toThrow('Stripe checkout failed');
+    ).rejects.toThrow('stripe checkout failed (500)');
+  });
+
+  it('createSession returns the client secret from the server result', async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      Response.json({ provider: 'stripe', id: 'pi_1', status: 'open', clientSecret: 'pi_1_secret' }),
+    );
+    const provider = stripeProvider({ publishableKey: 'pk_test_123', serverEndpoint: '/api/payments' });
+
+    const session = await provider.createSession?.(
+      { items: [{ sku: 'pro', quantity: 1 }], successUrl: '/s', cancelUrl: '/c' },
+      { provider: 'stripe', flow: 'inline', paymentMethods: [], source: 'fallback' },
+    );
+
+    expect(session).toEqual({ flow: 'inline', clientSecret: 'pi_1_secret', sessionId: 'pi_1' });
+  });
+
+  it('createSession fails when the server result has no client secret', async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      Response.json({ provider: 'stripe', id: 'pi_1', status: 'open' }),
+    );
+    const provider = stripeProvider({ publishableKey: 'pk_test_123', serverEndpoint: '/api/payments' });
+
+    await expect(
+      provider.createSession?.(
+        { items: [{ sku: 'pro', quantity: 1 }], successUrl: '/s', cancelUrl: '/c' },
+        { provider: 'stripe', flow: 'inline', paymentMethods: [], source: 'fallback' },
+      ),
+    ).rejects.toThrow('clientSecret');
   });
 });

@@ -1,0 +1,58 @@
+---
+// Renders a source file from the repository. The code shown is the file's
+// content, imported with `?raw`, so it cannot drift from what CI typechecks.
+import { Code } from 'astro:components';
+
+interface Props {
+  code: string;
+  /** Path from the repository root, shown as the caption and linked. */
+  file: string;
+  lang?: 'ts' | 'tsx';
+}
+const { code, file, lang = file.endsWith('.tsx') ? 'tsx' : 'ts' } = Astro.props;
+const href = `https://github.com/farisaziz12/tenderlane/blob/main/${file}`;
+---
+
+<figure class="source">
+  <figcaption>
+    <a href={href}>{file}</a>
+    <span>from the repository, typechecked in CI</span>
+  </figcaption>
+  <Code code={code.trim()} lang={lang} theme="github-dark-default" />
+</figure>
+
+<style>
+  .source {
+    margin: 20px 0;
+    border: 1px solid var(--line-2);
+    border-radius: 8px;
+    overflow: hidden;
+    background: var(--code-bg);
+  }
+  figcaption {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 4px 16px;
+    padding: 8px 14px;
+    border-bottom: 1px solid var(--line-1);
+    font: 12px var(--font-mono);
+    color: var(--text-3);
+  }
+  figcaption a {
+    color: var(--text-1);
+    text-decoration: none;
+  }
+  figcaption a:hover {
+    text-decoration: underline;
+  }
+  .source :global(pre) {
+    margin: 0;
+    padding: 14px;
+    border: 0;
+    border-radius: 0;
+    overflow-x: auto;
+    font: 13px/1.6 var(--font-mono);
+    background: transparent !important;
+  }
+</style>

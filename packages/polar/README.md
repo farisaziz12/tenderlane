@@ -1,32 +1,18 @@
 # @tenderlane/polar
 
-[Polar.sh](https://polar.sh) provider adapter for [Tenderlane](https://github.com/farisaziz12/tenderlane).
+Polar adapter for [Tenderlane](../../README.md).
 
-Same browser/server boundary as `@tenderlane/stripe`:
+Alpha. Not published to npm; use it from this workspace. No test runs against the live Polar API; the SDK is mocked.
 
-- `@tenderlane/polar` — browser entry. Uses `fetch`. No SDK import.
-- `@tenderlane/polar/server` — server adapter. Imports `@polar-sh/sdk`.
+| Import | Runs in | Contents | Needs |
+| --- | --- | --- | --- |
+| `@tenderlane/polar` | Browser | `polarProvider({ serverEndpoint })` | nothing |
+| `@tenderlane/polar/server` | Server | `polarServerAdapter({ accessToken, server })`, `createPolarCatalog` | `@polar-sh/sdk` |
 
-## Install
+- `hosted` flow only: the server creates a Polar checkout and the browser is redirected to it.
+- Polar sells products by id, so each item needs `providerRefs.polar.productId`. `createPolarCatalog({ accessToken, server, skus: { 'pro-plan': { productId } } })` supplies it and reads the price from Polar.
+- One product with quantity one per checkout. Anything else is rejected with a `CATALOG_ERROR`.
 
-```bash
-npm install @tenderlane/polar @tenderlane/core @polar-sh/sdk
-```
-
-`@polar-sh/sdk` is a peer dep marked optional.
-
-## Flow
-
-Redirect-only in v1. Polar's iframe embed (`@polar-sh/checkout`) is a whole-page iframe rather than a field-level Stripe-Elements analog, so embedded support is deferred.
-
-## Catalog support
-
-`createPolarCatalog` calls the Polar API at resolve time so the Polar dashboard remains the source of truth for product/price data.
-
-## Status
-
-Alpha. APIs may change before `1.0`.
-
-## License
+Not implemented: Polar's embedded checkout, webhooks, subscriptions.
 
 MIT

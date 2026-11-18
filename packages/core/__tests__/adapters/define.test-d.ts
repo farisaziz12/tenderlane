@@ -11,7 +11,7 @@ const acme = defineBrowserProvider({
   id: 'acme',
   capabilities: {
     provider: 'acme',
-    flows: ['checkout-session'],
+    flows: ['hosted'],
     paymentMethods: ['card'],
     supports: {},
   },

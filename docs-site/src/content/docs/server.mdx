@@ -1,0 +1,143 @@
+---
+title: Server and price integrity
+description: createTenderlaneHandler is the one endpoint the browser talks to. It decides the price and re-checks the route, and it is where every trust decision is made.
+order: 4
+---
+import Source from '../../components/Source.astro';
+import server from '../../../snippets/server.ts?raw';
+import catalog from '../../../snippets/catalog.ts?raw';
+import confirm from '../../../snippets/confirm.ts?raw';
+import webhook from '../../../snippets/webhook.ts?raw';
+
+## The handler
+
+<Source code={server} file="docs-site/snippets/server.ts" />
+
+`createTenderlaneHandler` returns `POST` and `resolve`, both `(request: Request) => Promise<Response>`; `retrieve`, a function for your own server code; and `webhook`, which builds the route for a provider's webhook. It runs wherever the Web `Request` and `Response` exist. The example mounts `POST` as a Next.js route handler.
+
+## What the browser may and may not decide
+
+The request body is `{ provider, action, payload, paymentMethods }`, where `payload` is a `CheckoutInput`:
+
+```ts
+interface CheckoutInput {
+  items: { sku: string; quantity: number }[];
+  context?: TenderlaneContext;
+  successUrl: string;
+  cancelUrl: string;
+  customerEmail?: string;
+  clientReferenceId?: string;
+  metadata?: Record<string, string>;
+  idempotencyKey?: string;
+}
+```
+
+| Input from the browser | What the server does with it |
+| --- | --- |
+| A price | There is no field for one. Any `unitAmount` key, at any depth, is deleted before anything reads the body. |
+| `items` | Validated: non-empty, at most `maxItems` (100), `sku` a non-empty string, `quantity` an integer from 1 to `maxQuantity` (10 000). Priced by `catalog.resolve()`. |
+| `provider` | Must be a registered adapter. With `routing` set, must be the provider the server's own evaluation selects, or the request is rejected with 400. |
+| `paymentMethods` | Ignored when `routing` is set; the route's methods are used. |
+| `context` | Passed to `resolveContext`, whose return value is what pricing and routing use. Without `resolveContext` it is used as sent. |
+| `successUrl`, `cancelUrl` | Must be absolute URLs on an origin in `allowedRedirectOrigins`, which defaults to the origin of the request. Otherwise the endpoint could mint a real checkout that returns the customer to someone else's site. |
+| `customerEmail`, `clientReferenceId`, `metadata`, `idempotencyKey` | Type-checked and forwarded to the provider as sent. They are browser input: do not fulfil an order from `clientReferenceId` or `metadata`. Key your order on the id `onCheckoutCreated` gives you. |
+| Anything else in the body | Dropped. The adapter payload is built field by field from validated values. |
+
+The response is `{ provider, id, status, url?, clientSecret? }`. An adapter result is passed through a validator that copies only those fields, so the rest of a provider response (customer details, amounts, internal ids) never reaches the browser. The browser validates the same shape before acting on it, and only follows an absolute `http(s)` URL.
+
+:::caution
+Two options default to the permissive choice so that a first setup works. Set them before real use: `routing` (otherwise the browser picks the provider) and `resolveContext` (otherwise a forged context can select a cheaper regional price). Set `allowedRedirectOrigins` explicitly when a proxy changes the host the handler sees.
+:::
+
+## Catalogs
+
+A catalog turns `{ sku, quantity }` into a name, a unit amount and a currency. Amounts are integers in the currency's minor unit (2900 is CHF 29.00 or $29.00). Tenderlane does no currency arithmetic beyond `unitAmount * quantity`, and does not convert between currencies.
+
+<Source code={catalog} file="docs-site/snippets/catalog.ts" />
+
+`createStripeCatalog` (`@tenderlane/stripe/server`) and `createPolarCatalog` (`@tenderlane/polar/server`) read the price from the provider at resolve time, so the provider dashboard is the price list. They make one API call per item and do not cache.
+
+`catalogs: { polar: polarCatalog }` sets a catalog per provider; `catalog` is the default.
+
+### Showing a price in the browser
+
+The browser needs a price to display. Two options, both display-only:
+
+- Import an inline catalog on both sides, as the example does. The prices are then in the client bundle.
+- Mount `handler.resolve` on a second route and call it with `createRemoteCatalog({ endpoint })`. It returns the server's resolution of `{ items, context }`.
+
+Whatever the browser displayed, `POST` resolves again and charges that.
+
+## Knowing which order was paid
+
+Two things are needed to connect a payment to an order, and neither may come from the browser: a key, and an answer from the provider.
+
+<Source code={confirm} file="docs-site/snippets/confirm.ts" />
+
+**`onCheckoutCreated`** runs after the provider created the checkout and before the response is sent. `result.id` is the provider's id for it (a Stripe `cs_…` or `pi_…`, a Polar checkout id), and `items` are the prices the server charged. Store your order under that id. If the hook throws, the request fails with 500 and the checkout is never handed to the customer.
+
+**`handler.retrieve(provider, id)`** asks the provider for the checkout's current state with the secret key and returns `{ provider, id, status, amountTotal?, currency?, paymentMethod? }`.
+
+| `status` | Meaning | Stripe | Polar |
+| --- | --- | --- | --- |
+| `open` | Waiting on the customer. Nothing was submitted for payment. | Session not finished, or finished with nothing to charge (setup, trial); PaymentIntent needs a method, confirmation or authentication | `open` |
+| `processing` | The customer did their part; the provider is waiting for the money. It can still fail. | Session finished with `payment_status: 'unpaid'`; PaymentIntent `processing`, or `requires_capture` (authorised, not captured) | `confirmed` |
+| `complete` | The provider's own record says the payment went through. | `payment_status: 'paid'`; PaymentIntent `succeeded` | `succeeded` |
+| `expired` | Expired or cancelled. | Session `expired`; PaymentIntent `canceled` | `expired` |
+| `failed` | The attempt failed. | PaymentIntent back in `requires_payment_method` with a payment error, including a debit that bounced after the session finished | `failed` |
+
+`processing` lasts seconds for most methods and several business days for bank debits such as SEPA. `paymentMethod` is the method attached to the payment, reported by Stripe once the customer has chosen one (Stripe clears it again after a failure, and types wallets such as Apple Pay as `card`). It tells you which case you are in. Whether to fulfil on `processing` or wait for `complete` is your decision; Tenderlane only keeps the two apart.
+
+To get the id back on return, put the literal `{CHECKOUT_ID}` in `successUrl`: `https://shop.example/success?checkout={CHECKOUT_ID}`. Stripe's adapter translates it to Stripe's own placeholder; Polar uses the same one natively.
+
+`amountTotal` is what the provider charged. It can differ from the catalog price, because providers add tax and apply discounts.
+
+`retrieve` only runs when someone asks. A customer who pays and closes the tab never triggers it, and a bank debit settles days after they left. That is what the webhook is for.
+
+## Webhooks
+
+<Source code={webhook} file="docs-site/snippets/webhook.ts" />
+
+`handler.webhook(provider, onEvent)` returns a route. Mount it at a URL of its own, register that URL with the provider, and give the adapter the endpoint's signing secret (`webhookSecret`). For each request it:
+
+1. has the adapter verify the signature over the raw body. A request that does not verify gets 400 and `onEvent` is not called;
+2. reduces the provider's event to one of five types;
+3. awaits `onEvent`. If it resolves the answer is 200; if it throws, 500, which tells the provider to deliver again later.
+
+| `event.type` | Meaning | Stripe events | Polar `checkout.updated` status |
+| --- | --- | --- | --- |
+| `payment.processing` | Customer done, money not arrived | `checkout.session.completed` (unpaid), `payment_intent.processing`, `payment_intent.amount_capturable_updated` (authorised, not captured) | `confirmed` |
+| `payment.succeeded` | Paid | `checkout.session.completed` (paid), `checkout.session.async_payment_succeeded`, `payment_intent.succeeded` | `succeeded` |
+| `payment.failed` | An attempt failed, possibly days later. Not final for an inline payment: the customer can retry on the same PaymentIntent, so do not cancel the order on it | `checkout.session.async_payment_failed`, `payment_intent.payment_failed` | `failed` |
+| `checkout.expired` | Expired or cancelled unpaid | `checkout.session.expired`, `payment_intent.canceled` | `expired` |
+| `unhandled` | Verified, and none of the above | everything else | everything else, including order events |
+
+Every event has `provider`, `eventId` and `providerEventType`; all but `unhandled` have `checkoutId`, the same id `onCheckoutCreated` gave you.
+
+What `onEvent` must cope with, because no library can do it without your database:
+
+- **Repeats.** Providers deliver at least once. `eventId` is stable across retries if you want to record what you have seen.
+- **Disorder.** A `succeeded` can arrive before the `processing` it follows. Reading the state back with `retrieve`, as the snippet does, handles most of it: you store what the provider says now, not what an event said. Two deliveries can still overlap and write in the wrong order, so never let an update move a paid order back. For full safety make the write conditional in your database.
+- **Unknown ids.** A hosted Stripe checkout also emits PaymentIntent events, whose `pi_…` id you never recorded. Not finding an order is normal; return without throwing, or the provider retries for days. One consequence: with manual capture on a hosted checkout, the later capture is reported only under the `pi_…` id.
+- **Slowness.** Providers time out. Do slow work (email, shipping) after acknowledging, on your own queue.
+
+:::caution
+The route must receive the body exactly as sent. A framework or proxy that parses and re-serialises JSON before the handler sees it breaks every signature.
+:::
+
+Tenderlane has no queue, no scheduler and no storage. A sweep that calls `retrieve` for orders stuck in `processing` is worth running alongside the webhook: it is the same update function with a third trigger.
+
+
+## Errors
+
+| Status | When | Body |
+| --- | --- | --- |
+| 400 | A webhook whose signature does not verify (also reported to `onError`, since a wrong or rotated secret looks the same). Invalid body, unknown provider or action, wrong provider for the route, redirect URL on another origin, unknown SKU, cart the provider cannot represent | `{ error, code }` with the specific message; `code` is `VALIDATION_ERROR` or `CATALOG_ERROR` |
+| 500 | The provider call failed, no catalog is configured, or anything unexpected | `{ error: 'Checkout request failed.', code }`. The detail goes to `onError`, not to the browser. |
+
+## What the handler does not do
+
+- **Authentication, CSRF, rate limiting.** It is a plain route handler. Wrap it as you would any endpoint that creates billable objects.
+- **Storage, deduplication, scheduling.** Webhook events are verified and interpreted, then handed to you. Remembering which you have processed, and retrying your own side effects, is yours.
+- **Refunds, disputes, subscriptions.** Their events arrive as `unhandled`.
+- **Idempotency.** `idempotencyKey` is forwarded to Stripe if the browser sends one. Tenderlane does not generate or store keys. The client refuses a second `submit()` while one is in flight, which prevents double clicks but not retries across page loads.

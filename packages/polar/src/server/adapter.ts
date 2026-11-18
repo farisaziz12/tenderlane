@@ -1,15 +1,18 @@
 import { Polar } from '@polar-sh/sdk';
 import type {
+  CheckoutDetails,
   CheckoutResult,
   ResolvedCheckoutInput,
   ServerProviderAdapter,
 } from '@tenderlane/core';
-import { ProviderError, CatalogError } from '@tenderlane/core';
+import type { PaymentEvent } from '@tenderlane/core';
+import { ProviderError, CatalogError, ConfigurationError } from '@tenderlane/core';
+import { mapPolarEvent, verifyPolarSignature } from './webhook.js';
 import type { PolarServerConfig } from './types.js';
 import {
   mapToPolarCheckoutParams,
   mapFromPolarCheckout,
-  type PolarCheckoutResponse,
+  mapPolarCheckoutDetails,
 } from './mapper.js';
 
 /**
@@ -27,7 +30,6 @@ import {
  *   providers: [
  *     polarServerAdapter({
  *       accessToken: process.env.POLAR_ACCESS_TOKEN!,
- *       organizationId: process.env.POLAR_ORG_ID!,
  *       server: 'sandbox',
  *     }),
  *   ],
@@ -53,13 +55,7 @@ export function polarServerAdapter(
     ): Promise<CheckoutResult> {
       try {
         if (action === 'checkout') {
-          const params = mapToPolarCheckoutParams(payload);
-          // `@polar-sh/sdk`'s checkouts.create accepts the same body shape we
-          // built locally; cast through unknown to avoid coupling our mapper
-          // to the SDK's request type.
-          const checkout = (await polar.checkouts.create(
-            params as unknown as Parameters<typeof polar.checkouts.create>[0],
-          )) as unknown as PolarCheckoutResponse;
+          const checkout = await polar.checkouts.create(mapToPolarCheckoutParams(payload));
           return mapFromPolarCheckout(checkout);
         }
 
@@ -68,16 +64,40 @@ export function polarServerAdapter(
           'polar',
         );
       } catch (error) {
-        // Catalog and provider errors flow through unchanged so the server
-        // handler maps them to the correct HTTP status (400 vs 500).
-        if (error instanceof CatalogError) throw error;
-        if (error instanceof ProviderError) throw error;
-        throw new ProviderError(
-          error instanceof Error ? error.message : 'Unknown Polar error',
-          'polar',
-          { cause: error },
-        );
+        throw toProviderError(error);
       }
     },
+
+    async retrieve(id: string): Promise<CheckoutDetails> {
+      try {
+        return mapPolarCheckoutDetails(await polar.checkouts.get({ id }));
+      } catch (error) {
+        throw toProviderError(error);
+      }
+    },
+
+    async verifyWebhook(request: Request): Promise<PaymentEvent> {
+      if (!config.webhookSecret) {
+        throw new ConfigurationError(
+          'polarServerAdapter needs `webhookSecret` (the secret set on the webhook endpoint) to verify webhooks.',
+        );
+      }
+      // The signature covers the exact bytes Polar sent.
+      const body = await request.text();
+      const headers = Object.fromEntries(request.headers);
+      const payload = verifyPolarSignature(body, headers, config.webhookSecret);
+      return mapPolarEvent(payload, headers['webhook-id'] ?? '');
+    },
   };
+}
+
+/**
+ * Catalog and provider errors pass through unchanged, so the server handler
+ * maps them to the right HTTP status. Anything else becomes a ProviderError.
+ */
+function toProviderError(error: unknown): unknown {
+  if (error instanceof CatalogError || error instanceof ProviderError) return error;
+  return new ProviderError(error instanceof Error ? error.message : 'Unknown Polar error', 'polar', {
+    cause: error,
+  });
 }

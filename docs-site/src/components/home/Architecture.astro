@@ -2,18 +2,18 @@
 import Section from '../Section.astro';
 
 const layers = [
-  { l: 'core', desc: 'Types, rules router, auto router, middleware, errors, catalog, server handler. Zero runtime deps.', file: '@tenderlane/core' },
-  { l: 'client', desc: 'Framework-agnostic headless state machine. ready → submitting → success, redirecting or pending.', file: '@tenderlane/client' },
-  { l: 'bindings', desc: 'React provider + hooks via useSyncExternalStore. Vue/Svelte planned.', file: '@tenderlane/react' },
-  { l: 'adapters', desc: 'Per-PSP. Stripe and Polar today. Browser SDK lazy-loaded only when the active route needs it.', file: '@tenderlane/stripe · @tenderlane/polar' },
+  { l: 'core', desc: 'Types, rules router, catalogs, errors, and the server handler that sets the price and confirms payments. Zero runtime dependencies.', file: '@tenderlane/core' },
+  { l: 'client', desc: 'A headless state machine with no framework: ready → submitting → success, redirecting or pending.', file: '@tenderlane/client' },
+  { l: 'bindings', desc: 'React provider, hook and form via useSyncExternalStore. Vue is experimental (hosted flow only). Svelte and Solid are planned.', file: '@tenderlane/react · @tenderlane/vue' },
+  { l: 'adapters', desc: 'One per provider. Stripe and Polar today. Stripe.js is loaded only when an inline route needs it.', file: '@tenderlane/stripe · @tenderlane/polar' },
 ];
 ---
 
 <Section
   alt={true}
   eyebrow="Architecture"
-  title="Four layers. Each one swappable. Each one MIT."
-  kicker="A core that knows nothing about your framework, a headless state machine on top, framework bindings, and provider adapters. TanStack-inspired — and the browser bundle pays only for what each route uses."
+  title="Four layers. Each one swappable."
+  kicker="A core that knows nothing about your framework, a headless state machine on top, framework bindings, and provider adapters. The layering is inspired by TanStack; this is an independent project."
 >
   <div class="arch-diagram">
     <svg viewBox="0 0 1080 360" width="100%" style="display:block">
@@ -44,8 +44,7 @@ const layers = [
         {[
           { t: '@tenderlane/core', sub: 'types · errors', accent: true },
           { t: 'rulesRouter', sub: 'first-match-wins' },
-          { t: 'autoRouter', sub: 'remote delegate' },
-          { t: 'middleware', sub: 'onEvaluated · onSuccess' },
+          { t: 'server handler', sub: 'price · confirm' },
         ].map((b, i) => (
           <g transform={`translate(0 ${14 + i * 50})`}>
             <rect
@@ -86,7 +85,7 @@ const layers = [
         <text x="0" y="0" fill="var(--text-3)" letter-spacing="0.08em">L3 · BINDINGS</text>
         {[
           { t: 'react', sub: 'TenderlaneProvider' },
-          { t: 'vue', sub: 'planned', dim: true },
+          { t: 'vue', sub: 'experimental', dim: true },
           { t: 'svelte', sub: 'planned', dim: true },
           { t: 'vanilla', sub: 'use client directly' },
         ].map((b, i) => (
@@ -104,8 +103,8 @@ const layers = [
       <g transform="translate(900 30)" font-family="var(--font-mono)" font-size="11">
         <text x="0" y="0" fill="var(--text-3)" letter-spacing="0.08em">L4 · ADAPTERS</text>
         {[
-          { t: 'stripe', sub: 'shipped · v0.4' },
-          { t: 'polar', sub: 'shipped · v0.4' },
+          { t: 'stripe', sub: 'hosted · inline' },
+          { t: 'polar', sub: 'hosted' },
           { t: 'adyen', sub: 'planned', dim: true },
           { t: 'paypal', sub: 'planned', dim: true },
           { t: 'your-psp', sub: 'write the adapter', dim: true },
@@ -135,9 +134,9 @@ const layers = [
         <g transform="translate(0 14)">
           <rect width="1000" height="56" rx="8" fill="var(--bg-2)" stroke="var(--line-2)"></rect>
           <text x="20" y="22" font-family="var(--font-mono)" font-size="12" fill="var(--text-0)">@tenderlane/core/server</text>
-          <text x="20" y="40" font-family="var(--font-mono)" font-size="10" fill="var(--text-2)">accepts {`{ provider, action, payload }`} — runs anywhere Web APIs run</text>
+          <text x="20" y="40" font-family="var(--font-mono)" font-size="10" fill="var(--text-2)">accepts {`{ provider, action, payload }`} · built on Web Request and Response</text>
           <g transform="translate(360 14)" font-family="var(--font-mono)" font-size="10">
-            {['Next.js', 'Bun', 'Deno', 'CF Workers', 'Vercel', 'SvelteKit'].map((p, i) => (
+            {['Next.js (tested)', 'Bun', 'Deno', 'Workers'].map((p, i) => (
               <g transform={`translate(${i * 105} 0)`}>
                 <rect width="98" height="26" rx="4" fill="var(--bg-1)" stroke="var(--line-2)"></rect>
                 <text x="49" y="17" text-anchor="middle" fill="var(--text-1)">{p}</text>
@@ -158,7 +157,7 @@ const layers = [
       </div>
     ))}
   </div>
-  <p class="arch-foot">* The browser bundle only loads provider SDKs after the active route resolves to that provider — pure redirect flows can ship without any PSP JS at all.</p>
+  <p class="arch-foot">* Stripe.js is loaded only when an inline Stripe route needs it. A hosted-only checkout ships no provider JavaScript. Next.js is the only server runtime tested so far.</p>
 </Section>
 
 <style>

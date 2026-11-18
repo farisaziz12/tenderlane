@@ -16,11 +16,13 @@ export type {
   ProviderCapabilities,
   PaymentMethodDescriptor,
   ProviderPhantomTypes,
-  CheckoutLineItem,
   CheckoutInput,
   ResolvedCheckoutInput,
   CheckoutStatus,
   CheckoutResult,
+  CheckoutDetails,
+  PaymentEvent,
+  PaymentEventType,
   Catalog,
   CatalogPhantomTypes,
   CatalogRequest,
@@ -37,11 +39,12 @@ export type {
   RouteTarget,
   SelectedPaymentRoute,
   RulesRouterConfig,
-  AutoRouterConfig,
+  RulesRouter,
   Router,
   ProviderSession,
   BrowserPaymentProvider,
   ServerProviderAdapter,
+  ServerActionOptions,
   AnyBrowserProvider,
   TenderlaneMiddleware,
   InferProviderId,
@@ -55,17 +58,12 @@ export type {
 
 // Routing
 export { createRulesRouter } from './routing/rules-router.js';
-export { createAutoRouter } from './routing/auto-router.js';
-export type { AutoRouterRequest, AutoRouterResponse } from './routing/auto-router.js';
-export { resolvePath, matchConditionValue, matchRuleConditions } from './routing/evaluate.js';
 
 // Catalog
 export {
   createInlineCatalog,
   createRemoteCatalog,
   defineCatalog,
-  resolveCatalogItems,
-  wrapLegacyLineItems,
 } from './catalog/index.js';
 export type {
   InlineCatalogPricing,
@@ -88,5 +86,6 @@ export {
   ValidationError,
   UnsupportedCapabilityError,
   CatalogError,
+  WebhookVerificationError,
   hasErrorCode,
 } from './errors/errors.js';

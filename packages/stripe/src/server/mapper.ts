@@ -1,9 +1,11 @@
 import type {
+  CheckoutDetails,
   CheckoutResult,
   ResolvedCatalogItem,
   ResolvedCheckoutInput,
 } from '@tenderlane/core';
 import { CatalogError } from '@tenderlane/core';
+import { CHECKOUT_ID_PLACEHOLDER } from '@tenderlane/core/adapters';
 import type Stripe from 'stripe';
 
 /**
@@ -69,11 +71,12 @@ function resolvedItemToStripeLineItem(
  */
 export function mapToStripeSessionParams(
   input: ResolvedCheckoutInput,
-  paymentMethods?: string[],
+  paymentMethods?: readonly string[],
 ): Stripe.Checkout.SessionCreateParams {
   const params: Stripe.Checkout.SessionCreateParams = {
     mode: 'payment',
-    success_url: input.successUrl,
+    // Tenderlane's `{CHECKOUT_ID}` is Stripe's `{CHECKOUT_SESSION_ID}`.
+    success_url: input.successUrl.replaceAll(CHECKOUT_ID_PLACEHOLDER, '{CHECKOUT_SESSION_ID}'),
     cancel_url: input.cancelUrl,
     line_items: input.items.map(resolvedItemToStripeLineItem),
   };
@@ -105,9 +108,8 @@ export function mapToStripeSessionParams(
 
   // Merge provider-specific Stripe options (escape hatch). These come from the
   // server handler's `providerOptions` config, never from the request body.
-  if (input.providerOptions && typeof input.providerOptions === 'object') {
-    const stripeOptions = input.providerOptions as Record<string, unknown>;
-    Object.assign(params, stripeOptions);
+  if (input.providerOptions) {
+    Object.assign(params, input.providerOptions);
   }
 
   return params;
@@ -120,25 +122,77 @@ export function mapFromStripeSession(session: Stripe.Checkout.Session): Checkout
   return {
     provider: 'stripe',
     id: session.id,
-    status: mapStripeStatus(session.status),
-    url: session.url ?? undefined,
-    raw: session,
+    status: mapStripeStatus(session),
+    ...(session.url ? { url: session.url } : {}),
   };
 }
 
-function mapStripeStatus(
-  status: Stripe.Checkout.Session.Status | null,
-): CheckoutResult['status'] {
-  switch (status) {
-    case 'open':
-      return 'open';
-    case 'complete':
-      return 'complete';
-    case 'expired':
-      return 'expired';
-    default:
-      return 'created';
+/**
+ * A Checkout Session is `complete` once the customer finishes the page. That
+ * is before any money moved for delayed methods (`unpaid`), and without any
+ * money at all for a setup or a trial (`no_payment_required`). It counts as
+ * a completed payment only when `payment_status` is `paid`.
+ */
+function mapStripeStatus(session: Stripe.Checkout.Session): CheckoutResult['status'] {
+  if (session.status === 'expired') return 'expired';
+  if (session.status !== 'complete') return 'open';
+  if (session.payment_status === 'paid') return 'complete';
+  // `no_payment_required`: a setup or a trial. Nothing is being charged.
+  if (session.payment_status !== 'unpaid') return 'open';
+
+  // Finished by the customer, not paid. The session itself never changes
+  // again, so only the PaymentIntent can say whether the money is still on
+  // its way or the debit has since failed.
+  const paymentIntent = session.payment_intent;
+  if (paymentIntent && typeof paymentIntent !== 'string') {
+    return mapPaymentIntentStatus(paymentIntent);
   }
+  return 'processing';
+}
+
+/** Stripe payment method types whose Tenderlane id is spelled differently. */
+const TENDERLANE_METHOD_BY_STRIPE_TYPE: Readonly<Record<string, string>> = {
+  cashapp: 'cash_app',
+  us_bank_account: 'ach_debit',
+  customer_balance: 'bank_transfer',
+};
+
+/**
+ * The method attached to the payment, when Stripe returned it expanded. Wallets
+ * such as Apple Pay are reported as `card`, which is how Stripe types them.
+ */
+function usedPaymentMethod(
+  paymentIntent: string | Stripe.PaymentIntent | null | undefined,
+): { paymentMethod: string } | Record<string, never> {
+  // An id instead of an object means the field was not expanded.
+  if (!paymentIntent || typeof paymentIntent === 'string') return {};
+  const method = paymentIntent.payment_method;
+  if (!method || typeof method === 'string') return {};
+  return { paymentMethod: TENDERLANE_METHOD_BY_STRIPE_TYPE[method.type] ?? method.type };
+}
+
+/** What `retrieve()` reports for a hosted checkout. */
+export function mapStripeSessionDetails(session: Stripe.Checkout.Session): CheckoutDetails {
+  return {
+    provider: 'stripe',
+    id: session.id,
+    status: mapStripeStatus(session),
+    ...(session.amount_total !== null ? { amountTotal: session.amount_total } : {}),
+    ...(session.currency ? { currency: session.currency } : {}),
+    ...usedPaymentMethod(session.payment_intent),
+  };
+}
+
+/** What `retrieve()` reports for an inline payment. */
+export function mapStripePaymentIntentDetails(paymentIntent: Stripe.PaymentIntent): CheckoutDetails {
+  return {
+    provider: 'stripe',
+    id: paymentIntent.id,
+    status: mapPaymentIntentStatus(paymentIntent),
+    amountTotal: paymentIntent.amount,
+    currency: paymentIntent.currency,
+    ...usedPaymentMethod(paymentIntent),
+  };
 }
 
 /**
@@ -147,7 +201,7 @@ function mapStripeStatus(
  */
 export function mapToStripePaymentIntentParams(
   input: ResolvedCheckoutInput,
-  paymentMethods?: string[],
+  paymentMethods?: readonly string[],
 ): Stripe.PaymentIntentCreateParams {
   const amount = input.items.reduce(
     (total, item) => total + item.unitAmount * item.quantity,
@@ -199,43 +253,45 @@ export function mapToStripePaymentIntentParams(
     params.metadata = input.metadata;
   }
 
-  if (input.providerOptions && typeof input.providerOptions === 'object') {
-    const stripeOptions = input.providerOptions as Record<string, unknown>;
-    Object.assign(params, stripeOptions);
+  if (input.providerOptions) {
+    Object.assign(params, input.providerOptions);
   }
 
   return params;
 }
 
 /**
- * Map a Stripe PaymentIntent into a normalized CheckoutResult.
- * Includes clientSecret in raw for the browser provider to extract.
+ * Map a created Stripe PaymentIntent into a CheckoutResult. The client secret
+ * is the one PSP field the browser needs to mount the Payment Element.
  */
-export function mapFromStripePaymentIntent(
-  paymentIntent: Stripe.PaymentIntent,
-): CheckoutResult {
+export function mapFromStripePaymentIntent(paymentIntent: Stripe.PaymentIntent): CheckoutResult {
   return {
     provider: 'stripe',
     id: paymentIntent.id,
-    status: mapPaymentIntentStatus(paymentIntent.status),
-    raw: { clientSecret: paymentIntent.client_secret },
+    status: mapPaymentIntentStatus(paymentIntent),
+    ...(paymentIntent.client_secret ? { clientSecret: paymentIntent.client_secret } : {}),
   };
 }
 
 function mapPaymentIntentStatus(
-  status: Stripe.PaymentIntent.Status,
+  paymentIntent: Pick<Stripe.PaymentIntent, 'status' | 'last_payment_error'>,
 ): CheckoutResult['status'] {
-  switch (status) {
+  switch (paymentIntent.status) {
     case 'succeeded':
       return 'complete';
     case 'canceled':
       return 'expired';
-    case 'requires_payment_method':
-    case 'requires_confirmation':
-    case 'requires_action':
+    // `requires_capture`: the card is authorised and the customer is done;
+    // the merchant has yet to capture.
     case 'processing':
-      return 'open';
+    case 'requires_capture':
+      return 'processing';
+    // A PaymentIntent returns here after a failed attempt, with the error
+    // attached. Without one it is new and nothing was tried yet.
+    case 'requires_payment_method':
+      return paymentIntent.last_payment_error ? 'failed' : 'open';
+    // requires_confirmation, requires_action: waiting on the customer.
     default:
-      return 'created';
+      return 'open';
   }
 }

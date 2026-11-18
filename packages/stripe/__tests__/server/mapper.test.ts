@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { mapToStripeSessionParams } from '../../src/server/mapper.js';
+import type Stripe from 'stripe';
+import {
+  mapFromStripePaymentIntent,
+  mapFromStripeSession,
+  mapToStripeSessionParams,
+} from '../../src/server/mapper.js';
 import type { ResolvedCheckoutInput } from '@tenderlane/core';
 
 const baseInput: ResolvedCheckoutInput = {
@@ -229,3 +234,55 @@ describe('mapToStripePaymentIntentParams currency', () => {
     expect(() => mapToStripePaymentIntentParams({ ...baseInput, items: [] })).toThrow();
   });
 });
+
+describe('results sent to the browser', () => {
+  it('maps a Checkout Session to id, status and url only', () => {
+    const session = {
+      id: 'cs_test_1',
+      status: 'open',
+      url: 'https://checkout.stripe.com/c/pay/cs_test_1',
+      customer_details: { email: 'someone@example.com' },
+      amount_total: 2900,
+    } as Stripe.Checkout.Session;
+
+    expect(mapFromStripeSession(session)).toEqual({
+      provider: 'stripe',
+      id: 'cs_test_1',
+      status: 'open',
+      url: 'https://checkout.stripe.com/c/pay/cs_test_1',
+    });
+  });
+
+  it('maps a PaymentIntent to id, status and client secret only', () => {
+    const paymentIntent = {
+      id: 'pi_1',
+      status: 'requires_payment_method',
+      client_secret: 'pi_1_secret_abc',
+      amount: 2900,
+      latest_charge: 'ch_1',
+    } as Stripe.PaymentIntent;
+
+    expect(mapFromStripePaymentIntent(paymentIntent)).toEqual({
+      provider: 'stripe',
+      id: 'pi_1',
+      status: 'open',
+      clientSecret: 'pi_1_secret_abc',
+    });
+  });
+});
+
+describe('success URL placeholder', () => {
+  it("translates {CHECKOUT_ID} to Stripe's {CHECKOUT_SESSION_ID}", () => {
+    const params = mapToStripeSessionParams({
+      items: [{ sku: 'pro', name: 'Pro', quantity: 1, unitAmount: 2900, currency: 'usd' }],
+      context: {},
+      successUrl: 'https://shop.example/success?checkout={CHECKOUT_ID}&again={CHECKOUT_ID}',
+      cancelUrl: 'https://shop.example/cancel',
+    });
+
+    expect(params.success_url).toBe(
+      'https://shop.example/success?checkout={CHECKOUT_SESSION_ID}&again={CHECKOUT_SESSION_ID}',
+    );
+  });
+});
+

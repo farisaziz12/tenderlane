@@ -16,7 +16,7 @@ describe('runMiddlewareHook', () => {
       context: { country: 'CH' },
       route: {
         provider: 'stripe',
-        flow: 'checkout-session' as const,
+        flow: 'hosted' as const,
         paymentMethods: ['card'],
         source: 'rule' as const,
       },
@@ -46,7 +46,7 @@ describe('runMiddlewareHook', () => {
       context: {},
       route: {
         provider: 'stripe',
-        flow: 'checkout-session' as const,
+        flow: 'hosted' as const,
         paymentMethods: [],
         source: 'rule' as const,
       },
@@ -67,7 +67,7 @@ describe('runMiddlewareHook', () => {
       context: {},
       route: {
         provider: 'stripe',
-        flow: 'checkout-session' as const,
+        flow: 'hosted' as const,
         paymentMethods: [],
         source: 'rule' as const,
       },
@@ -100,7 +100,7 @@ describe('runMiddlewareHook', () => {
       context: {},
       route: {
         provider: 'stripe',
-        flow: 'checkout-session' as const,
+        flow: 'hosted' as const,
         paymentMethods: [],
         source: 'rule' as const,
       },
@@ -163,7 +163,7 @@ describe('runMiddlewareHook', () => {
       context: {},
       route: {
         provider: 'stripe',
-        flow: 'checkout-session' as const,
+        flow: 'hosted' as const,
         paymentMethods: [],
         source: 'rule' as const,
       },

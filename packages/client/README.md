@@ -1,26 +1,27 @@
 # @tenderlane/client
 
-Framework-agnostic headless checkout client for [Tenderlane](https://github.com/farisaziz12/tenderlane).
+The headless checkout state machine of [Tenderlane](../../README.md). It selects a route for the current context and drives one checkout through the selected provider. No framework, no rendering.
 
-Owns the state machine (`idle → evaluating → ready → submitting → success | error`) and exposes `subscribe` / `getSnapshot` for external store integration (React's `useSyncExternalStore`, Vue's `customRef`, Svelte stores, etc.).
+Alpha. Not published to npm; use it from this workspace.
 
-## Install
+```ts
+import { createTenderlaneClient } from '@tenderlane/client';
 
-```bash
-npm install @tenderlane/client @tenderlane/core
+const client = createTenderlaneClient({
+  context: { country: 'CH' },
+  providers: [stripe], // from @tenderlane/stripe
+  routing, // from createRulesRouter
+});
+
+client.subscribe(() => {
+  const state = client.getSnapshot();
+  if (state.status === 'error') console.error(state.error.code);
+});
+
+client.updateContext({ country: 'DE' }); // selects a route for the new state
+await client.submit({ items: [{ sku: 'pro-plan', quantity: 1 }], successUrl, cancelUrl });
 ```
 
-## When to use this directly
-
-- Building bindings for a framework that doesn't have an official Tenderlane package yet
-- Driving checkout state from outside a component tree (e.g. a state library)
-
-For React, install [`@tenderlane/react`](https://www.npmjs.com/package/@tenderlane/react). For most apps, install [`tenderlane`](https://www.npmjs.com/package/tenderlane).
-
-## Status
-
-Alpha. APIs may change before `1.0`.
-
-## License
+`getSnapshot()` returns a discriminated union on `status`; `subscribe`/`getSnapshot` follow the `useSyncExternalStore` contract. States and rules: [checkout state](../../docs-site/src/content/docs/checkout-state.mdx).
 
 MIT

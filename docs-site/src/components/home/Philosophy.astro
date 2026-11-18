@@ -5,17 +5,17 @@ const tenets = [
   {
     n: '01',
     title: 'Frontend-first orchestration',
-    body: "Routing happens in the browser, where the app already knows the user's country, currency, experiment variant, and cart shape. The server-side handler exists to mint sessions and re-verify price — not to decide which payment method to render. State changes the UI; the UI doesn't wait on state.",
+    body: "Routing happens in the browser, where the app already knows the user's country, currency, experiment variant, and cart shape. The server handler sets the price, checks the route again and confirms the payment. It does not decide what to render. State changes the UI; the UI does not wait on a request.",
   },
   {
     n: '02',
     title: 'Typed end-to-end',
-    body: 'Phantom `~types` metadata carries literal provider IDs, capability sets, and context shapes through every generic boundary. Add a provider, get auto-complete for its methods. Tighten a context, get a compile error on a stale rule. Nothing is stringly-typed where it could be a literal.',
+    body: 'Provider ids stay string literals all the way from the adapters you register to the rules you write. A rule that names a provider you did not register does not compile, and neither does a mistyped flow or currency. A checkout status narrows the fields you can read.',
   },
   {
     n: '03',
     title: 'Provider-agnostic by default',
-    body: '`@tenderlane/core` has zero runtime dependencies and never imports a PSP SDK. Stripe, Polar, and every future adapter live behind the same contract. Swap providers, run two side-by-side, or A/B-test them — without rewriting your checkout UI or your server.',
+    body: '`@tenderlane/core` has zero runtime dependencies and never imports a provider SDK. Stripe, Polar and every future adapter live behind the same contract. Swap providers, run two side by side or A/B test them, without rewriting your checkout UI or your server.',
   },
 ];
 ---
@@ -24,7 +24,7 @@ const tenets = [
   id="philosophy"
   eyebrow="Philosophy"
   title="Three rules the codebase lives by."
-  kicker="Tenderlane is not a backend payment wrapper. It is the connective tissue between application state and the PSPs that take money — and it has opinions."
+  kicker="Tenderlane is not a backend payment wrapper. It connects what your application knows to the providers that take the money, and it has opinions about how."
 >
   <div class="philosophy-grid">
     {tenets.map((t) => (

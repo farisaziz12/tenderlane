@@ -1,6 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import { createTenderlaneHandler } from '../../src/server/handler.js';
+import { createInlineCatalog } from '../../src/index.js';
 import type { ServerProviderAdapter, CheckoutResult } from '../../src/index.js';
+
+const catalog = createInlineCatalog({
+  widget: { name: 'Widget', pricing: { amount: 1000, currency: 'usd' } },
+});
 
 function createMockProvider(): ServerProviderAdapter<'mock'> {
   return {
@@ -10,7 +15,7 @@ function createMockProvider(): ServerProviderAdapter<'mock'> {
       return {
         provider: 'mock',
         id: 'session_123',
-        status: 'created',
+        status: 'open',
         url: 'https://checkout.example.com/session_123',
       };
     },
@@ -21,7 +26,7 @@ describe('createTenderlaneHandler', () => {
   it('routes to the correct provider', async () => {
     const handler = createTenderlaneHandler({
       providers: [createMockProvider()],
-      allowLegacyLineItems: true,
+      catalog,
     });
 
     const req = new Request('http://localhost/api/payments', {
@@ -31,9 +36,9 @@ describe('createTenderlaneHandler', () => {
         provider: 'mock',
         action: 'checkout',
         payload: {
-          lineItems: [{ name: 'Test', quantity: 1, unitAmount: 1000 }],
-          successUrl: '/success',
-          cancelUrl: '/cancel',
+          items: [{ sku: 'widget', quantity: 1 }],
+          successUrl: 'http://localhost/success',
+          cancelUrl: 'http://localhost/cancel',
         },
       }),
     });
@@ -45,7 +50,7 @@ describe('createTenderlaneHandler', () => {
     expect(body).toMatchObject({
       provider: 'mock',
       id: 'session_123',
-      status: 'created',
+      status: 'open',
       url: 'https://checkout.example.com/session_123',
     });
   });
@@ -112,7 +117,7 @@ describe('createTenderlaneHandler', () => {
 
     const handler = createTenderlaneHandler({
       providers: [errorProvider],
-      allowLegacyLineItems: true,
+      catalog,
     });
 
     const req = new Request('http://localhost/api/payments', {
@@ -122,9 +127,9 @@ describe('createTenderlaneHandler', () => {
         provider: 'error-provider',
         action: 'checkout',
         payload: {
-          lineItems: [{ name: 'Widget', quantity: 1, unitAmount: 1000 }],
-          successUrl: '/success',
-          cancelUrl: '/cancel',
+          items: [{ sku: 'widget', quantity: 1 }],
+          successUrl: 'http://localhost/success',
+          cancelUrl: 'http://localhost/cancel',
         },
       }),
     });

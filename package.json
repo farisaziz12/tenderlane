@@ -2,7 +2,7 @@
   "name": "tenderlane-monorepo",
   "private": true,
   "version": "0.0.0",
-  "description": "Reactive payment orchestration SDK for modern web apps",
+  "description": "Write your payment routing rules once; the checkout page and the server both follow them. Alpha.",
   "packageManager": "pnpm@9.15.4",
   "engines": {
     "node": ">=18.0.0"
@@ -14,6 +14,7 @@
     "lint": "oxlint --deny-warnings",
     "clean": "turbo run clean",
     "dev": "turbo run dev",
+    "example": "turbo run build --filter='./packages/*' && pnpm --filter nextjs-multi-psp-checkout-example dev",
     "docs": "cd docs-site && pnpm build",
     "docs:dev": "cd docs-site && pnpm dev",
     "docs:serve": "cd docs-site && pnpm preview",
@@ -21,9 +22,12 @@
     "version-packages": "changeset version",
     "release": "pnpm build && changeset publish",
     "lint:fix": "oxlint --fix",
+    "test:journey": "node tools/journey.mjs",
+    "test:live": "pnpm --filter @tenderlane/e2e test:live",
     "test:build": "pnpm -r --filter './packages/*' exec publint --strict",
     "test:workspace": "sherif",
-    "check": "pnpm test:hidden-code && pnpm lint && pnpm test:workspace && pnpm build && pnpm typecheck && pnpm test && pnpm test:build",
+    "test:words": "node tools/check-words.mjs",
+    "check": "pnpm test:hidden-code && pnpm test:words && pnpm lint && pnpm test:workspace && pnpm build && pnpm typecheck && pnpm test && pnpm test:build",
     "test:hidden-code": "node tools/check-hidden-code.mjs"
   },
   "devDependencies": {
@@ -34,7 +38,6 @@
     "publint": "^0.3.25",
     "sherif": "^1.13.0",
     "turbo": "^2.3.0",
-    "typedoc": "^0.28.0",
     "typescript": "^5.7.0"
   }
 }

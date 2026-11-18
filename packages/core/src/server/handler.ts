@@ -1,79 +1,111 @@
 import type { ServerProviderAdapter } from '../types/provider.js';
-import type { CheckoutInput, ResolvedCheckoutInput } from '../types/checkout.js';
-import type { Catalog, ResolvedCatalogItem } from '../types/catalog.js';
+import type {
+  CheckoutDetails,
+  CheckoutResult,
+  ResolvedCheckoutInput,
+} from '../types/checkout.js';
+import type { Catalog, CatalogRequest, ResolvedCatalogItem } from '../types/catalog.js';
 import type { TenderlaneContext } from '../types/context.js';
 import type { TenderlaneMiddleware } from '../types/middleware.js';
 import type { Router } from '../types/routing.js';
-import { resolveCatalogItems, wrapLegacyLineItems } from '../catalog/runner.js';
+import { resolveCatalogItems } from '../catalog/runner.js';
+import {
+  parseCheckoutDetails,
+  parseCheckoutResult,
+  parsePaymentEvent,
+} from '../adapters/index.js';
+import type { PaymentEvent } from '../types/webhook.js';
 import { runMiddlewareHook } from '../middleware/runner.js';
-import { CatalogError, ValidationError, hasErrorCode } from '../errors/errors.js';
+import {
+  ConfigurationError,
+  TenderlaneError,
+  UnsupportedCapabilityError,
+  ValidationError,
+  hasErrorCode,
+} from '../errors/errors.js';
 
 const DEFAULT_MAX_ITEMS = 100;
 const DEFAULT_MAX_QUANTITY = 10_000;
 
-interface ServerHandlerConfig {
-  readonly providers: readonly ServerProviderAdapter[];
+/** Error codes a 5xx response may carry. */
+const RESPONSE_CODES = [
+  'PROVIDER_ERROR',
+  'CONFIGURATION_ERROR',
+  'ROUTING_ERROR',
+  'UNSUPPORTED_CAPABILITY',
+] as const;
+
+/** The provider ids of a tuple of server adapters, as a literal union. */
+type AdapterIds<TAdapters extends readonly ServerProviderAdapter[]> = TAdapters[number]['id'];
+
+export interface TenderlaneHandlerConfig<
+  TAdapters extends readonly ServerProviderAdapter[] = readonly ServerProviderAdapter[],
+> {
+  readonly providers: TAdapters;
   /**
-   * Optional default catalog used to resolve `CheckoutInput.items[]`
-   * server-side when no per-provider catalog is configured. The `/resolve`
-   * route always uses this catalog (it has no provider context).
-   *
-   * If both `catalog` and `catalogs` are omitted, requests carrying
-   * `items[]` are rejected. The legacy `lineItems[]` shim is available only
-   * with `allowLegacyLineItems: true`.
+   * Catalog that prices `items[]` when no per-provider catalog is configured,
+   * and the catalog behind the `resolve` route. A request for a provider with
+   * no catalog is rejected.
    */
   readonly catalog?: Catalog;
   /**
-   * Per-provider catalogs. When the wire payload's `provider` matches a key
-   * here, that catalog is used for resolution instead of the default
-   * `catalog`. Lets each PSP pull pricing from its own source of truth
-   * (e.g., `createStripeCatalog` calls `stripe.prices.retrieve(...)`,
-   * `createPolarCatalog` calls `polar.products.get(...)`).
+   * Per-provider catalogs, keyed by provider id. Lets each PSP price from its
+   * own source of truth (`createStripeCatalog`, `createPolarCatalog`).
    */
-  readonly catalogs?: Readonly<Record<string, Catalog>>;
-  /** Middleware invoked at lifecycle points (currently `onCatalogResolved`). */
+  readonly catalogs?: Readonly<Partial<Record<AdapterIds<TAdapters>, Catalog>>>;
+  /** Server middleware. Only `onCatalogResolved` fires here. */
   readonly middleware?: readonly TenderlaneMiddleware[];
   /**
    * The same router the browser uses. When set, the server evaluates it
-   * against the resolved context and rejects a request whose `provider` is
-   * not the one the route selects, and it takes the allowed payment methods
-   * from the route instead of the request body. Without it, the browser
-   * decides which registered provider (and so which catalog) handles the
-   * checkout.
+   * against the resolved context, rejects a request whose `provider` is not
+   * the one the route selects, and takes the allowed payment methods from the
+   * route instead of the request body. Without it, the browser decides which
+   * registered provider (and so which catalog) handles the checkout.
    */
-  readonly routing?: Router;
+  readonly routing?: Router<AdapterIds<TAdapters>>;
   /**
-   * Derive the context used for pricing on the server. The context in the
-   * request body comes from the browser and can be forged, so a catalog whose
-   * price depends on context (regional pricing, tiers, experiments) must not
-   * trust it. Return the context the server believes: read the country from
-   * a geo header, the tier from the session, and so on.
+   * Derive the context used for pricing and routing on the server. The
+   * context in the request body comes from the browser and can be forged, so
+   * return the context the server believes: the country from a geo header,
+   * the tier from the session, and so on.
    *
-   * Without this hook the client's context is passed to the catalog as sent.
+   * Without this hook the client's context is used as sent.
    */
   readonly resolveContext?: (
     request: Request,
     clientContext: TenderlaneContext,
   ) => TenderlaneContext | Promise<TenderlaneContext>;
   /**
-   * Provider-specific options merged into the PSP request, keyed by provider
-   * id. These are server configuration. `providerOptions` in the request body
-   * is always dropped: it could otherwise override the resolved price.
+   * PSP-specific options merged into the PSP request, keyed by provider id.
+   * Server configuration only: nothing in the request body can set them.
    */
-  readonly providerOptions?: Readonly<Record<string, Readonly<Record<string, unknown>>>>;
+  readonly providerOptions?: Readonly<
+    Partial<Record<AdapterIds<TAdapters>, Readonly<Record<string, unknown>>>>
+  >;
   /**
    * Origins that `successUrl` and `cancelUrl` may point to, for example
-   * `['https://shop.example.com']`. When set, a request whose URLs are
-   * relative or point elsewhere is rejected with 400. When omitted, the
-   * URLs are passed to the PSP as sent.
+   * `['https://shop.example.com']`. A request whose URLs are relative or
+   * point elsewhere is rejected with 400, so the endpoint cannot be used to
+   * mint a genuine checkout that returns the customer to someone else's site.
+   *
+   * Defaults to the origin of the request itself. Set it explicitly when the
+   * checkout returns to another origin, or when a proxy rewrites the host the
+   * handler sees.
    */
   readonly allowedRedirectOrigins?: readonly string[];
   /**
-   * Accept the deprecated `lineItems[]` shape, which carries `unitAmount`
-   * from the browser and therefore has no price integrity. Off by default,
-   * and ignored whenever any catalog is configured.
+   * Called after the provider created a checkout and before the response is
+   * sent. This is where an app records its order: `result.id` is the key the
+   * provider's webhook and `retrieve()` will use, and `items` are the prices
+   * the server charged. Both come from the server, unlike `clientReferenceId`
+   * and `metadata`, which the browser wrote.
+   *
+   * If it throws, the request fails with 500 and the checkout is never handed
+   * to the customer: an unrecorded checkout cannot be reconciled later.
    */
-  readonly allowLegacyLineItems?: boolean;
+  readonly onCheckoutCreated?: (
+    event: CheckoutCreatedEvent<AdapterIds<TAdapters>>,
+  ) => void | Promise<void>;
   /** Most entries accepted in `items[]`. Default 100. */
   readonly maxItems?: number;
   /** Largest `quantity` accepted for one item. Default 10 000. */
@@ -85,84 +117,88 @@ interface ServerHandlerConfig {
   readonly onError?: (error: unknown) => void;
 }
 
-interface TenderlaneRequest {
-  readonly provider: string;
+export interface CheckoutCreatedEvent<TProviderId extends string = string> {
+  readonly request: Request;
+  /** The registered adapter that created it. Pass it back to `retrieve()`. */
+  readonly provider: TProviderId;
+  /** The adapter action that created it, for example `'checkout'`. */
   readonly action: string;
-  readonly payload: CheckoutInput;
-  readonly paymentMethods?: string[];
+  readonly result: CheckoutResult;
+  /** The items as priced by the server's catalog. */
+  readonly items: readonly ResolvedCatalogItem[];
+  /** The context the server believes (after `resolveContext`). */
+  readonly context: TenderlaneContext;
 }
 
-interface TenderlaneResolveRequest {
-  readonly items?: readonly { sku: string; quantity: number }[];
-  readonly context?: TenderlaneContext;
-}
-
-/**
- * Recursively strip any client-supplied `unitAmount` from the catalog-driven
- * `items[]` subtree of a payload. Returns a defensive copy — the original
- * object is never mutated — so forged amounts cannot reach the catalog, the
- * middleware, or the adapter.
- *
- * This is the load-bearing piece of the price-integrity contract: when a
- * caller passes the new `items[]` shape, anything resembling an amount they
- * sneak in is dropped. The legacy `lineItems[]` subtree is left untouched
- * because there is no catalog to override it — `unitAmount` is intentional
- * and the only signal for legacy callers. The legacy shim is opt-in
- * (`allowLegacyLineItems: true` and no catalog configured) and explicitly
- * carries no integrity guarantee.
- */
-function stripClientAmounts<T>(payload: T): T {
-  if (payload === null || typeof payload !== 'object') return payload;
-  if (Array.isArray(payload)) {
-    return payload.map((entry) => stripClientAmounts(entry)) as unknown as T;
-  }
-  const sanitized: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(payload as Record<string, unknown>)) {
-    if (key === 'unitAmount') continue;
-    if (key === 'lineItems') {
-      sanitized[key] = value;
-      continue;
-    }
-    sanitized[key] = stripClientAmounts(value);
-  }
-  return sanitized as T;
-}
-
-/**
- * Resolve the items on a CheckoutInput using the configured catalog (when
- * `items[]` is present) or the legacy lineItems shim (when only `lineItems[]`
- * is present). Returns the canonical `ResolvedCatalogItem[]`.
- *
- * Throws `CatalogError` if neither path is satisfiable.
- */
-async function resolvePayloadItems(
-  payload: CheckoutInput,
-  context: TenderlaneContext,
-  catalog: Catalog | undefined,
-  legacyLineItemsAllowed: boolean,
-): Promise<readonly ResolvedCatalogItem[]> {
-  if (payload.items && payload.items.length > 0) {
-    return await resolveCatalogItems(catalog, payload.items, context);
-  }
-  if (payload.lineItems && payload.lineItems.length > 0) {
-    if (!legacyLineItemsAllowed) {
-      throw new CatalogError(
-        'CheckoutInput.lineItems carries client-supplied amounts and is rejected. Send `items: [{ sku, quantity }]` and configure a catalog.',
-      );
-    }
-    return wrapLegacyLineItems(payload.lineItems, context);
-  }
-  throw new CatalogError('CheckoutInput must contain `items: [{ sku, quantity }]`.');
+export interface TenderlaneHandler<TProviderId extends string = string> {
+  /** Dispatch `{ provider, action, payload }` to a provider adapter. */
+  POST(request: Request): Promise<Response>;
+  /** Price `{ items, context }` with the default catalog, for display. */
+  resolve(request: Request): Promise<Response>;
+  /**
+   * Ask the provider for the current state of a checkout, with the secret
+   * key. A function for server code (a success page, a job), not a route: it
+   * is not exposed to the browser. Use it when the customer returns from a
+   * hosted checkout, instead of trusting the return itself.
+   *
+   * It is a pull. A customer who pays and closes the tab never triggers it,
+   * so it does not replace the provider's webhook.
+   *
+   * @throws {ConfigurationError} If no adapter is registered under `provider`.
+   * @throws {UnsupportedCapabilityError} If the adapter has no `retrieve`.
+   * @throws {ProviderError} If the provider call fails or the id is unknown.
+   */
+  retrieve(provider: TProviderId, id: string): Promise<CheckoutDetails>;
+  /**
+   * Build the route for one provider's webhook. Mount what it returns at a
+   * URL of its own and register that URL with the provider.
+   *
+   * For each request it verifies the signature with the adapter, reduces the
+   * event to a {@link PaymentEvent} and awaits `onEvent`:
+   *
+   * - signature does not verify: 400, `onEvent` is not called;
+   * - `onEvent` resolves: 200, the provider considers the event delivered;
+   * - `onEvent` throws: 500, so the provider retries later.
+   *
+   * Delivery is at least once and unordered, so `onEvent` has to be
+   * idempotent. Events that are not about a payment arrive as `unhandled`.
+   *
+   * @throws {ConfigurationError} If no adapter is registered under `provider`.
+   * @throws {UnsupportedCapabilityError} If the adapter cannot verify webhooks.
+   */
+  webhook(
+    provider: TProviderId,
+    onEvent: (event: PaymentEvent<TProviderId>) => void | Promise<void>,
+  ): (request: Request) => Promise<Response>;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+/**
+ * Copy a parsed request body without any `unitAmount` key, at any depth. The
+ * wire format has no amount field; this makes sure a forged one cannot reach
+ * the catalog, the middleware or an adapter.
+ */
+function stripClientAmounts(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(stripClientAmounts);
+  if (typeof value !== 'object' || value === null) return value;
+  const sanitized: Record<string, unknown> = {};
+  for (const [key, nested] of Object.entries(value)) {
+    // `__proto__` from JSON.parse is an own key; assigning it would set the
+    // copy's prototype and smuggle fields past every own-property check.
+    if (key === 'unitAmount' || key === '__proto__') continue;
+    sanitized[key] = stripClientAmounts(nested);
+  }
+  return sanitized;
+}
+
+/** Parse the body as a JSON object, with client-supplied amounts removed. */
 async function readJsonBody(request: Request): Promise<Record<string, unknown>> {
   let parsed: unknown;
   try {
-    parsed = await request.json();
+    parsed = stripClientAmounts(await request.json());
   } catch {
     throw new ValidationError('Request body is not valid JSON.');
   }
@@ -172,18 +208,21 @@ async function readJsonBody(request: Request): Promise<Record<string, unknown>> 
   return parsed;
 }
 
-function validateItems(
+function parseItems(
   items: unknown,
   limits: { maxItems: number; maxQuantity: number },
-): void {
-  if (!Array.isArray(items)) {
-    throw new ValidationError('`items` must be an array.', { field: 'items' });
+): CatalogRequest[] {
+  if (!Array.isArray(items) || items.length === 0) {
+    throw new ValidationError('`items` must be a non-empty array of `{ sku, quantity }`.', {
+      field: 'items',
+    });
   }
   if (items.length > limits.maxItems) {
     throw new ValidationError(`\`items\` has more than ${limits.maxItems} entries.`, {
       field: 'items',
     });
   }
+  const parsed: CatalogRequest[] = [];
   for (const [index, item] of items.entries()) {
     if (!isRecord(item) || typeof item.sku !== 'string' || item.sku.length === 0) {
       throw new ValidationError(`items[${index}].sku must be a non-empty string.`, {
@@ -202,109 +241,118 @@ function validateItems(
         { field: `items[${index}].quantity` },
       );
     }
+    parsed.push({ sku: item.sku, quantity });
   }
+  return parsed;
 }
 
-const OPTIONAL_STRING_FIELDS = [
-  'cancelUrl',
-  'customerEmail',
-  'clientReferenceId',
-  'idempotencyKey',
-] as const;
+function requiredString(payload: Record<string, unknown>, field: string): string {
+  const value = payload[field];
+  if (typeof value !== 'string' || value.length === 0) {
+    throw new ValidationError(`\`${field}\` must be a non-empty string.`, { field });
+  }
+  return value;
+}
 
-/** Types of the pass-through fields, so a bad one is a 400 and not a PSP 500. */
-function validatePayloadFields(payload: Record<string, unknown>): void {
-  if (typeof payload.successUrl !== 'string' || payload.successUrl.length === 0) {
-    throw new ValidationError('`successUrl` must be a non-empty string.', { field: 'successUrl' });
+function optionalString(payload: Record<string, unknown>, field: string): string | undefined {
+  const value = payload[field];
+  if (value === undefined) return undefined;
+  if (typeof value !== 'string') {
+    throw new ValidationError(`\`${field}\` must be a string.`, { field });
   }
-  for (const field of OPTIONAL_STRING_FIELDS) {
-    if (payload[field] !== undefined && typeof payload[field] !== 'string') {
-      throw new ValidationError(`\`${field}\` must be a string.`, { field });
-    }
+  return value;
+}
+
+function parseMetadata(value: unknown): Record<string, string> | undefined {
+  if (value === undefined) return undefined;
+  const invalid = () =>
+    new ValidationError('`metadata` must be an object of string values.', { field: 'metadata' });
+  if (!isRecord(value)) throw invalid();
+  const metadata: Record<string, string> = {};
+  for (const [key, entry] of Object.entries(value)) {
+    if (typeof entry !== 'string') throw invalid();
+    metadata[key] = entry;
   }
-  if (payload.metadata !== undefined) {
-    const metadata = payload.metadata;
-    if (!isRecord(metadata) || Object.values(metadata).some((value) => typeof value !== 'string')) {
-      throw new ValidationError('`metadata` must be an object of string values.', {
-        field: 'metadata',
-      });
-    }
-  }
+  return metadata;
 }
 
 function validateRedirectUrl(
-  value: unknown,
+  value: string,
   field: string,
-  allowedOrigins: readonly string[] | undefined,
+  allowedOrigins: readonly string[],
 ): void {
-  if (!allowedOrigins || value === undefined) return;
   let origin: string | undefined;
   try {
-    origin = typeof value === 'string' ? new URL(value).origin : undefined;
+    origin = new URL(value).origin;
   } catch {
     origin = undefined;
   }
   if (!origin || !allowedOrigins.includes(origin)) {
-    throw new ValidationError(`\`${field}\` must be an absolute URL on an allowed origin.`, {
-      field,
-    });
+    throw new ValidationError(
+      `\`${field}\` must be an absolute URL on an allowed origin (${allowedOrigins.join(', ')}).`,
+      { field },
+    );
   }
 }
 
 /**
- * Creates a framework-agnostic request handler using the Web `Request`/`Response`
- * API. Works in any runtime that supports the Web standards: Next.js App Router,
- * Deno, Bun, Cloudflare Workers, etc.
+ * Create the server endpoint the browser providers talk to. Uses the Web
+ * `Request`/`Response` API, so it runs anywhere those exist (Next.js route
+ * handlers, Bun, Deno, Cloudflare Workers).
  *
- * The returned object exposes:
- * - `POST(req)` — main dispatch. Parses `{ provider, action, payload }`,
- *   resolves the catalog, fires `onCatalogResolved`, and routes to the
- *   correct provider adapter.
- * - `resolve(req)` — preview-only endpoint. Parses `{ items, context }` and
- *   returns the resolved items as `{ items: ResolvedCatalogItem[] }`. This
- *   is the target for {@link createRemoteCatalog} on the client.
+ * `POST` is where a Tenderlane checkout stops trusting the browser. For every
+ * request it:
  *
- * Both routes strip client-supplied `unitAmount` defensively before any
- * downstream code runs — the server's catalog is always the source of truth
- * for pricing.
+ * 1. parses the body and removes any client-supplied `unitAmount`,
+ * 2. validates `items`, the pass-through fields, and that the redirect URLs
+ *    stay on an allowed origin,
+ * 3. derives the server's context (`resolveContext`),
+ * 4. checks the named provider against the server's `routing`, when given,
+ * 5. prices the items with the server's catalog,
+ * 6. calls the provider adapter with the resolved items,
+ * 7. reduces the result to the fields of a `CheckoutResult`,
+ * 8. calls `onCheckoutCreated`, where the app records its order, and responds.
+ *
+ * `providers`, `catalogs`, `routing` and `providerOptions` are checked against
+ * each other at compile time: a key or a route for an adapter that is not in
+ * `providers` is a type error.
  *
  * @example
- * // app/api/tenderlane/route.ts
+ * // app/api/payments/route.ts
  * const handler = createTenderlaneHandler({
  *   providers: [stripeServerAdapter({ secretKey })],
- *   catalog: defineCatalog({ async resolve(items, context) { ... } }),
+ *   catalog,
+ *   routing,
  * });
  * export const POST = handler.POST;
- *
- * // app/api/tenderlane/resolve/route.ts — for createRemoteCatalog
- * export const POST = handler.resolve;
  */
-export function createTenderlaneHandler(config: ServerHandlerConfig) {
+export function createTenderlaneHandler<
+  const TAdapters extends readonly ServerProviderAdapter[],
+>(config: TenderlaneHandlerConfig<TAdapters>): TenderlaneHandler<AdapterIds<TAdapters>> {
   const providerMap = new Map<string, ServerProviderAdapter>();
   for (const provider of config.providers) {
     providerMap.set(provider.id, provider);
   }
   const defaultCatalog = config.catalog;
-  const perProviderCatalogs = config.catalogs ?? {};
+  const perProviderCatalogs: Readonly<Record<string, Catalog | undefined>> = config.catalogs ?? {};
+  const perProviderOptions: Readonly<
+    Record<string, Readonly<Record<string, unknown>> | undefined>
+  > = config.providerOptions ?? {};
   const middleware = config.middleware ?? [];
-
-  function catalogForProvider(providerId: string): Catalog | undefined {
-    return perProviderCatalogs[providerId] ?? defaultCatalog;
-  }
+  const routing: Router | undefined = config.routing;
 
   const limits = {
     maxItems: config.maxItems ?? DEFAULT_MAX_ITEMS,
     maxQuantity: config.maxQuantity ?? DEFAULT_MAX_QUANTITY,
   };
-  const hasAnyCatalog =
-    defaultCatalog !== undefined || Object.keys(perProviderCatalogs).length > 0;
-  const legacyLineItemsAllowed = config.allowLegacyLineItems === true && !hasAnyCatalog;
 
   async function resolveServerContext(
     request: Request,
     clientContext: unknown,
   ): Promise<TenderlaneContext> {
-    const context = (isRecord(clientContext) ? clientContext : {}) as TenderlaneContext;
+    // The shape is not validated here: the context is untrusted input, read
+    // only by the app's own `resolveContext`, catalog and routing rules.
+    const context: TenderlaneContext = isRecord(clientContext) ? clientContext : {};
     return config.resolveContext ? await config.resolveContext(request, context) : context;
   }
 
@@ -319,89 +367,81 @@ export function createTenderlaneHandler(config: ServerHandlerConfig) {
       return Response.json({ error: error.message, code: error.code }, { status: 400 });
     }
     config.onError?.(error);
-    const candidate = (error as { code?: unknown } | null)?.code;
-    const code =
-      typeof candidate === 'string' && /^[A-Z_]+$/.test(candidate) ? candidate : 'INTERNAL_ERROR';
+    // Only Tenderlane's own codes are echoed. Another library's `code`
+    // (a database driver's, say) describes the server's internals.
+    const code = RESPONSE_CODES.find((known) => hasErrorCode(error, known)) ?? 'INTERNAL_ERROR';
     return Response.json({ error: 'Checkout request failed.', code }, { status: 500 });
   }
 
   async function POST(request: Request): Promise<Response> {
     try {
-      const body = stripClientAmounts(await readJsonBody(request)) as unknown as Partial<TenderlaneRequest>;
-
-      if (
-        typeof body.provider !== 'string' ||
-        typeof body.action !== 'string' ||
-        !isRecord(body.payload)
-      ) {
-        return Response.json(
-          { error: 'Missing required fields: provider, action, payload' },
-          { status: 400 },
-        );
-      }
-
-      const adapter = providerMap.get(body.provider);
-      if (!adapter) {
-        return Response.json(
-          {
-            error: `Unknown provider: "${body.provider}". Available: ${[...providerMap.keys()].join(', ')}`,
-          },
-          { status: 400 },
-        );
-      }
-
-      if (!adapter.actions.includes(body.action)) {
-        return Response.json(
-          {
-            error: `Provider "${body.provider}" does not support action "${body.action}". Supported: ${adapter.actions.join(', ')}`,
-          },
-          { status: 400 },
-        );
-      }
-
+      const body = await readJsonBody(request);
+      const providerId = body.provider;
+      const action = body.action;
       const payload = body.payload;
-      validatePayloadFields(payload);
-      if (payload.items !== undefined) validateItems(payload.items, limits);
-      validateRedirectUrl(payload.successUrl, 'successUrl', config.allowedRedirectOrigins);
-      validateRedirectUrl(payload.cancelUrl, 'cancelUrl', config.allowedRedirectOrigins);
+
+      if (typeof providerId !== 'string' || typeof action !== 'string' || !isRecord(payload)) {
+        throw new ValidationError('Missing required fields: provider, action, payload.');
+      }
+
+      const adapter = providerMap.get(providerId);
+      if (!adapter) {
+        throw new ValidationError(
+          `Unknown provider "${providerId}". Registered: ${[...providerMap.keys()].join(', ')}.`,
+          { field: 'provider' },
+        );
+      }
+      if (!adapter.actions.includes(action)) {
+        throw new ValidationError(
+          `Provider "${providerId}" does not support action "${action}". Supported: ${adapter.actions.join(', ')}.`,
+          { field: 'action' },
+        );
+      }
+
+      const items = parseItems(payload.items, limits);
+      const successUrl = requiredString(payload, 'successUrl');
+      const cancelUrl = requiredString(payload, 'cancelUrl');
+      const redirectOrigins = config.allowedRedirectOrigins ?? [new URL(request.url).origin];
+      validateRedirectUrl(successUrl, 'successUrl', redirectOrigins);
+      validateRedirectUrl(cancelUrl, 'cancelUrl', redirectOrigins);
+      const customerEmail = optionalString(payload, 'customerEmail');
+      const clientReferenceId = optionalString(payload, 'clientReferenceId');
+      const idempotencyKey = optionalString(payload, 'idempotencyKey');
+      const metadata = parseMetadata(payload.metadata);
 
       const context = await resolveServerContext(request, payload.context);
 
       // The browser names the provider; with a server router it has to be the
       // one the route selects for the context the server believes.
-      const serverRoute = config.routing
-        ? await config.routing.evaluate(context as unknown as Record<string, unknown>)
-        : undefined;
-      if (serverRoute && serverRoute.provider !== body.provider) {
+      const serverRoute = routing ? await routing.evaluate(context) : undefined;
+      if (serverRoute && serverRoute.provider !== providerId) {
         throw new ValidationError(
-          `Provider "${body.provider}" is not the route selected for this context.`,
+          `Provider "${providerId}" is not the route selected for this context.`,
           { field: 'provider' },
         );
       }
 
-      const resolved = await resolvePayloadItems(
-        payload,
+      const resolved = await resolveCatalogItems(
+        perProviderCatalogs[providerId] ?? defaultCatalog,
+        items,
         context,
-        catalogForProvider(body.provider),
-        legacyLineItemsAllowed,
       );
 
       await runMiddlewareHook(middleware, 'onCatalogResolved', { context, resolved });
 
-      // `providerOptions` from the browser is dropped: adapters merge it into
-      // the PSP request, where it could replace the resolved line items.
-      const {
-        items: _droppedItems,
-        lineItems: _droppedLineItems,
-        providerOptions: _droppedProviderOptions,
-        ...rest
-      } = payload;
-      const serverProviderOptions = config.providerOptions?.[body.provider];
+      // Built field by field from validated values: nothing else in the
+      // request body (a `providerOptions`, say) reaches the adapter.
+      const providerOptions = perProviderOptions[providerId];
       const adapterPayload: ResolvedCheckoutInput = {
-        ...rest,
-        context,
         items: resolved,
-        ...(serverProviderOptions ? { providerOptions: serverProviderOptions } : {}),
+        context,
+        successUrl,
+        cancelUrl,
+        ...(customerEmail !== undefined ? { customerEmail } : {}),
+        ...(clientReferenceId !== undefined ? { clientReferenceId } : {}),
+        ...(idempotencyKey !== undefined ? { idempotencyKey } : {}),
+        ...(metadata !== undefined ? { metadata } : {}),
+        ...(providerOptions ? { providerOptions } : {}),
       };
 
       const paymentMethods = serverRoute
@@ -409,11 +449,38 @@ export function createTenderlaneHandler(config: ServerHandlerConfig) {
         : Array.isArray(body.paymentMethods)
           ? body.paymentMethods.filter((method): method is string => typeof method === 'string')
           : undefined;
-      const options = paymentMethods ? { paymentMethods } : undefined;
 
-      const result = await adapter.handle(body.action, adapterPayload, options);
+      const result = await adapter.handle(
+        action,
+        adapterPayload,
+        paymentMethods ? { paymentMethods } : undefined,
+      );
 
-      return Response.json(result, { status: 200 });
+      // Only the fields of a CheckoutResult cross the wire.
+      const checkoutResult = parseCheckoutResult(result, providerId);
+
+      if (config.onCheckoutCreated) {
+        try {
+          await config.onCheckoutCreated({
+            request,
+            // `providerId` was found in `providerMap`, so it is one of the
+            // registered ids; the map itself is keyed by plain strings.
+            provider: providerId as AdapterIds<TAdapters>,
+            action,
+            result: checkoutResult,
+            items: resolved,
+            context,
+          });
+        } catch (error) {
+          // Always a server fault, whatever the app's error looks like: it
+          // must not be answered as a 400 or echoed to the browser.
+          throw new TenderlaneError('onCheckoutCreated failed.', 'INTERNAL_ERROR', {
+            cause: error,
+          });
+        }
+      }
+
+      return Response.json(checkoutResult, { status: 200 });
     } catch (error) {
       return errorResponse(error);
     }
@@ -421,34 +488,92 @@ export function createTenderlaneHandler(config: ServerHandlerConfig) {
 
   async function resolve(request: Request): Promise<Response> {
     try {
-      const body = stripClientAmounts(await readJsonBody(request)) as TenderlaneResolveRequest;
-
-      if (!Array.isArray(body.items) || body.items.length === 0) {
-        return Response.json(
-          { error: 'Missing required field: items[]' },
-          { status: 400 },
-        );
-      }
-      validateItems(body.items, limits);
+      const body = await readJsonBody(request);
+      const items = parseItems(body.items, limits);
 
       if (!defaultCatalog) {
-        return Response.json(
-          {
-            error:
-              'No default catalog configured on the handler. The /resolve route uses the top-level `catalog` field (per-provider `catalogs` are only used when a provider is known from the wire payload).',
-          },
-          { status: 400 },
+        throw new ConfigurationError(
+          'The resolve route prices with the top-level `catalog`, and none is configured.',
         );
       }
 
       const context = await resolveServerContext(request, body.context);
-      const items = await resolveCatalogItems(defaultCatalog, body.items, context);
+      const resolved = await resolveCatalogItems(defaultCatalog, items, context);
 
-      return Response.json({ items }, { status: 200 });
+      return Response.json({ items: resolved }, { status: 200 });
     } catch (error) {
       return errorResponse(error);
     }
   }
 
-  return { POST, resolve };
+  async function retrieve(providerId: string, id: string): Promise<CheckoutDetails> {
+    const adapter = providerMap.get(providerId);
+    if (!adapter) {
+      throw new ConfigurationError(
+        `Cannot retrieve from "${providerId}": no adapter with that id is registered.`,
+      );
+    }
+    if (!adapter.retrieve) {
+      throw new UnsupportedCapabilityError(
+        `Provider "${providerId}" cannot look a checkout up.`,
+        providerId,
+      );
+    }
+    return parseCheckoutDetails(await adapter.retrieve(id), providerId);
+  }
+
+  function webhook(
+    providerId: string,
+    onEvent: (event: PaymentEvent<AdapterIds<TAdapters>>) => void | Promise<void>,
+  ): (request: Request) => Promise<Response> {
+    // Checked when the route is built, so an unknown provider or an adapter
+    // without webhook support fails at startup. A missing signing secret is
+    // the adapter's to report, on the first delivery.
+    const adapter = providerMap.get(providerId);
+    if (!adapter) {
+      throw new ConfigurationError(
+        `Cannot build a webhook route for "${providerId}": no adapter with that id is registered.`,
+      );
+    }
+    const verify = adapter.verifyWebhook?.bind(adapter);
+    if (!verify) {
+      throw new UnsupportedCapabilityError(
+        `Provider "${providerId}" cannot verify webhooks.`,
+        providerId,
+      );
+    }
+
+    return async (request) => {
+      let event: PaymentEvent;
+      try {
+        event = parsePaymentEvent(await verify(request), providerId);
+      } catch (error) {
+        if (hasErrorCode(error, 'WEBHOOK_VERIFICATION_FAILED')) {
+          // Reported as well as refused: a rotated or mistyped secret makes
+          // every genuine event fail this way, silently otherwise.
+          config.onError?.(error);
+          return Response.json(
+            { error: 'Webhook signature verification failed.', code: error.code },
+            { status: 400 },
+          );
+        }
+        return errorResponse(error);
+      }
+
+      try {
+        // `providerId` is a registered id (see above); the map is keyed by string.
+        await onEvent(event as PaymentEvent<AdapterIds<TAdapters>>);
+      } catch (error) {
+        // A 5xx asks the provider to deliver the event again.
+        config.onError?.(error);
+        return Response.json(
+          { error: 'Webhook handler failed.', code: 'INTERNAL_ERROR' },
+          { status: 500 },
+        );
+      }
+      return Response.json({ received: true }, { status: 200 });
+    };
+  }
+
+  return { POST, resolve, retrieve, webhook };
 }

@@ -25,8 +25,6 @@ export interface PolarCatalogSkuConfig {
 export interface PolarCatalogConfig<TSku extends string = string> {
   /** Polar Organization Access Token (server-only). */
   readonly accessToken: string;
-  /** Polar organization ID. */
-  readonly organizationId: string;
   /** Polar environment. Default: `'production'`. */
   readonly server?: 'sandbox' | 'production';
   /**
@@ -69,7 +67,6 @@ interface PolarPriceLike {
  * @example
  * const catalog = createPolarCatalog({
  *   accessToken: process.env.POLAR_ACCESS_TOKEN!,
- *   organizationId: process.env.POLAR_ORG_ID!,
  *   server: 'sandbox',
  *   skus: {
  *     'premium-plan': { productId: 'polar_prod_abc' },

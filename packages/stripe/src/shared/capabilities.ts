@@ -32,10 +32,10 @@ export const STRIPE_PAYMENT_METHODS = [
 /**
  * Supported Stripe checkout flows as a const tuple.
  *
- * - `checkout-session` — Redirect flow using Stripe Checkout Sessions.
- * - `payment-intent` — Inline flow using Stripe PaymentIntents with Elements.
+ * - `hosted`: a Stripe Checkout Session the browser is redirected to.
+ * - `inline`: a PaymentIntent confirmed with the Payment Element.
  */
-export const STRIPE_FLOWS = ['checkout-session', 'payment-intent'] as const;
+export const STRIPE_FLOWS = ['hosted', 'inline'] as const;
 
 /** Literal union of payment methods supported by the Stripe adapter */
 export type StripePaymentMethodId = (typeof STRIPE_PAYMENT_METHODS)[number];
@@ -72,30 +72,10 @@ export const STRIPE_METHOD_DESCRIPTORS: Record<StripePaymentMethodId, PaymentMet
   google_pay: { id: 'google_pay', label: 'Google Pay', type: 'wallet', provider: 'stripe' },
 };
 
-/**
- * Full capabilities declaration for the Stripe adapter.
- *
- * Declares which flows, payment methods, currencies, and countries the
- * Stripe adapter supports, as well as feature flags for redirect, embedded,
- * subscriptions, refunds, and webhooks. Satisfies the {@link ProviderCapabilities}
- * contract from `@tenderlane/core`.
- *
- * Note: `subscriptions` and `refunds` are declared as `false` in the alpha.
- */
+/** What the Stripe adapter implements: both flows, and the methods it can label. */
 export const STRIPE_CAPABILITIES = {
-  provider: 'stripe',
   flows: STRIPE_FLOWS,
   paymentMethods: STRIPE_PAYMENT_METHODS,
-  currencies: ['usd', 'eur', 'gbp', 'chf', 'jpy', 'cad', 'aud'] as const,
-  countries: ['US', 'GB', 'DE', 'FR', 'CH', 'JP', 'CA', 'AU'] as const,
-  supports: {
-    redirect: true,
-    embedded: true,
-    subscriptions: false,
-    refunds: false,
-    // No webhook verification is implemented yet.
-    webhooks: false,
-  },
 } as const satisfies ProviderCapabilities;
 
 export type StripeCapabilities = typeof STRIPE_CAPABILITIES;

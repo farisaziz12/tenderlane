@@ -27,7 +27,7 @@ describe('mapToPolarCheckoutParams', () => {
     const params = mapToPolarCheckoutParams(baseInput);
 
     expect(params.products).toEqual(['polar_prod_pro']);
-    expect(params.success_url).toBe('https://example.com/success');
+    expect(params.successUrl).toBe('https://example.com/success');
     // The Polar product's own price is charged; no amount is sent.
     expect(params).not.toHaveProperty('prices');
   });
@@ -121,7 +121,7 @@ describe('mapToPolarCheckoutParams', () => {
     };
 
     const params = mapToPolarCheckoutParams(input);
-    expect(params.customer_email).toBe('buyer@example.com');
+    expect(params.customerEmail).toBe('buyer@example.com');
     expect(params.metadata).toEqual({ orderId: 'order_123', region: 'us-east' });
   });
 });
@@ -144,10 +144,34 @@ describe('mapFromPolarCheckout / mapPolarStatus', () => {
 
   it('maps Polar statuses to the normalized Tenderlane status union', () => {
     expect(mapPolarStatus('open')).toBe('open');
-    expect(mapPolarStatus('confirmed')).toBe('complete');
+    // Confirmed: the customer pressed Pay; the payment is still processing.
+    expect(mapPolarStatus('confirmed')).toBe('processing');
     expect(mapPolarStatus('succeeded')).toBe('complete');
     expect(mapPolarStatus('expired')).toBe('expired');
     expect(mapPolarStatus('failed')).toBe('failed');
-    expect(mapPolarStatus(undefined)).toBe('created');
+    expect(mapPolarStatus(undefined)).toBe('open');
   });
 });
+
+describe('success URL placeholder', () => {
+  it("leaves {CHECKOUT_ID} for Polar, whose own placeholder it is", () => {
+    const params = mapToPolarCheckoutParams({
+      items: [
+        {
+          sku: 'pro',
+          name: 'Pro',
+          quantity: 1,
+          unitAmount: 2900,
+          currency: 'usd',
+          providerRefs: { polar: { productId: 'polar_prod_pro' } },
+        },
+      ],
+      context: {},
+      successUrl: 'https://shop.example/success?checkout={CHECKOUT_ID}',
+      cancelUrl: 'https://shop.example/cancel',
+    });
+
+    expect(params.successUrl).toBe('https://shop.example/success?checkout={CHECKOUT_ID}');
+  });
+});
+

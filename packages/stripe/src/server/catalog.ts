@@ -42,7 +42,7 @@ export interface StripeCatalogConfig<TSku extends string = string> {
  *
  * The Stripe dashboard becomes the single source of truth for pricing — your
  * code never declares an amount, and the price-integrity contract is enforced
- * at the strongest possible boundary (the PSP itself).
+ * at the strongest possible place (the PSP itself).
  *
  * Resolved items carry `providerRefs.stripe.priceId`, so the Stripe adapter's
  * mapper emits `{ price: priceId }` against the session — Stripe looks up the

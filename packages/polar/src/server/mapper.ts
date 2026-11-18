@@ -1,41 +1,41 @@
 import type {
+  CheckoutDetails,
   CheckoutResult,
   ResolvedCatalogItem,
   ResolvedCheckoutInput,
 } from '@tenderlane/core';
 import { CatalogError } from '@tenderlane/core';
+import type { Checkout } from '@polar-sh/sdk/models/components/checkout.js';
+import type { CheckoutCreate } from '@polar-sh/sdk/models/components/checkoutcreate.js';
 
 /**
- * Body shape sent to Polar's `POST /v1/checkouts/` endpoint. We type just the
- * fields we send so this file doesn't pull a runtime dependency on
- * `@polar-sh/sdk` — the SDK is consumed only in adapter.ts.
+ * The fields of the SDK's `CheckoutCreate` that this adapter sets. Typed
+ * against the installed SDK, so a renamed field is a compile error instead
+ * of a value the SDK silently drops.
  */
-export interface PolarCheckoutCreateParams {
-  /** Polar product IDs offered at this checkout. Tenderlane always sends one. */
-  readonly products: string[];
-  readonly success_url?: string;
-  readonly customer_email?: string;
-  readonly customer_name?: string;
-  readonly metadata?: Record<string, string | number | boolean>;
-  readonly embed_origin?: string;
+export type PolarCheckoutCreateParams = Pick<
+  CheckoutCreate,
+  'products' | 'successUrl' | 'customerEmail' | 'metadata'
+>;
+
+/** The fields of the SDK's `Checkout` that this adapter reads. */
+export type PolarCheckoutResponse = Pick<Checkout, 'id' | 'url'> & {
+  readonly status?: Checkout['status'];
+};
+
+/** What `retrieve()` reports. `totalAmount` includes the tax Polar added. */
+export function mapPolarCheckoutDetails(
+  checkout: Pick<Checkout, 'id' | 'status' | 'totalAmount' | 'currency'>,
+): CheckoutDetails {
+  return {
+    provider: 'polar',
+    id: checkout.id,
+    status: mapPolarStatus(checkout.status),
+    amountTotal: checkout.totalAmount,
+    currency: checkout.currency,
+  };
 }
 
-/**
- * The subset of Polar's Checkout response we depend on. Typed locally so the
- * mapper has no SDK dependency.
- */
-export interface PolarCheckoutResponse {
-  readonly id: string;
-  readonly url: string;
-  readonly status?: 'open' | 'expired' | 'confirmed' | 'succeeded' | 'failed';
-}
-
-/**
- * Extract the Polar product ID for a resolved item. Throws a typed
- * `CatalogError` (mapped to HTTP 400 by the server handler) when the
- * required `providerRefs.polar.productId` is missing — Polar is product-first
- * and has no inline `price_data` fallback.
- */
 function requirePolarProductId(item: ResolvedCatalogItem): string {
   const polarRef = item.providerRefs?.polar;
   if (!polarRef || !polarRef.productId) {
@@ -84,8 +84,10 @@ export function mapToPolarCheckoutParams(
 
   const params: PolarCheckoutCreateParams = {
     products: [requirePolarProductId(item)],
-    ...(input.successUrl ? { success_url: input.successUrl } : {}),
-    ...(input.customerEmail ? { customer_email: input.customerEmail } : {}),
+    // Passed through unchanged: Tenderlane's `{CHECKOUT_ID}` placeholder is
+    // also Polar's own, so Polar substitutes the checkout id itself.
+    ...(input.successUrl ? { successUrl: input.successUrl } : {}),
+    ...(input.customerEmail ? { customerEmail: input.customerEmail } : {}),
   };
 
   if (input.metadata) {
@@ -108,7 +110,6 @@ export function mapFromPolarCheckout(checkout: PolarCheckoutResponse): CheckoutR
     id: checkout.id,
     status: mapPolarStatus(checkout.status),
     url: checkout.url,
-    raw: checkout,
   };
 }
 
@@ -116,16 +117,16 @@ export function mapPolarStatus(
   status: PolarCheckoutResponse['status'],
 ): CheckoutResult['status'] {
   switch (status) {
-    case 'open':
-      return 'open';
-    case 'succeeded':
+    // The customer pressed Pay and the payment is still going through.
     case 'confirmed':
+      return 'processing';
+    case 'succeeded':
       return 'complete';
     case 'expired':
       return 'expired';
     case 'failed':
       return 'failed';
     default:
-      return 'created';
+      return 'open';
   }
 }

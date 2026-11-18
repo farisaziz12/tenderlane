@@ -1,61 +1,30 @@
 # @tenderlane/client
 
-Framework-agnostic headless checkout client. Depends only on `@tenderlane/core`.
-
-## Structure
+The headless checkout state machine. Depends only on `@tenderlane/core`.
 
 ```
 src/
-  client.ts   # createTenderlaneClient() factory - owns the state machine
-  types.ts    # ClientConfig, ClientState, ClientStatus, TenderlaneClient interface
-  index.ts    # Public exports
+  client.ts   createTenderlaneClient()
+  types.ts    TenderlaneClientState (discriminated union), TenderlaneClientConfig, TenderlaneClient
 ```
 
-## State Machine
+## State
 
 ```
-idle → evaluating → ready → submitting → success
-                  ↘ error                ↘ error
+idle → evaluating → ready ─(inline: preparing → prepared)→ submitting → success | redirecting | pending
+            ↘ error                  ↘ error                              ↘ error (route kept; submit again)
 ```
 
-- `idle`: Initial state before evaluation starts
-- `evaluating`: Router is evaluating the current context (async)
-- `ready`: Route selected, provider resolved, payment methods available, canSubmit=true
-- `submitting`: Provider.submit() in progress
-- `success`: Checkout completed (may trigger redirect for Stripe)
-- `error`: Any failure; canSubmit remains true for retries after submit errors
+`TenderlaneClientState` is a union on `status`; each variant says which of `route`, `providerSession`, `checkoutResult`, `error` are non-null. Every transition goes through `setState(next)` with a complete variant, so the compiler checks it. `selectedProvider` and `canSubmit` are derived in `derive()` and never set by hand.
 
-## Key Design Rules
+## Invariants (each has a test in `__tests__/client-state.test.ts`)
 
-- Client is a plain object with closures (not a class) to avoid `this`-binding issues
-- `subscribe()` + `getSnapshot()` follow the `useSyncExternalStore` contract exactly
-- State is replaced immutably on every `setState()` call so `getSnapshot()` returns stable references
-- Uses an `evaluationVersion` counter to handle rapid `updateContext()` calls - stale evaluations are discarded
-- `evaluate()` is fire-and-forget from `updateContext()` - the state machine handles async lifecycle
-- Initial evaluation happens automatically in `createTenderlaneClient()`
-- Middleware hooks are fired at each lifecycle point via `runMiddlewareHook` from core
-- **Price integrity**: the client must NEVER post `unitAmount` to the server. The wire shape is `{ items: [{ sku, quantity }], context, ... }`. Server's catalog is canonical and re-resolves at submit time. Client-side `catalog.resolve()` results are display-only.
+- One submit at a time (`submitInFlight`).
+- An inline route needs a session: `canSubmit` is false and `submit()` throws `INVALID_STATE` until `prepare()` succeeded.
+- A new evaluation or `prepare()` drops the previous session before doing anything else.
+- `updateContext` and `reset` during a submit are deferred until it settles.
+- Async results are discarded when `evaluationVersion` has moved on.
+- `success` only for `result.status === 'complete'`. A result with a `url` is `redirecting`; otherwise `pending`. `failed` and `expired` are errors.
+- A failed submit keeps the route and session, so it can be retried.
 
-## CheckoutInput Migration (planned)
-
-- New canonical shape: `submit({ items: [{ sku, quantity }], successUrl, ... })`.
-- Legacy `submit({ lineItems: [{ name, unitAmount, currency, quantity }] })` continues to work — the client wraps it in an ephemeral inline catalog on the way out and posts the resulting `items[]`. No behavior change for existing Stripe consumers.
-- When a `catalog` is configured at the client level (planned `ClientConfig.catalog`), `client.previewItems()` returns the client-side resolved `ResolvedCatalogItem[]` for currency-switcher / running-total UX. The submit path still hits the server, which re-resolves canonically.
-
-## API
-
-```ts
-const client = createTenderlaneClient({
-  context: { country: "CH", currency: "chf", amount: 1000 },
-  providers: [stripeProvider(...)],
-  routing: createRulesRouter({ rules: [...], fallback: {...} }),
-  middleware: [{ name: "analytics", onRouteEvaluated: ... }],
-});
-
-client.subscribe(listener);     // useSyncExternalStore compatible
-client.getSnapshot();           // returns immutable ClientState
-client.updateContext(newCtx);   // triggers re-evaluation
-client.selectPaymentMethod(id); // updates selected method
-client.submit(checkoutInput);   // delegates to provider
-client.reset();                 // back to idle
-```
+`getSnapshot()` returns the same reference until the next transition (required by `useSyncExternalStore`).

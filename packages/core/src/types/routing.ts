@@ -1,3 +1,4 @@
+import type { TenderlaneContext, MaybePromise } from './context.js';
 import type { PaymentFlow, PaymentMethodId, ProviderId, KnownCountryCode, KnownCurrencyCode, KnownLocale } from './capabilities.js';
 
 /**
@@ -82,134 +83,65 @@ export interface RuleConditions {
 }
 
 /**
- * A single routing rule with a unique identifier, match conditions, and a
- * target route. Rules are evaluated in order and the first matching rule wins.
- *
- * Rules are fully serializable (plain JSON) -- no functions. Use the
- * `predicates` escape hatch in {@link RulesRouterConfig} for function-based
- * conditions keyed by rule ID.
+ * One routing rule: when `when` matches the context, `use` is the route.
+ * Rules are plain JSON, evaluated in order; the first match wins.
  *
  * @example
- * const swissHighValueRule: RoutingRule = {
- *   id: "swiss-high-value",
- *   description: "Route Swiss high-value orders to Stripe checkout",
- *   when: { country: "CH", amount: { gte: 10000 } },
- *   use: { provider: "stripe", flow: "checkout" },
+ * const rule: RoutingRule = {
+ *   id: 'ch-inline',
+ *   when: { country: 'CH', currency: 'chf' },
+ *   use: { provider: 'stripe', flow: 'inline', paymentMethods: ['card', 'twint'] },
  * };
  */
-export interface RoutingRule {
+export interface RoutingRule<TProviderId extends string = ProviderId> {
   readonly id: string;
   readonly description?: string;
   readonly when: RuleConditions;
-  readonly use: RouteTarget;
+  readonly use: RouteTarget<TProviderId>;
 }
 
-/**
- * The `use` clause of a {@link RoutingRule}: specifies which provider, payment
- * flow, and (optionally) which payment methods to select when the rule matches.
- *
- * @example
- * const target: RouteTarget = {
- *   provider: "stripe",
- *   flow: "checkout",
- *   paymentMethods: ["card"],
- *   providerOptions: { locale: "de" },
- * };
- */
-export interface RouteTarget {
-  /**
-   * Any registered provider id. Well-known ids autocomplete, but core has no
-   * privileged list: a community or in-house adapter is targeted the same way.
-   */
-  readonly provider: ProviderId;
+/** The provider, flow and (optionally) payment methods a rule selects. */
+export interface RouteTarget<TProviderId extends string = ProviderId> {
+  readonly provider: TProviderId;
   readonly flow: PaymentFlow;
-  readonly paymentMethods?: PaymentMethodId[];
-  readonly providerOptions?: Record<string, unknown>;
+  /** Restrict the checkout to these methods. Omit for the provider's default set. */
+  readonly paymentMethods?: readonly PaymentMethodId[];
 }
 
-/**
- * The output of route evaluation. Contains the selected provider, flow, and
- * payment methods, along with metadata about which rule matched and why.
- *
- * Returned by {@link Router.evaluate}.
- *
- * @example
- * const route: SelectedPaymentRoute = {
- *   provider: "stripe",
- *   flow: "checkout",
- *   paymentMethods: ["card"],
- *   ruleId: "swiss-high-value",
- *   reason: "Matched rule: swiss-high-value",
- *   source: "rule",
- * };
- */
-export interface SelectedPaymentRoute {
-  readonly provider: ProviderId;
+/** The output of route evaluation, with which rule produced it. */
+export interface SelectedPaymentRoute<TProviderId extends string = ProviderId> {
+  readonly provider: TProviderId;
   readonly flow: PaymentFlow;
-  readonly paymentMethods: PaymentMethodId[];
-  readonly providerOptions?: Record<string, unknown>;
+  readonly paymentMethods: readonly PaymentMethodId[];
   readonly reason?: string;
   readonly ruleId?: string;
-  readonly source: 'rule' | 'fallback' | 'auto' | 'auto-fallback';
+  readonly source: 'rule' | 'fallback';
 }
 
 /**
- * Configuration for {@link createRulesRouter}. Defines an ordered array of
- * routing rules, a required fallback route, and an optional `predicates`
- * escape hatch for function-based conditions.
- *
- * @example
- * const routerConfig: RulesRouterConfig = {
- *   rules: [
- *     {
- *       id: "eu-card",
- *       when: { country: { in: ["DE", "FR"] }, currency: "EUR" },
- *       use: { provider: "stripe", flow: "checkout" },
- *     },
- *   ],
- *   fallback: { provider: "stripe", flow: "checkout" },
- *   predicates: {
- *     "eu-card": (context) => context.amount !== undefined && context.amount > 0,
- *   },
- * };
+ * Configuration for {@link createRulesRouter}: ordered rules, a required
+ * fallback, and optional `predicates` (functions keyed by rule id) for
+ * conditions that JSON cannot express.
  */
-export interface RulesRouterConfig {
-  readonly rules: readonly RoutingRule[];
-  readonly fallback: RouteTarget;
-  readonly predicates?: Record<string, (context: Record<string, unknown>) => boolean>;
+export interface RulesRouterConfig<TProviderId extends string = ProviderId> {
+  readonly rules: readonly RoutingRule<TProviderId>[];
+  readonly fallback: RouteTarget<TProviderId>;
+  readonly predicates?: Readonly<Record<string, (context: TenderlaneContext) => boolean>>;
 }
 
 /**
- * Configuration for {@link createAutoRouter}. Fetches routing decisions from
- * a remote endpoint with a configurable timeout and a local fallback route
- * used when the endpoint is unreachable or times out.
+ * Selects a route for a context. `TProviderId` is the union of provider ids
+ * the router can select; the client and the server handler use it to reject,
+ * at compile time, a router that targets a provider they were not given.
  *
- * @example
- * const autoConfig: AutoRouterConfig = {
- *   endpoint: "https://routing.example.com/evaluate",
- *   fallback: { provider: "stripe", flow: "checkout" },
- *   timeoutMs: 3000,
- *   headers: { "x-api-key": "sk_live_..." },
- * };
+ * `createRulesRouter` is the built-in implementation. Any object with this
+ * shape works, and `evaluate` may be async.
  */
-export interface AutoRouterConfig {
-  readonly endpoint: string;
-  readonly fallback: RouteTarget;
-  readonly timeoutMs?: number;
-  readonly headers?: Record<string, string>;
+export interface Router<TProviderId extends string = string> {
+  evaluate(context: TenderlaneContext): MaybePromise<SelectedPaymentRoute<TProviderId>>;
 }
 
-/**
- * Interface that all routers implement. A router evaluates payment context
- * and returns a {@link SelectedPaymentRoute} indicating which provider,
- * flow, and payment methods to use.
- *
- * @example
- * const router: Router = createRulesRouter(config);
- * const route = await router.evaluate({ country: "CH", currency: "CHF", amount: 5000 });
- */
-export interface Router {
-  evaluate(context: Record<string, unknown>): MaybePromise<SelectedPaymentRoute>;
+/** A router that decides synchronously. What `createRulesRouter` returns. */
+export interface RulesRouter<TProviderId extends string = string> extends Router<TProviderId> {
+  evaluate(context: TenderlaneContext): SelectedPaymentRoute<TProviderId>;
 }
-
-type MaybePromise<T> = T | Promise<T>;

@@ -6,15 +6,21 @@
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@polar-sh/sdk": "^0.34.0",
+    "@stripe/react-stripe-js": "^3.0.0",
+    "@stripe/stripe-js": "^4.0.0",
+    "@tenderlane/core": "workspace:*",
+    "@tenderlane/polar": "workspace:*",
+    "@tenderlane/react": "workspace:*",
+    "@tenderlane/stripe": "workspace:*",
     "next": "^15.3.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
-    "stripe": "^17.0.0",
-    "tenderlane": "workspace:*"
+    "stripe": "^17.0.0"
   },
   "devDependencies": {
     "@types/react": "^19.1.0",

@@ -9,7 +9,7 @@ import type { SelectedPaymentRoute } from '../../src/index.js';
 
 const route: SelectedPaymentRoute = {
   provider: 'acme',
-  flow: 'checkout-session',
+  flow: 'hosted',
   paymentMethods: ['card'],
   source: 'rule',
 };
@@ -20,7 +20,7 @@ describe('defineBrowserProvider', () => {
     const submit = vi.fn();
     const provider = defineBrowserProvider({
       id: 'acme',
-      capabilities: { provider: 'acme', flows: ['checkout-session'], paymentMethods: ['card'], supports: {} },
+      capabilities: { provider: 'acme', flows: ['hosted'], paymentMethods: ['card'], supports: {} },
       getAvailablePaymentMethods: () => [],
       submit,
     });
