@@ -14,7 +14,7 @@ const example = `${repository}/tree/main/examples/react-checkout-multi-psp`;
 const typeErrorsBody = typeErrors.slice(typeErrors.indexOf('createRulesRouter({'));
 ---
 
-<Layout title="Tenderlane: route a checkout between payment providers from app state">
+<Layout title="Tenderlane: pick the payment provider for each customer from rules you write once">
   <div class="container home">
     <header class="intro">
       <p class="status">
@@ -22,14 +22,18 @@ const typeErrorsBody = typeErrors.slice(typeErrors.indexOf('createRulesRouter({'
         <a href={`${base}/docs/limitations`}>What is missing</a>
       </p>
       <h1>
-        Tenderlane selects the payment provider and checkout flow from your application&rsquo;s
-        state.
+        Tenderlane picks the payment provider and checkout flow for each customer, from rules you
+        write once.
       </h1>
       <p class="lede">
-        It is a headless TypeScript library. You write routing rules as data. A client state
-        machine runs whichever provider the rules select behind one <code>submit()</code>, and a
-        server handler re-checks the route and sets the price, so the browser never sends an
-        amount. Stripe and Polar adapters and React bindings exist today.
+        Say you take cards through Stripe in Switzerland and send customers in the US to Polar. With
+        Tenderlane you write that down as a short list of rules. Your checkout page reads the rules
+        to show the right payment form. Your server reads the same rules before it creates the
+        payment, and it sets the price, so the browser never sends one.
+      </p>
+      <p class="lede">
+        It works with Stripe and Polar today and has React bindings. It ships no UI: the buttons
+        and forms are yours.
       </p>
       <p class="links">
         <a class="btn btn-primary" href={`${base}/docs/getting-started`}>Run the example</a>
@@ -41,15 +45,15 @@ const typeErrorsBody = typeErrors.slice(typeErrors.indexOf('createRulesRouter({'
     <section>
       <h2>The problem</h2>
       <p>
-        A checkout that uses two providers, or two flows of one provider, grows the same
-        conditional in three places: the component that decides what to render, the submit
-        handler, and the API route that creates the session. Each provider SDK has its own
-        session object and its own meaning of &ldquo;done&rdquo;, and nothing checks that the
-        three places agree.
+        As soon as a checkout uses two providers, or two ways of paying with one provider, you
+        write the same <code>if (country === ...)</code> three times: where you decide what to
+        render, where you handle the Pay button, and in the API route that creates the payment.
+        Each provider&rsquo;s SDK has its own objects and its own idea of &ldquo;paid&rdquo;.
+        Nothing checks that your three copies agree, and the price often travels from the browser.
       </p>
       <p>
-        Tenderlane moves that decision into one router that the browser and the server both
-        evaluate, and puts every provider behind the same two interfaces.
+        With Tenderlane you make that decision in one place. The browser and the server both read
+        it, and every provider plugs in the same way.
       </p>
     </section>
 
@@ -58,22 +62,24 @@ const typeErrorsBody = typeErrors.slice(typeErrors.indexOf('createRulesRouter({'
 
       <h3>1. Rules: which provider and flow, for which state</h3>
       <p>
-        Plain data, first match wins. <code>hosted</code> redirects to the provider&rsquo;s page;
-        <code>inline</code> mounts the provider&rsquo;s payment element in yours.
+        Rules are plain data, and the first one that matches wins. Use <code>hosted</code> to
+        send the customer to the provider&rsquo;s own page, or <code>inline</code> to show the
+        provider&rsquo;s payment form inside yours.
       </p>
       <Source code={routing} file="docs-site/snippets/routing.ts" />
 
-      <h3>2. A server endpoint: the trust boundary</h3>
+      <h3>2. One server endpoint, which decides the price</h3>
       <p>
-        The browser sends <code>{'{ sku, quantity }'}</code>. The handler prices it from your
-        catalog, evaluates the same rules, and only then calls the provider with your secret key.
+        The browser only says what the customer is buying: <code>{'{ sku, quantity }'}</code>.
+        Your server looks up the price, checks the rules again, and only then calls the provider
+        with your secret key.
       </p>
       <Source code={server} file="docs-site/snippets/server.ts" />
 
       <h3>3. One form for every route</h3>
       <p>
-        The form renders no markup of its own. When app state changes the route, the same
-        component switches between a redirect and an inline payment element.
+        You write the button and the error message. When the customer&rsquo;s country changes,
+        the same component switches between a redirect and an inline payment form by itself.
       </p>
       <Source code={checkout} file="docs-site/snippets/checkout.tsx" />
     </section>
@@ -81,9 +87,9 @@ const typeErrorsBody = typeErrors.slice(typeErrors.indexOf('createRulesRouter({'
     <section>
       <h2>What the compiler checks</h2>
       <p>
-        Provider ids are inferred as literals from the providers you register, and the router is
-        checked against them. These are real errors: the file compiles only because each one is
-        expected.
+        TypeScript knows which providers you registered, so a rule that names any other one does
+        not compile. Neither does a mistyped currency or flow. These are real errors: this file
+        only compiles because each one is marked as expected.
       </p>
       <Source code={typeErrorsBody} file="docs-site/snippets/type-errors.ts" />
     </section>
@@ -106,9 +112,9 @@ client state machine ── submit() ──────────────�
    │
 hosted: redirect to url      inline: confirm in the provider's element`}</pre>
       <p>
-        Tenderlane is a library in your app and your API route. It is not a service, does not
-        proxy payments, and never sees card data: that stays in the provider&rsquo;s page or
-        iframe.
+        Tenderlane is a library that runs in your app and your API route. It is not a service
+        and payments do not pass through it. Card details stay in the provider&rsquo;s page or
+        iframe; neither you nor Tenderlane sees them.
       </p>
     </section>
 
@@ -117,7 +123,7 @@ hosted: redirect to url      inline: confirm in the provider's element`}</pre>
         <h2>Works today</h2>
         <ul>
           <li>Rules router shared by browser and server</li>
-          <li>Headless client state machine, typed as a discriminated union</li>
+          <li>A checkout client with no UI, whose state TypeScript can narrow by status</li>
           <li>React provider, hook and form</li>
           <li>Stripe: Checkout (hosted) and Payment Element (inline)</li>
           <li>Polar: hosted checkout, one product per checkout</li>
@@ -142,8 +148,9 @@ hosted: redirect to url      inline: confirm in the provider's element`}</pre>
     <section>
       <h2>Try it</h2>
       <p>
-        The example runs without any account, against a built-in demo PSP that is labelled as
-        such and moves no money. Stripe test keys switch on the real Stripe routes.
+        You can run the example without a payment account. It uses a built-in demo provider,
+        clearly labelled, that moves no money. Add Stripe test keys to switch on the real Stripe
+        routes.
       </p>
       <pre class="flow">{`git clone https://github.com/farisaziz12/tenderlane.git
 cd tenderlane

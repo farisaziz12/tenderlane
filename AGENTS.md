@@ -36,7 +36,7 @@ pnpm test:live    # Stripe adapter against Stripe test mode (needs STRIPE_TEST_S
 ### Provider neutrality
 Core has no privileged provider. The first-party adapters use only what `@tenderlane/core/adapters` exports (`defineBrowserProvider`, `defineServerAdapter`, `requestProviderAction`, `parseCheckoutResult`), which is the surface a community adapter gets. `e2e/` keeps that honest: one checkout through Stripe, Polar and a third adapter written from that entry point alone, against mocked PSP SDKs. The example's demo PSP is a second such adapter.
 
-Errors that cross a package boundary are matched by `code` (`hasErrorCode`), not `instanceof`.
+Errors that come from another package are matched by `code` (`hasErrorCode`), not `instanceof`.
 
 ### Typed provider ids
 A provider's `id` is a string literal (the `'~types'` phantom property carries it through generics). `createRulesRouter` infers the union of provider ids its rules target and returns `RulesRouter<TProviderId>`. `createTenderlaneClient`, `TenderlaneProvider` and `createTenderlaneHandler` take `Router<ids of the registered providers>`, so a rule that targets an unregistered provider does not compile. The type tests in `packages/core/__tests__/types/` and `packages/client/__tests__/types/` pin this; do not loosen a signature to make an error go away.
@@ -67,7 +67,7 @@ Response: `{ provider, id, status, url?, clientSecret? }` and nothing else. Adap
 ## Conventions
 
 - ESM only (`"type": "module"` in all packages)
-- TypeScript strict mode with `noUncheckedIndexedAccess`; no `any`, no non-null assertions in `src/`. A cast at an SDK boundary needs a comment saying why.
+- TypeScript strict mode with `noUncheckedIndexedAccess`; no `any`, no non-null assertions in `src/`. A cast where an adapter calls an SDK needs a comment saying why.
 - All exports use `.js` extensions in import paths (for ESM resolution)
 - Errors extend `TenderlaneError` with a `code`
 - Tests live in `__tests__/` directories mirroring `src/`; type tests use `.test-d.ts`

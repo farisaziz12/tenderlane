@@ -1,6 +1,6 @@
 # @tenderlane/stripe
 
-Stripe adapter. Three entry points with a hard boundary.
+Stripe adapter. Three entry points; only the server one may import the `stripe` package.
 
 ```
 src/

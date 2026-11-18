@@ -19,7 +19,7 @@ src/
 - Never import a PSP SDK, and never name a provider in logic. `KnownProviderId` is autocomplete only.
 - `PaymentFlow` is `'hosted' | 'inline'`. Do not add a flow without an adapter that implements it.
 - `Router<TProviderId>` carries the provider ids a router can select. `createRulesRouter` infers them; the client and the handler constrain them to the registered providers. Keep that inference intact when touching these signatures (`__tests__/types/routing.test-d.ts`, and `client.test-d.ts` in the client package).
-- The three entry points must share one copy of the error classes (`splitting: true` in `tsup.config.ts`). Errors that cross a package boundary are matched with `hasErrorCode`, not `instanceof`.
+- The three entry points must share one copy of the error classes (`splitting: true` in `tsup.config.ts`). Errors that come from another package are matched with `hasErrorCode`, not `instanceof`.
 
 ## The handler (`server/handler.ts`)
 

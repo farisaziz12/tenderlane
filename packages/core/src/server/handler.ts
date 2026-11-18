@@ -300,7 +300,8 @@ function validateRedirectUrl(
  * `Request`/`Response` API, so it runs anywhere those exist (Next.js route
  * handlers, Bun, Deno, Cloudflare Workers).
  *
- * `POST` is the trust boundary of a Tenderlane checkout. For every request it:
+ * `POST` is where a Tenderlane checkout stops trusting the browser. For every
+ * request it:
  *
  * 1. parses the body and removes any client-supplied `unitAmount`,
  * 2. validates `items`, the pass-through fields, and that the redirect URLs

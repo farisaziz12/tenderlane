@@ -1,6 +1,6 @@
 # @tenderlane/polar
 
-Polar adapter. Hosted flow only. Same browser/server boundary as Stripe.
+Polar adapter. Hosted flow only. Same browser/server split as Stripe.
 
 ```
 src/
@@ -18,7 +18,7 @@ src/
 - Polar is product-first: every item needs `providerRefs.polar.productId`. `unitAmount` is never sent to Polar; the product's own price applies.
 - One product, quantity one, per checkout. The mapper throws a `CatalogError` for anything else instead of approximating.
 - Sandbox and production are different hosts with separate tokens (`server: 'sandbox' | 'production'`).
-- The mapper's request and response types are `Pick`s of the SDK's `CheckoutCreate` and `Checkout`. Do not cast at the SDK boundary: a cast hid `success_url` (dropped by the SDK, which takes `successUrl`) behind mocked tests.
+- The mapper's request and response types are `Pick`s of the SDK's `CheckoutCreate` and `Checkout`. Do not cast where the adapter calls the SDK: a cast hid `success_url` (dropped by the SDK, which takes `successUrl`) behind mocked tests.
 - Only `succeeded` maps to `complete`. `confirmed` maps to `processing`.
 - `server/webhook.ts` verifies with `standardwebhooks` directly (the key is the UTF-8 bytes of the secret, as in the SDK's `validateEvent`) and reads only `type`, `data.id` and `data.status`. Do not switch to `validateEvent`: it rejects a genuine event whenever Polar's payload drifts from the SDK's generated schema.
 

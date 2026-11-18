@@ -170,7 +170,7 @@ export class WebhookVerificationError extends TenderlaneError {
 /**
  * Whether a value is a Tenderlane error with the given `code`.
  *
- * Prefer this to `instanceof` wherever an error can cross a package boundary:
+ * Prefer this to `instanceof` wherever an error can come from another package:
  * two copies of `@tenderlane/core` in one process (a duplicated install, or
  * separately bundled entry points) have distinct classes, and `instanceof`
  * is false between them. The `code` is the stable contract.

@@ -48,7 +48,7 @@ In the browser, with the network tab open:
 
 With Stripe keys: Switzerland, card `4242 4242 4242 4242`, the status goes `prepared → submitting → success`. Germany redirects to Stripe Checkout.
 
-## 4. The server is the trust boundary (60 seconds)
+## 4. The server decides, not the browser (60 seconds)
 
 Show `checkout/server.ts` (the handler behind `/api/payments`), then run this in terminal 2:
 

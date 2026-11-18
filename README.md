@@ -1,16 +1,18 @@
 # Tenderlane
 
-Tenderlane selects the payment provider and checkout flow from your application's state.
+Tenderlane picks the payment provider and checkout flow for each customer, from rules you write once.
 
-It is a headless TypeScript library. You write routing rules as data. A client state machine runs whichever provider the rules select behind one `submit()`, and a server handler re-checks the route and sets the price, so the browser never sends an amount.
+Say you take cards through Stripe in Switzerland and send customers in the US to Polar. With Tenderlane you write that down as a short list of rules. Your checkout page reads the rules to show the right payment form. Your server reads the same rules before it creates the payment, and it sets the price, so the browser never sends one.
+
+It works with Stripe and Polar today and has React bindings. It ships no UI: the buttons and forms are yours.
 
 > **Alpha proof of concept.** Not published to npm, not production-ready. See [what does not work yet](#what-does-not-work-yet).
 
 ## The problem
 
-A checkout that uses two providers, or two flows of one provider, grows the same conditional in three places: the component that decides what to render, the submit handler, and the API route that creates the session. Each provider SDK has its own session object and its own meaning of "done", and nothing checks that the three places agree.
+As soon as a checkout uses two providers, or two ways of paying with one provider, you write the same `if (country === ...)` three times: where you decide what to render, where you handle the Pay button, and in the API route that creates the payment. Each provider's SDK has its own objects and its own idea of "paid". Nothing checks that your three copies agree, and the price often travels from the browser.
 
-Tenderlane moves that decision into one router that the browser and the server both evaluate, and puts every provider behind the same two interfaces.
+With Tenderlane you make that decision in one place. The browser and the server both read it, and every provider plugs in the same way.
 
 ```ts
 import { createRulesRouter } from '@tenderlane/core';
@@ -24,7 +26,7 @@ export const routing = createRulesRouter({
 });
 ```
 
-`hosted` redirects to the provider's page. `inline` mounts the provider's payment element in yours. A rule that names a provider you did not register is a compile error.
+Use `hosted` to send the customer to the provider's own page, or `inline` to show the provider's payment form inside yours. A rule that names a provider you did not register does not compile.
 
 ## Run it
 
@@ -46,7 +48,7 @@ pnpm test:live   # the Stripe adapter against Stripe test mode; needs STRIPE_TES
 ## What works
 
 - A rules router, evaluated in the browser and again on the server
-- A headless checkout client whose state is a discriminated union
+- A checkout client with no UI, whose state TypeScript can narrow by status
 - React bindings: `TenderlaneProvider`, `useTenderlaneCheckout`, `TenderlaneCheckoutForm`
 - Stripe: Checkout (hosted) and PaymentIntent with the Payment Element (inline)
 - Polar: hosted checkout, one product per checkout

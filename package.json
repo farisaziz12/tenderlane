@@ -2,7 +2,7 @@
   "name": "tenderlane-monorepo",
   "private": true,
   "version": "0.0.0",
-  "description": "Headless, typed checkout routing across payment providers. Alpha.",
+  "description": "Write your payment routing rules once; the checkout page and the server both follow them. Alpha.",
   "packageManager": "pnpm@9.15.4",
   "engines": {
     "node": ">=18.0.0"

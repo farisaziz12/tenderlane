@@ -1,6 +1,6 @@
 ---
 title: Architecture
-description: Six packages, one direction of dependency, and one server endpoint that owns the trust boundary.
+description: Six packages, one direction of dependency, and one server endpoint that decides the price and re-checks the route.
 order: 2
 ---
 
@@ -79,4 +79,4 @@ There is no plugin registry and no event bus. Middleware observes; it cannot cha
 
 **Provider ids are literals.** `stripeProvider()` returns a provider whose `id` has type `'stripe'`. `createRulesRouter` infers the union of ids its rules target, and the client and handler require that union to be registered. See [Routing](/docs/routing).
 
-**Errors cross package boundaries by `code`.** Every error extends `TenderlaneError` and carries a string `code`. Code that handles errors from another package checks `hasErrorCode(error, 'CATALOG_ERROR')` and not `instanceof`, which breaks when two copies of a package are installed.
+**Errors from another package are matched by `code`.** Every error extends `TenderlaneError` and carries a string `code`. Code that handles errors from another package checks `hasErrorCode(error, 'CATALOG_ERROR')` and not `instanceof`, which breaks when two copies of a package are installed.
