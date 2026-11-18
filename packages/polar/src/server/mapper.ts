@@ -84,6 +84,8 @@ export function mapToPolarCheckoutParams(
 
   const params: PolarCheckoutCreateParams = {
     products: [requirePolarProductId(item)],
+    // Passed through unchanged: Tenderlane's `{CHECKOUT_ID}` placeholder is
+    // also Polar's own, so Polar substitutes the checkout id itself.
     ...(input.successUrl ? { successUrl: input.successUrl } : {}),
     ...(input.customerEmail ? { customerEmail: input.customerEmail } : {}),
   };

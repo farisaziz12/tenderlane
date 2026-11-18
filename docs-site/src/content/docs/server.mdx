@@ -75,9 +75,9 @@ Two things are needed to connect a payment to an order, and neither may come fro
 
 **`onCheckoutCreated`** runs after the provider created the checkout and before the response is sent. `result.id` is the provider's id for it (a Stripe `cs_…` or `pi_…`, a Polar checkout id), and `items` are the prices the server charged. Store your order under that id. If the hook throws, the request fails with 500 and the checkout is never handed to the customer.
 
-**`handler.retrieve(provider, id)`** asks the provider for the checkout's current state with the secret key and returns `{ provider, id, status, amountTotal?, currency? }`. `status: 'complete'` means the provider's own record says the payment went through. For Stripe Checkout that requires `payment_status` to be paid, not only that the customer finished the page; for Polar it requires `succeeded`.
+**`handler.retrieve(provider, id)`** asks the provider for the checkout's current state with the secret key and returns `{ provider, id, status, amountTotal?, currency? }`. `status: 'complete'` means the provider's own record says the payment went through. For Stripe Checkout that requires `payment_status: 'paid'`, not only that the customer finished the page; for Polar it requires `succeeded`.
 
-To get the id back on return, put the literal `{CHECKOUT_ID}` in `successUrl`: `https://shop.example/success?checkout={CHECKOUT_ID}`. Each adapter has the provider fill it in.
+To get the id back on return, put the literal `{CHECKOUT_ID}` in `successUrl`: `https://shop.example/success?checkout={CHECKOUT_ID}`. Stripe's adapter translates it to Stripe's own placeholder; Polar uses the same one natively.
 
 `amountTotal` is what the provider charged. It can differ from the catalog price, because providers add tax and apply discounts.
 

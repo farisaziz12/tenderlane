@@ -13,6 +13,7 @@ import { parseCheckoutDetails, parseCheckoutResult } from '../adapters/index.js'
 import { runMiddlewareHook } from '../middleware/runner.js';
 import {
   ConfigurationError,
+  TenderlaneError,
   UnsupportedCapabilityError,
   ValidationError,
   hasErrorCode,
@@ -20,6 +21,14 @@ import {
 
 const DEFAULT_MAX_ITEMS = 100;
 const DEFAULT_MAX_QUANTITY = 10_000;
+
+/** Error codes a 5xx response may carry. */
+const RESPONSE_CODES = [
+  'PROVIDER_ERROR',
+  'CONFIGURATION_ERROR',
+  'ROUTING_ERROR',
+  'UNSUPPORTED_CAPABILITY',
+] as const;
 
 /** The provider ids of a tuple of server adapters, as a literal union. */
 type AdapterIds<TAdapters extends readonly ServerProviderAdapter[]> = TAdapters[number]['id'];
@@ -89,7 +98,9 @@ export interface TenderlaneHandlerConfig<
    * If it throws, the request fails with 500 and the checkout is never handed
    * to the customer: an unrecorded checkout cannot be reconciled later.
    */
-  readonly onCheckoutCreated?: (event: CheckoutCreatedEvent) => void | Promise<void>;
+  readonly onCheckoutCreated?: (
+    event: CheckoutCreatedEvent<AdapterIds<TAdapters>>,
+  ) => void | Promise<void>;
   /** Most entries accepted in `items[]`. Default 100. */
   readonly maxItems?: number;
   /** Largest `quantity` accepted for one item. Default 10 000. */
@@ -101,9 +112,10 @@ export interface TenderlaneHandlerConfig<
   readonly onError?: (error: unknown) => void;
 }
 
-export interface CheckoutCreatedEvent {
+export interface CheckoutCreatedEvent<TProviderId extends string = string> {
   readonly request: Request;
-  readonly provider: string;
+  /** The registered adapter that created it. Pass it back to `retrieve()`. */
+  readonly provider: TProviderId;
   /** The adapter action that created it, for example `'checkout'`. */
   readonly action: string;
   readonly result: CheckoutResult;
@@ -328,10 +340,9 @@ export function createTenderlaneHandler<
       return Response.json({ error: error.message, code: error.code }, { status: 400 });
     }
     config.onError?.(error);
-    const code =
-      isRecord(error) && typeof error.code === 'string' && /^[A-Z_]+$/.test(error.code)
-        ? error.code
-        : 'INTERNAL_ERROR';
+    // Only Tenderlane's own codes are echoed. Another library's `code`
+    // (a database driver's, say) describes the server's internals.
+    const code = RESPONSE_CODES.find((known) => hasErrorCode(error, known)) ?? 'INTERNAL_ERROR';
     return Response.json({ error: 'Checkout request failed.', code }, { status: 500 });
   }
 
@@ -421,14 +432,26 @@ export function createTenderlaneHandler<
       // Only the fields of a CheckoutResult cross the wire.
       const checkoutResult = parseCheckoutResult(result, providerId);
 
-      await config.onCheckoutCreated?.({
-        request,
-        provider: providerId,
-        action,
-        result: checkoutResult,
-        items: resolved,
-        context,
-      });
+      if (config.onCheckoutCreated) {
+        try {
+          await config.onCheckoutCreated({
+            request,
+            // `providerId` was found in `providerMap`, so it is one of the
+            // registered ids; the map itself is keyed by plain strings.
+            provider: providerId as AdapterIds<TAdapters>,
+            action,
+            result: checkoutResult,
+            items: resolved,
+            context,
+          });
+        } catch (error) {
+          // Always a server fault, whatever the app's error looks like: it
+          // must not be answered as a 400 or echoed to the browser.
+          throw new TenderlaneError('onCheckoutCreated failed.', 'INTERNAL_ERROR', {
+            cause: error,
+          });
+        }
+      }
 
       return Response.json(checkoutResult, { status: 200 });
     } catch (error) {

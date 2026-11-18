@@ -1,5 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
-import { parseCheckoutResult, requestProviderAction } from '../../src/adapters/index.js';
+import {
+  parseCheckoutDetails,
+  parseCheckoutResult,
+  requestProviderAction,
+} from '../../src/adapters/index.js';
 import { createTenderlaneHandler } from '../../src/server/handler.js';
 import { createInlineCatalog } from '../../src/index.js';
 
@@ -41,6 +45,22 @@ describe('parseCheckoutResult', () => {
   ])('rejects a result with %s', (_label, value) => {
     expect(() => parseCheckoutResult(value, 'acme')).toThrowError(
       expect.objectContaining({ code: 'PROVIDER_ERROR', provider: 'acme' }),
+    );
+  });
+});
+
+describe('parseCheckoutDetails', () => {
+  const base = { provider: 'acme', id: 'cs_1', status: 'complete' };
+
+  it('keeps the known fields and lower-cases the currency', () => {
+    expect(
+      parseCheckoutDetails({ ...base, amountTotal: 3132, currency: 'USD', clientSecret: 's' }, 'acme'),
+    ).toEqual({ ...base, amountTotal: 3132, currency: 'usd' });
+  });
+
+  it.each([-1, 29.5, '2900', Number.NaN])('rejects amountTotal %s', (amountTotal) => {
+    expect(() => parseCheckoutDetails({ ...base, amountTotal }, 'acme')).toThrowError(
+      expect.objectContaining({ code: 'PROVIDER_ERROR' }),
     );
   });
 });

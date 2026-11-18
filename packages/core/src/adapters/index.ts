@@ -202,8 +202,11 @@ export function parseCheckoutDetails(value: unknown, provider: string): Checkout
     new ProviderError(`Invalid checkout details from "${provider}": ${detail}.`, provider);
 
   const { amountTotal, currency } = candidate;
-  if (amountTotal !== undefined && (typeof amountTotal !== 'number' || !Number.isSafeInteger(amountTotal))) {
-    throw invalid('`amountTotal` is not an integer');
+  if (
+    amountTotal !== undefined &&
+    (typeof amountTotal !== 'number' || !Number.isSafeInteger(amountTotal) || amountTotal < 0)
+  ) {
+    throw invalid('`amountTotal` is not a non-negative integer');
   }
   if (currency !== undefined && typeof currency !== 'string') {
     throw invalid('`currency` is not a string');

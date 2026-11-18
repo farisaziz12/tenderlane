@@ -22,6 +22,6 @@ src/
 - A PaymentIntent has one currency; a mixed-currency cart is a `CatalogError`.
 - `submitInline` reports `complete` only for `paymentIntent.status === 'succeeded'`.
 - `providerOptions` on the payload comes from server config and is merged last into the Stripe params.
-- `retrieve` dispatches on the id prefix (`cs_`, `pi_`) and rejects anything else before calling Stripe. A Checkout Session is `complete` only when `payment_status` is not `unpaid`.
+- `retrieve` dispatches on the id prefix (`cs_`, `pi_`) and rejects anything else before calling Stripe. A Checkout Session is `complete` only when `payment_status` is `paid` (`unpaid` and `no_payment_required` are not payments).
 
 Tests mock the Stripe SDK. Nothing here is verified against the live API in CI.

@@ -78,3 +78,13 @@ test('retrieve accepts only registered provider ids', () => {
   void handler.retrieve('polar', 'co_1');
 });
 
+
+test('onCheckoutCreated receives a provider id that retrieve accepts', () => {
+  const handler = createTenderlaneHandler({
+    providers: [stripeAdapter],
+    onCheckoutCreated: (event) => {
+      expectTypeOf(event.provider).toEqualTypeOf<'stripe'>();
+      void handler.retrieve(event.provider, event.result.id);
+    },
+  });
+});

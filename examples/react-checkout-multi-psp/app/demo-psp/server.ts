@@ -23,7 +23,7 @@ export function demoServerAdapter() {
         currency: payload.items[0]?.currency ?? 'usd',
         description: payload.items.map((item) => item.name).join(', '),
         // The PSP fills in the checkout id, as Stripe and Polar do.
-        successUrl: payload.successUrl.replace(CHECKOUT_ID_PLACEHOLDER, id),
+        successUrl: payload.successUrl.replaceAll(CHECKOUT_ID_PLACEHOLDER, id),
         cancelUrl: payload.cancelUrl,
         paid: false,
       });

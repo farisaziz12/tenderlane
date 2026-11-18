@@ -76,7 +76,7 @@ export function mapToStripeSessionParams(
   const params: Stripe.Checkout.SessionCreateParams = {
     mode: 'payment',
     // Tenderlane's `{CHECKOUT_ID}` is Stripe's `{CHECKOUT_SESSION_ID}`.
-    success_url: input.successUrl.replace(CHECKOUT_ID_PLACEHOLDER, '{CHECKOUT_SESSION_ID}'),
+    success_url: input.successUrl.replaceAll(CHECKOUT_ID_PLACEHOLDER, '{CHECKOUT_SESSION_ID}'),
     cancel_url: input.cancelUrl,
     line_items: input.items.map(resolvedItemToStripeLineItem),
   };
@@ -128,13 +128,14 @@ export function mapFromStripeSession(session: Stripe.Checkout.Session): Checkout
 }
 
 /**
- * A Checkout Session is `complete` once the customer finishes the page, which
- * for delayed methods (bank debits) is before any money moved. It counts as
- * a completed payment only when `payment_status` says so.
+ * A Checkout Session is `complete` once the customer finishes the page. That
+ * is before any money moved for delayed methods (`unpaid`), and without any
+ * money at all for a setup or a trial (`no_payment_required`). It counts as
+ * a completed payment only when `payment_status` is `paid`.
  */
 function mapStripeStatus(session: Stripe.Checkout.Session): CheckoutResult['status'] {
   if (session.status === 'expired') return 'expired';
-  if (session.status === 'complete' && session.payment_status !== 'unpaid') return 'complete';
+  if (session.status === 'complete' && session.payment_status === 'paid') return 'complete';
   return 'open';
 }
 

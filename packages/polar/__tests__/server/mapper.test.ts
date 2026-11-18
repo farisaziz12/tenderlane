@@ -152,3 +152,26 @@ describe('mapFromPolarCheckout / mapPolarStatus', () => {
     expect(mapPolarStatus(undefined)).toBe('open');
   });
 });
+
+describe('success URL placeholder', () => {
+  it("leaves {CHECKOUT_ID} for Polar, whose own placeholder it is", () => {
+    const params = mapToPolarCheckoutParams({
+      items: [
+        {
+          sku: 'pro',
+          name: 'Pro',
+          quantity: 1,
+          unitAmount: 2900,
+          currency: 'usd',
+          providerRefs: { polar: { productId: 'polar_prod_pro' } },
+        },
+      ],
+      context: {},
+      successUrl: 'https://shop.example/success?checkout={CHECKOUT_ID}',
+      cancelUrl: 'https://shop.example/cancel',
+    });
+
+    expect(params.successUrl).toBe('https://shop.example/success?checkout={CHECKOUT_ID}');
+  });
+});
+

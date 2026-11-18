@@ -276,11 +276,13 @@ describe('success URL placeholder', () => {
     const params = mapToStripeSessionParams({
       items: [{ sku: 'pro', name: 'Pro', quantity: 1, unitAmount: 2900, currency: 'usd' }],
       context: {},
-      successUrl: 'https://shop.example/success?checkout={CHECKOUT_ID}',
+      successUrl: 'https://shop.example/success?checkout={CHECKOUT_ID}&again={CHECKOUT_ID}',
       cancelUrl: 'https://shop.example/cancel',
     });
 
-    expect(params.success_url).toBe('https://shop.example/success?checkout={CHECKOUT_SESSION_ID}');
+    expect(params.success_url).toBe(
+      'https://shop.example/success?checkout={CHECKOUT_SESSION_ID}&again={CHECKOUT_SESSION_ID}',
+    );
   });
 });
 

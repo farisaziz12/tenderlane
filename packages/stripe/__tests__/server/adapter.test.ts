@@ -45,6 +45,10 @@ describe('stripeServerAdapter retrieve', () => {
     sessionsRetrieve.mockResolvedValueOnce({ ...session, payment_status: 'unpaid' });
     expect((await adapter.retrieve?.('cs_test_1'))?.status).toBe('open');
 
+    // A setup-mode session or a free trial: finished, and nothing was charged.
+    sessionsRetrieve.mockResolvedValueOnce({ ...session, payment_status: 'no_payment_required' });
+    expect((await adapter.retrieve?.('cs_test_1'))?.status).toBe('open');
+
     sessionsRetrieve.mockResolvedValueOnce({ ...session, status: 'expired', payment_status: 'unpaid' });
     expect((await adapter.retrieve?.('cs_test_1'))?.status).toBe('expired');
   });

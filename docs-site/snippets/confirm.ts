@@ -26,6 +26,7 @@ export const handler = createTenderlaneHandler({
 });
 
 // 2. When the customer returns to /success?checkout=cs_..., ask the provider.
+// A real app also checks that the order belongs to the signed-in customer.
 export async function confirmOnReturn(checkoutId: string): Promise<boolean> {
   const order = await orders.find(checkoutId);
   if (!order) return false;

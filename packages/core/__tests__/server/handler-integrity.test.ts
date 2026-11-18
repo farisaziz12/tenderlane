@@ -433,7 +433,9 @@ describe('onCheckoutCreated', () => {
       providers: [adapter],
       catalog,
       onCheckoutCreated: () => {
-        throw new Error('database is down');
+        // Shaped like a request error, with a driver-style code: neither may
+        // turn this into a 400 or reach the browser.
+        throw Object.assign(new Error('insert into orders failed'), { code: 'VALIDATION_ERROR' });
       },
       onError,
     });
