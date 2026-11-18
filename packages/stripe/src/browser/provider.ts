@@ -96,7 +96,7 @@ export function stripeProvider(options: StripeProviderOptions): StripeBrowserPro
       // failure the customer would answer by paying again.
       const definite = error.type === 'card_error' || error.type === 'validation_error';
       const actual = definite ? undefined : await lookUpPaymentIntent(stripe);
-      if (actual && (actual.status === 'succeeded' || actual.status === 'processing')) {
+      if (actual && toStatus(actual) !== 'open') {
         return toResult(actual);
       }
       throw new ProviderError(error.message ?? 'Payment confirmation failed', 'stripe', {
@@ -114,14 +114,22 @@ export function stripeProvider(options: StripeProviderOptions): StripeBrowserPro
     return {
       provider: 'stripe',
       id: paymentIntent.id,
-      // Anything short of `succeeded` is not a completed payment.
-      status:
-        paymentIntent.status === 'succeeded'
-          ? 'complete'
-          : paymentIntent.status === 'processing'
-            ? 'processing'
-            : 'open',
+      status: toStatus(paymentIntent),
     };
+  }
+
+  /** Anything short of `succeeded` is not a completed payment. */
+  function toStatus(paymentIntent: PaymentIntent): 'complete' | 'processing' | 'open' {
+    switch (paymentIntent.status) {
+      case 'succeeded':
+        return 'complete';
+      // `requires_capture`: authorised, waiting for the merchant to capture.
+      case 'processing':
+      case 'requires_capture':
+        return 'processing';
+      default:
+        return 'open';
+    }
   }
 
   async function lookUpPaymentIntent(stripe: Stripe): Promise<PaymentIntent | undefined> {

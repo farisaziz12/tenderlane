@@ -79,20 +79,20 @@ Two things are needed to connect a payment to an order, and neither may come fro
 
 | `status` | Meaning | Stripe | Polar |
 | --- | --- | --- | --- |
-| `open` | Waiting on the customer. Nothing was submitted for payment. | Session not finished; PaymentIntent needs a method, confirmation or authentication | `open` |
-| `processing` | The customer did their part; the provider is waiting for the money. It can still fail. | Session finished with `payment_status: 'unpaid'`; PaymentIntent `processing` | `confirmed` |
+| `open` | Waiting on the customer. Nothing was submitted for payment. | Session not finished, or finished with nothing to charge (setup, trial); PaymentIntent needs a method, confirmation or authentication | `open` |
+| `processing` | The customer did their part; the provider is waiting for the money. It can still fail. | Session finished with `payment_status: 'unpaid'`; PaymentIntent `processing`, or `requires_capture` (authorised, not captured) | `confirmed` |
 | `complete` | The provider's own record says the payment went through. | `payment_status: 'paid'`; PaymentIntent `succeeded` | `succeeded` |
 | `expired` | Expired or cancelled. | Session `expired`; PaymentIntent `canceled` | `expired` |
-| `failed` | The attempt failed. | | `failed` |
+| `failed` | The attempt failed. | PaymentIntent back in `requires_payment_method` with a payment error, including a debit that bounced after the session finished | `failed` |
 
-`processing` lasts seconds for most methods and several business days for bank debits such as SEPA. `paymentMethod` (reported by Stripe once the customer has chosen one) tells you which case you are in. Whether to fulfil on `processing` or wait for `complete` is your decision; Tenderlane only keeps the two apart.
+`processing` lasts seconds for most methods and several business days for bank debits such as SEPA. `paymentMethod` is the method attached to the payment, reported by Stripe once the customer has chosen one (Stripe clears it again after a failure, and types wallets such as Apple Pay as `card`). It tells you which case you are in. Whether to fulfil on `processing` or wait for `complete` is your decision; Tenderlane only keeps the two apart.
 
 To get the id back on return, put the literal `{CHECKOUT_ID}` in `successUrl`: `https://shop.example/success?checkout={CHECKOUT_ID}`. Stripe's adapter translates it to Stripe's own placeholder; Polar uses the same one natively.
 
 `amountTotal` is what the provider charged. It can differ from the catalog price, because providers add tax and apply discounts.
 
 :::caution
-`retrieve` only runs when the customer comes back. Someone who pays and closes the tab never triggers it, and a delayed payment method may still be `open` when they return. It makes the success page truthful; it does not replace the provider's webhook, which Tenderlane does not handle yet.
+`retrieve` only runs when the customer comes back. Someone who pays and closes the tab never triggers it, and a bank debit will still be `processing` when they return. It makes the success page truthful; it does not replace the provider's webhook, which Tenderlane does not handle yet.
 :::
 
 ## Errors

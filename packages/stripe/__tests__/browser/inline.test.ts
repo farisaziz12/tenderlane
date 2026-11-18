@@ -47,6 +47,9 @@ describe('stripeProvider inline submit', () => {
     stripeJs.confirmPayment.mockResolvedValueOnce({ paymentIntent: { id: 'pi_1', status: 'processing' } });
     expect(await provider.submit(input, route)).toEqual({ provider: 'stripe', id: 'pi_1', status: 'processing' });
 
+    stripeJs.confirmPayment.mockResolvedValueOnce({ paymentIntent: { id: 'pi_1', status: 'requires_capture' } });
+    expect(await provider.submit(input, route)).toEqual({ provider: 'stripe', id: 'pi_1', status: 'processing' });
+
     stripeJs.confirmPayment.mockResolvedValueOnce({ paymentIntent: { id: 'pi_1', status: 'requires_action' } });
     expect(await provider.submit(input, route)).toEqual({ provider: 'stripe', id: 'pi_1', status: 'open' });
   });

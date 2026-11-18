@@ -52,8 +52,19 @@ describe('stripeServerAdapter retrieve', () => {
     });
 
     // A bank debit: the customer finished the page, no money has moved yet.
-    sessionsRetrieve.mockResolvedValueOnce({ ...session, payment_status: 'unpaid' });
+    const debit = (status: string, last_payment_error: unknown = null) => ({
+      ...session,
+      payment_status: 'unpaid',
+      payment_intent: { id: 'pi_1', status, last_payment_error, payment_method: null },
+    });
+    sessionsRetrieve.mockResolvedValueOnce(debit('processing'));
     expect((await adapter.retrieve?.('cs_test_1'))?.status).toBe('processing');
+
+    // Days later the debit bounces. The session still says complete/unpaid.
+    sessionsRetrieve.mockResolvedValueOnce(
+      debit('requires_payment_method', { code: 'payment_intent_payment_attempt_failed' }),
+    );
+    expect((await adapter.retrieve?.('cs_test_1'))?.status).toBe('failed');
 
     // Still on the page.
     sessionsRetrieve.mockResolvedValueOnce({ ...session, status: 'open', payment_status: 'unpaid' });
@@ -104,6 +115,26 @@ describe('stripeServerAdapter retrieve', () => {
 
     paymentIntentsRetrieve.mockResolvedValueOnce({ ...paymentIntent, status: 'requires_action' });
     expect((await adapter.retrieve?.('pi_1'))?.status).toBe('open');
+
+    // Authorised with manual capture: the customer is done.
+    paymentIntentsRetrieve.mockResolvedValueOnce({ ...paymentIntent, status: 'requires_capture' });
+    expect((await adapter.retrieve?.('pi_1'))?.status).toBe('processing');
+
+    // New, nothing tried yet.
+    paymentIntentsRetrieve.mockResolvedValueOnce({
+      ...paymentIntent,
+      status: 'requires_payment_method',
+      last_payment_error: null,
+    });
+    expect((await adapter.retrieve?.('pi_1'))?.status).toBe('open');
+
+    // Back to requires_payment_method after a failed debit.
+    paymentIntentsRetrieve.mockResolvedValueOnce({
+      ...paymentIntent,
+      status: 'requires_payment_method',
+      last_payment_error: { code: 'payment_intent_payment_attempt_failed' },
+    });
+    expect((await adapter.retrieve?.('pi_1'))?.status).toBe('failed');
   });
 
   it('rejects an id that is neither, without calling Stripe', async () => {

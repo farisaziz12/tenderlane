@@ -99,8 +99,8 @@ export interface CheckoutDetails {
   readonly amountTotal?: number;
   readonly currency?: string;
   /**
-   * The payment method the customer used, once the provider knows it
-   * (`'card'`, `'sepa_debit'`, ...). Tells an app whether `processing` will
+   * The payment method attached to the payment, once the customer has chosen
+   * one (`'card'`, `'sepa_debit'`, ...). It can be set before anything is paid. Tells an app whether `processing` will
    * last seconds or days. Absent when the provider does not report it.
    */
   readonly paymentMethod?: PaymentMethodId;

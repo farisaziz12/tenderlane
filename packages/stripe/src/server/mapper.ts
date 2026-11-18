@@ -137,15 +137,30 @@ function mapStripeStatus(session: Stripe.Checkout.Session): CheckoutResult['stat
   if (session.status === 'expired') return 'expired';
   if (session.status !== 'complete') return 'open';
   if (session.payment_status === 'paid') return 'complete';
-  // Finished by the customer and waiting for the money (a bank debit).
-  if (session.payment_status === 'unpaid') return 'processing';
   // `no_payment_required`: a setup or a trial. Nothing is being charged.
-  return 'open';
+  if (session.payment_status !== 'unpaid') return 'open';
+
+  // Finished by the customer, not paid. The session itself never changes
+  // again, so only the PaymentIntent can say whether the money is still on
+  // its way or the debit has since failed.
+  const paymentIntent = session.payment_intent;
+  if (paymentIntent && typeof paymentIntent !== 'string') {
+    return mapPaymentIntentStatus(paymentIntent);
+  }
+  return 'processing';
 }
 
-const TENDERLANE_METHOD_BY_STRIPE_TYPE: Readonly<Record<string, string>> = { cashapp: 'cash_app' };
+/** Stripe payment method types whose Tenderlane id is spelled differently. */
+const TENDERLANE_METHOD_BY_STRIPE_TYPE: Readonly<Record<string, string>> = {
+  cashapp: 'cash_app',
+  us_bank_account: 'ach_debit',
+  customer_balance: 'bank_transfer',
+};
 
-/** The method the customer paid with, when Stripe returned it expanded. */
+/**
+ * The method attached to the payment, when Stripe returned it expanded. Wallets
+ * such as Apple Pay are reported as `card`, which is how Stripe types them.
+ */
 function usedPaymentMethod(
   paymentIntent: string | Stripe.PaymentIntent | null | undefined,
 ): { paymentMethod: string } | Record<string, never> {
@@ -173,7 +188,7 @@ export function mapStripePaymentIntentDetails(paymentIntent: Stripe.PaymentInten
   return {
     provider: 'stripe',
     id: paymentIntent.id,
-    status: mapPaymentIntentStatus(paymentIntent.status),
+    status: mapPaymentIntentStatus(paymentIntent),
     amountTotal: paymentIntent.amount,
     currency: paymentIntent.currency,
     ...usedPaymentMethod(paymentIntent),
@@ -253,21 +268,29 @@ export function mapFromStripePaymentIntent(paymentIntent: Stripe.PaymentIntent):
   return {
     provider: 'stripe',
     id: paymentIntent.id,
-    status: mapPaymentIntentStatus(paymentIntent.status),
+    status: mapPaymentIntentStatus(paymentIntent),
     ...(paymentIntent.client_secret ? { clientSecret: paymentIntent.client_secret } : {}),
   };
 }
 
-function mapPaymentIntentStatus(status: Stripe.PaymentIntent.Status): CheckoutResult['status'] {
-  switch (status) {
+function mapPaymentIntentStatus(
+  paymentIntent: Pick<Stripe.PaymentIntent, 'status' | 'last_payment_error'>,
+): CheckoutResult['status'] {
+  switch (paymentIntent.status) {
     case 'succeeded':
       return 'complete';
     case 'canceled':
       return 'expired';
+    // `requires_capture`: the card is authorised and the customer is done;
+    // the merchant has yet to capture.
     case 'processing':
+    case 'requires_capture':
       return 'processing';
-    // requires_payment_method, requires_confirmation, requires_action,
-    // requires_capture: something is still needed before money moves.
+    // A PaymentIntent returns here after a failed attempt, with the error
+    // attached. Without one it is new and nothing was tried yet.
+    case 'requires_payment_method':
+      return paymentIntent.last_payment_error ? 'failed' : 'open';
+    // requires_confirmation, requires_action: waiting on the customer.
     default:
       return 'open';
   }
