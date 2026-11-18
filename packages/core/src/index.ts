@@ -20,6 +20,7 @@ export type {
   ResolvedCheckoutInput,
   CheckoutStatus,
   CheckoutResult,
+  CheckoutDetails,
   Catalog,
   CatalogPhantomTypes,
   CatalogRequest,

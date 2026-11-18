@@ -37,5 +37,8 @@ Narrow the alpha to what is demonstrated, and tighten the types and the wire for
 
 **Added**
 
+- `onCheckoutCreated` on the handler: record the order under the provider's checkout id with the server's prices. Fails closed.
+- `handler.retrieve(provider, id)` and `ServerProviderAdapter.retrieve`: ask the provider whether a checkout was paid. Implemented for Stripe (Checkout Session and PaymentIntent) and Polar. `{CHECKOUT_ID}` in `successUrl` is replaced with the checkout id.
+- Stripe: a Checkout Session with `payment_status: 'unpaid'` is no longer `complete`. Polar: `confirmed` is no longer `complete`.
 - `parseCheckoutResult` in `@tenderlane/core/adapters`. The handler passes every adapter result through it, and `requestProviderAction` validates the response, including that `url` is an absolute http(s) URL.
 - `StripePaymentElement` accepts the generic provider prop, so `elements={{ stripe: StripePaymentElement }}` needs no cast. It imports `@stripe/react-stripe-js` directly; lazy-load `@tenderlane/stripe/react` to keep it out of the first bundle.

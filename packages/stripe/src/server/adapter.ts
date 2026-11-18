@@ -1,5 +1,6 @@
 import Stripe from 'stripe';
 import type {
+  CheckoutDetails,
   ServerActionOptions,
   ServerProviderAdapter,
   ResolvedCheckoutInput,
@@ -12,6 +13,8 @@ import {
   mapFromStripeSession,
   mapToStripePaymentIntentParams,
   mapFromStripePaymentIntent,
+  mapStripeSessionDetails,
+  mapStripePaymentIntentDetails,
 } from './mapper.js';
 
 /**
@@ -21,6 +24,8 @@ import {
  * The adapter handles two actions:
  * - `checkout` — Creates a Stripe Checkout Session and returns a redirect URL.
  * - `create-payment-intent` — Creates a Stripe PaymentIntent and returns the `clientSecret`.
+ *
+ * `retrieve(id)` reads a Checkout Session or a PaymentIntent back from Stripe.
  *
  * This function imports the `stripe` npm package and must only be used in
  * server-side code. The browser entry (`@tenderlane/stripe`) never imports this module.
@@ -89,22 +94,43 @@ export function stripeServerAdapter(
           'stripe',
         );
       } catch (error) {
-        if (error instanceof ProviderError || error instanceof CatalogError) throw error;
+        throw toProviderError(error);
+      }
+    },
 
-        if (error instanceof Stripe.errors.StripeError) {
-          throw new ProviderError(
-            `Stripe error: ${error.message}`,
-            'stripe',
-            { providerCode: error.code, cause: error },
-          );
+    async retrieve(id: string): Promise<CheckoutDetails> {
+      try {
+        // The id says which object it is: `handle` returned a Checkout
+        // Session id for the hosted flow and a PaymentIntent id for inline.
+        if (id.startsWith('cs_')) {
+          return mapStripeSessionDetails(await stripe.checkout.sessions.retrieve(id));
         }
-
+        if (id.startsWith('pi_')) {
+          return mapStripePaymentIntentDetails(await stripe.paymentIntents.retrieve(id));
+        }
         throw new ProviderError(
-          error instanceof Error ? error.message : 'Unknown Stripe error',
+          `"${id}" is neither a Checkout Session id nor a PaymentIntent id.`,
           'stripe',
-          { cause: error },
         );
+      } catch (error) {
+        throw toProviderError(error);
       }
     },
   };
+}
+
+/** Tenderlane errors pass through; anything else becomes a ProviderError. */
+function toProviderError(error: unknown): unknown {
+  if (error instanceof ProviderError || error instanceof CatalogError) return error;
+
+  if (error instanceof Stripe.errors.StripeError) {
+    return new ProviderError(`Stripe error: ${error.message}`, 'stripe', {
+      providerCode: error.code,
+      cause: error,
+    });
+  }
+
+  return new ProviderError(error instanceof Error ? error.message : 'Unknown Stripe error', 'stripe', {
+    cause: error,
+  });
 }

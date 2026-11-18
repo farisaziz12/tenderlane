@@ -6,12 +6,13 @@ order: 4
 import Source from '../../components/Source.astro';
 import server from '../../../snippets/server.ts?raw';
 import catalog from '../../../snippets/catalog.ts?raw';
+import confirm from '../../../snippets/confirm.ts?raw';
 
 ## The handler
 
 <Source code={server} file="docs-site/snippets/server.ts" />
 
-`createTenderlaneHandler` returns `{ POST, resolve }`, both `(request: Request) => Promise<Response>`. It runs wherever the Web `Request` and `Response` exist. The example mounts `POST` as a Next.js route handler.
+`createTenderlaneHandler` returns `POST` and `resolve`, both `(request: Request) => Promise<Response>`, and `retrieve`, a function for your own server code. It runs wherever the Web `Request` and `Response` exist. The example mounts `POST` as a Next.js route handler.
 
 ## What the browser may and may not decide
 
@@ -38,7 +39,7 @@ interface CheckoutInput {
 | `paymentMethods` | Ignored when `routing` is set; the route's methods are used. |
 | `context` | Passed to `resolveContext`, whose return value is what pricing and routing use. Without `resolveContext` it is used as sent. |
 | `successUrl`, `cancelUrl` | Must be absolute URLs on an origin in `allowedRedirectOrigins`, which defaults to the origin of the request. Otherwise the endpoint could mint a real checkout that returns the customer to someone else's site. |
-| `customerEmail`, `clientReferenceId`, `metadata`, `idempotencyKey` | Type-checked and forwarded to the provider as sent. They are browser input: do not fulfil an order from `clientReferenceId` or `metadata` without checking them against your own records. |
+| `customerEmail`, `clientReferenceId`, `metadata`, `idempotencyKey` | Type-checked and forwarded to the provider as sent. They are browser input: do not fulfil an order from `clientReferenceId` or `metadata`. Key your order on the id `onCheckoutCreated` gives you. |
 | Anything else in the body | Dropped. The adapter payload is built field by field from validated values. |
 
 The response is `{ provider, id, status, url?, clientSecret? }`. An adapter result is passed through a validator that copies only those fields, so the rest of a PSP response (customer details, amounts, internal ids) never reaches the browser. The browser validates the same shape before acting on it, and only follows an absolute `http(s)` URL.
@@ -66,6 +67,24 @@ The browser needs a price to display. Two options, both display-only:
 
 Whatever the browser displayed, `POST` resolves again and charges that.
 
+## Knowing which order was paid
+
+Two things are needed to connect a payment to an order, and neither may come from the browser: a key, and an answer from the provider.
+
+<Source code={confirm} file="docs-site/snippets/confirm.ts" />
+
+**`onCheckoutCreated`** runs after the provider created the checkout and before the response is sent. `result.id` is the provider's id for it (a Stripe `cs_…` or `pi_…`, a Polar checkout id), and `items` are the prices the server charged. Store your order under that id. If the hook throws, the request fails with 500 and the checkout is never handed to the customer.
+
+**`handler.retrieve(provider, id)`** asks the provider for the checkout's current state with the secret key and returns `{ provider, id, status, amountTotal?, currency? }`. `status: 'complete'` means the provider's own record says the payment went through. For Stripe Checkout that requires `payment_status` to be paid, not only that the customer finished the page; for Polar it requires `succeeded`.
+
+To get the id back on return, put the literal `{CHECKOUT_ID}` in `successUrl`: `https://shop.example/success?checkout={CHECKOUT_ID}`. Each adapter has the provider fill it in.
+
+`amountTotal` is what the provider charged. It can differ from the catalog price, because providers add tax and apply discounts.
+
+:::caution
+`retrieve` only runs when the customer comes back. Someone who pays and closes the tab never triggers it, and a delayed payment method may still be `open` when they return. It makes the success page truthful; it does not replace the provider's webhook, which Tenderlane does not handle yet.
+:::
+
 ## Errors
 
 | Status | When | Body |
@@ -76,5 +95,5 @@ Whatever the browser displayed, `POST` resolves again and charges that.
 ## What the handler does not do
 
 - **Authentication, CSRF, rate limiting.** It is a plain route handler. Wrap it as you would any endpoint that creates billable objects.
-- **Confirmation.** It creates a checkout. It does not learn whether the customer paid. That requires the provider's webhook, which Tenderlane does not handle yet.
+- **Webhooks.** `retrieve` answers when you ask. Nothing tells you when a payment settles while nobody is asking; that is the provider's webhook, which Tenderlane does not verify or interpret yet.
 - **Idempotency.** `idempotencyKey` is forwarded to Stripe if the browser sends one. Tenderlane does not generate or store keys. The client refuses a second `submit()` while one is in flight, which prevents double clicks but not retries across page loads.

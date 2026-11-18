@@ -52,6 +52,8 @@ Serializable JSON, first match wins. Operators: literal, `{ in }`, `{ notIn }`, 
 ### Wire format (load-bearing)
 Request: `{ provider, action, payload: CheckoutInput, paymentMethods }`. `CheckoutInput` is `{ items: [{ sku, quantity }], context?, successUrl, cancelUrl, customerEmail?, clientReferenceId?, metadata?, idempotencyKey? }`. **It has no amount, and nothing from the request may reach a PSP parameter that carries money.** The handler deletes any `unitAmount`, prices from its own catalog, and builds the adapter payload field by field from validated values. The client's `context` is untrusted: `resolveContext` derives the server's. The client names the `provider`: pass the handler the same `routing` so the server checks it.
 
+Confirmation: `onCheckoutCreated` hands the app the provider's checkout id and the server-priced items (record the order there; it fails closed). `handler.retrieve(provider, id)` asks the provider for `{ status, amountTotal?, currency? }` with the secret key; it is a server function, never a route. `'complete'` means the provider's record says paid (Stripe: `payment_status`, not only `status`; Polar: `succeeded`, not `confirmed`). `{CHECKOUT_ID}` in `successUrl` is filled in by the provider.
+
 Response: `{ provider, id, status, url?, clientSecret? }` and nothing else. Adapter results pass through `parseCheckoutResult` on the server and again in the browser. Never return a PSP object from an adapter.
 
 ### Catalog
@@ -71,7 +73,7 @@ Response: `{ provider, id, status, url?, clientSecret? }` and nothing else. Adap
 
 Implemented: rules router, headless client, React bindings, Stripe hosted + inline, Polar hosted, catalogs, middleware observers, typed errors, adapter entry point, Vue bindings for hosted flows.
 
-Not implemented: webhooks, subscriptions, refunds, failover, other PSPs, Polar's embedded checkout, Solid/Svelte/Angular bindings, `lookup_key` for `createStripeCatalog`, catalog caching, npm releases. No test runs against a live PSP. `docs-site/src/content/docs/limitations.mdx` is the public list; keep it in step with this one.
+Not implemented: webhooks (only the pull-based `retrieve` exists), subscriptions, refunds, failover, other PSPs, Polar's embedded checkout, Solid/Svelte/Angular bindings, `lookup_key` for `createStripeCatalog`, catalog caching, npm releases. No test runs against a live PSP. `docs-site/src/content/docs/limitations.mdx` is the public list; keep it in step with this one.
 
 ## Workflow
 

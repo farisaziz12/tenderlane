@@ -1,13 +1,22 @@
 import type { ServerProviderAdapter } from '../types/provider.js';
-import type { ResolvedCheckoutInput } from '../types/checkout.js';
-import type { Catalog, CatalogRequest } from '../types/catalog.js';
+import type {
+  CheckoutDetails,
+  CheckoutResult,
+  ResolvedCheckoutInput,
+} from '../types/checkout.js';
+import type { Catalog, CatalogRequest, ResolvedCatalogItem } from '../types/catalog.js';
 import type { TenderlaneContext } from '../types/context.js';
 import type { TenderlaneMiddleware } from '../types/middleware.js';
 import type { Router } from '../types/routing.js';
 import { resolveCatalogItems } from '../catalog/runner.js';
-import { parseCheckoutResult } from '../adapters/index.js';
+import { parseCheckoutDetails, parseCheckoutResult } from '../adapters/index.js';
 import { runMiddlewareHook } from '../middleware/runner.js';
-import { ConfigurationError, ValidationError, hasErrorCode } from '../errors/errors.js';
+import {
+  ConfigurationError,
+  UnsupportedCapabilityError,
+  ValidationError,
+  hasErrorCode,
+} from '../errors/errors.js';
 
 const DEFAULT_MAX_ITEMS = 100;
 const DEFAULT_MAX_QUANTITY = 10_000;
@@ -70,6 +79,17 @@ export interface TenderlaneHandlerConfig<
    * handler sees.
    */
   readonly allowedRedirectOrigins?: readonly string[];
+  /**
+   * Called after the provider created a checkout and before the response is
+   * sent. This is where an app records its order: `result.id` is the key the
+   * provider's webhook and `retrieve()` will use, and `items` are the prices
+   * the server charged. Both come from the server, unlike `clientReferenceId`
+   * and `metadata`, which the browser wrote.
+   *
+   * If it throws, the request fails with 500 and the checkout is never handed
+   * to the customer: an unrecorded checkout cannot be reconciled later.
+   */
+  readonly onCheckoutCreated?: (event: CheckoutCreatedEvent) => void | Promise<void>;
   /** Most entries accepted in `items[]`. Default 100. */
   readonly maxItems?: number;
   /** Largest `quantity` accepted for one item. Default 10 000. */
@@ -81,11 +101,37 @@ export interface TenderlaneHandlerConfig<
   readonly onError?: (error: unknown) => void;
 }
 
-export interface TenderlaneHandler {
+export interface CheckoutCreatedEvent {
+  readonly request: Request;
+  readonly provider: string;
+  /** The adapter action that created it, for example `'checkout'`. */
+  readonly action: string;
+  readonly result: CheckoutResult;
+  /** The items as priced by the server's catalog. */
+  readonly items: readonly ResolvedCatalogItem[];
+  /** The context the server believes (after `resolveContext`). */
+  readonly context: TenderlaneContext;
+}
+
+export interface TenderlaneHandler<TProviderId extends string = string> {
   /** Dispatch `{ provider, action, payload }` to a provider adapter. */
   POST(request: Request): Promise<Response>;
   /** Price `{ items, context }` with the default catalog, for display. */
   resolve(request: Request): Promise<Response>;
+  /**
+   * Ask the provider for the current state of a checkout, with the secret
+   * key. A function for server code (a success page, a job), not a route: it
+   * is not exposed to the browser. Use it when the customer returns from a
+   * hosted checkout, instead of trusting the return itself.
+   *
+   * It is a pull. A customer who pays and closes the tab never triggers it,
+   * so it does not replace the provider's webhook.
+   *
+   * @throws {ConfigurationError} If no adapter is registered under `provider`.
+   * @throws {UnsupportedCapabilityError} If the adapter has no `retrieve`.
+   * @throws {ProviderError} If the provider call fails or the id is unknown.
+   */
+  retrieve(provider: TProviderId, id: string): Promise<CheckoutDetails>;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -225,7 +271,8 @@ function validateRedirectUrl(
  * 4. checks the named provider against the server's `routing`, when given,
  * 5. prices the items with the server's catalog,
  * 6. calls the provider adapter with the resolved items,
- * 7. returns only the fields of a `CheckoutResult`.
+ * 7. reduces the result to the fields of a `CheckoutResult`,
+ * 8. calls `onCheckoutCreated`, where the app records its order, and responds.
  *
  * `providers`, `catalogs`, `routing` and `providerOptions` are checked against
  * each other at compile time: a key or a route for an adapter that is not in
@@ -242,7 +289,7 @@ function validateRedirectUrl(
  */
 export function createTenderlaneHandler<
   const TAdapters extends readonly ServerProviderAdapter[],
->(config: TenderlaneHandlerConfig<TAdapters>): TenderlaneHandler {
+>(config: TenderlaneHandlerConfig<TAdapters>): TenderlaneHandler<AdapterIds<TAdapters>> {
   const providerMap = new Map<string, ServerProviderAdapter>();
   for (const provider of config.providers) {
     providerMap.set(provider.id, provider);
@@ -372,7 +419,18 @@ export function createTenderlaneHandler<
       );
 
       // Only the fields of a CheckoutResult cross the wire.
-      return Response.json(parseCheckoutResult(result, providerId), { status: 200 });
+      const checkoutResult = parseCheckoutResult(result, providerId);
+
+      await config.onCheckoutCreated?.({
+        request,
+        provider: providerId,
+        action,
+        result: checkoutResult,
+        items: resolved,
+        context,
+      });
+
+      return Response.json(checkoutResult, { status: 200 });
     } catch (error) {
       return errorResponse(error);
     }
@@ -398,5 +456,21 @@ export function createTenderlaneHandler<
     }
   }
 
-  return { POST, resolve };
+  async function retrieve(providerId: string, id: string): Promise<CheckoutDetails> {
+    const adapter = providerMap.get(providerId);
+    if (!adapter) {
+      throw new ConfigurationError(
+        `Cannot retrieve from "${providerId}": no adapter with that id is registered.`,
+      );
+    }
+    if (!adapter.retrieve) {
+      throw new UnsupportedCapabilityError(
+        `Provider "${providerId}" cannot look a checkout up.`,
+        providerId,
+      );
+    }
+    return parseCheckoutDetails(await adapter.retrieve(id), providerId);
+  }
+
+  return { POST, resolve, retrieve };
 }

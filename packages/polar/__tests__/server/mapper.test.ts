@@ -144,7 +144,8 @@ describe('mapFromPolarCheckout / mapPolarStatus', () => {
 
   it('maps Polar statuses to the normalized Tenderlane status union', () => {
     expect(mapPolarStatus('open')).toBe('open');
-    expect(mapPolarStatus('confirmed')).toBe('complete');
+    // Confirmed: the customer pressed Pay; the payment is still processing.
+    expect(mapPolarStatus('confirmed')).toBe('open');
     expect(mapPolarStatus('succeeded')).toBe('complete');
     expect(mapPolarStatus('expired')).toBe('expired');
     expect(mapPolarStatus('failed')).toBe('failed');

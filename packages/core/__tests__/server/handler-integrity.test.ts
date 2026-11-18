@@ -392,3 +392,90 @@ describe('defaults that protect an unconfigured handler', () => {
     expect(handle).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('onCheckoutCreated', () => {
+  it('receives the provider id and the server prices, not what the browser sent', async () => {
+    const { adapter } = captureAdapter();
+    const onCheckoutCreated = vi.fn();
+    const handler = createTenderlaneHandler({
+      providers: [adapter],
+      catalog,
+      resolveContext: () => ({ country: 'CH' }),
+      onCheckoutCreated,
+    });
+
+    const response = await handler.POST(
+      post(
+        checkout({
+          items: [{ sku: 'pro', quantity: 2, unitAmount: 1 }],
+          context: { country: 'IN' },
+          clientReferenceId: 'order-chosen-by-the-browser',
+        }),
+      ),
+    );
+
+    expect(response.status).toBe(200);
+    expect(onCheckoutCreated).toHaveBeenCalledOnce();
+    const event = onCheckoutCreated.mock.calls[0]?.[0];
+    expect(event).toMatchObject({
+      provider: 'mock',
+      action: 'checkout',
+      result: { provider: 'mock', id: 'session_123', status: 'open' },
+      context: { country: 'CH' },
+    });
+    expect(event.items).toMatchObject([{ sku: 'pro', quantity: 2, unitAmount: 2900 }]);
+  });
+
+  it('does not hand out a checkout the app failed to record', async () => {
+    const { adapter } = captureAdapter();
+    const onError = vi.fn();
+    const handler = createTenderlaneHandler({
+      providers: [adapter],
+      catalog,
+      onCheckoutCreated: () => {
+        throw new Error('database is down');
+      },
+      onError,
+    });
+
+    const response = await handler.POST(post(checkout({ items: [{ sku: 'pro', quantity: 1 }] })));
+
+    expect(response.status).toBe(500);
+    expect(await response.json()).toEqual({ error: 'Checkout request failed.', code: 'INTERNAL_ERROR' });
+    expect(onError).toHaveBeenCalledOnce();
+  });
+});
+
+describe('retrieve', () => {
+  it("returns the adapter's details reduced to the known fields", async () => {
+    const { adapter } = captureAdapter();
+    const retrieve = vi.fn(async (id: string) => ({
+      provider: 'mock',
+      id,
+      status: 'complete' as const,
+      amountTotal: 3132,
+      currency: 'USD',
+      customer: { email: 'someone@example.com' },
+    }));
+    const handler = createTenderlaneHandler({ providers: [{ ...adapter, retrieve }], catalog });
+
+    expect(await handler.retrieve('mock', 'session_123')).toEqual({
+      provider: 'mock',
+      id: 'session_123',
+      status: 'complete',
+      amountTotal: 3132,
+      currency: 'usd',
+    });
+  });
+
+  it('fails clearly for an unknown provider and for an adapter that cannot look up', async () => {
+    const { adapter } = captureAdapter();
+    const handler = createTenderlaneHandler({ providers: [adapter], catalog });
+
+    await expect(handler.retrieve('nope', 'x')).rejects.toMatchObject({ code: 'CONFIGURATION_ERROR' });
+    await expect(handler.retrieve('mock', 'x')).rejects.toMatchObject({
+      code: 'UNSUPPORTED_CAPABILITY',
+    });
+  });
+});
+

@@ -270,3 +270,17 @@ describe('results sent to the browser', () => {
     });
   });
 });
+
+describe('success URL placeholder', () => {
+  it("translates {CHECKOUT_ID} to Stripe's {CHECKOUT_SESSION_ID}", () => {
+    const params = mapToStripeSessionParams({
+      items: [{ sku: 'pro', name: 'Pro', quantity: 1, unitAmount: 2900, currency: 'usd' }],
+      context: {},
+      successUrl: 'https://shop.example/success?checkout={CHECKOUT_ID}',
+      cancelUrl: 'https://shop.example/cancel',
+    });
+
+    expect(params.success_url).toBe('https://shop.example/success?checkout={CHECKOUT_SESSION_ID}');
+  });
+});
+

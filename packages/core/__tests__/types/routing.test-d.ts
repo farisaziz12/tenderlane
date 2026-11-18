@@ -69,3 +69,12 @@ test('the server handler accepts catalogs and options only for registered adapte
     providerOptions: { polar: {} },
   });
 });
+
+test('retrieve accepts only registered provider ids', () => {
+  const handler = createTenderlaneHandler({ providers: [stripeAdapter] });
+
+  expectTypeOf(handler.retrieve).parameter(0).toEqualTypeOf<'stripe'>();
+  // @ts-expect-error 'polar' is not a registered adapter
+  void handler.retrieve('polar', 'co_1');
+});
+

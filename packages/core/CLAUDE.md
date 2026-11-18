@@ -33,8 +33,11 @@ Order of operations in `POST`, each step covered by `__tests__/server/`:
 6. `onCatalogResolved` middleware.
 7. Build the adapter payload field by field from validated values. Nothing else from the body is forwarded.
 8. `adapter.handle(...)`, then `parseCheckoutResult`: only `{ provider, id, status, url?, clientSecret? }` is returned.
+9. `onCheckoutCreated({ request, provider, action, result, items, context })`. A throw is a 500: an unrecorded checkout is not handed out.
 
 Request errors are 400 with `{ error, code }`. Everything else is 500 with a generic message and goes to `onError`.
+
+`retrieve(provider, id)` is a function, not a route: `adapter.retrieve(id)` reduced by `parseCheckoutDetails`. Do not expose it over HTTP from core.
 
 `resolve` prices `{ items, context }` with the top-level `catalog` for display (`createRemoteCatalog`).
 

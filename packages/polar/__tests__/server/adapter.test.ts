@@ -3,12 +3,13 @@ import { ProviderError } from '@tenderlane/core';
 import type { ResolvedCheckoutInput } from '@tenderlane/core';
 
 const checkoutsCreate = vi.fn();
+const checkoutsGet = vi.fn();
 
 // Mock @polar-sh/sdk before importing the adapter so its `new Polar()` call
 // uses the mock instead of hitting the network.
 vi.mock('@polar-sh/sdk', () => ({
   Polar: vi.fn().mockImplementation(() => ({
-    checkouts: { create: checkoutsCreate },
+    checkouts: { create: checkoutsCreate, get: checkoutsGet },
   })),
 }));
 
@@ -119,5 +120,38 @@ describe('polarServerAdapter', () => {
       ProviderError,
     );
     await expect(adapter.handle('checkout', baseInput)).rejects.toThrow('Polar API down');
+  });
+});
+
+describe('polarServerAdapter retrieve', () => {
+  it('reports a paid checkout as complete, with what Polar charged', async () => {
+    const { polarServerAdapter } = await import('../../src/server/adapter.js');
+    checkoutsGet.mockResolvedValue({
+      id: 'polar_co_1',
+      status: 'succeeded',
+      totalAmount: 3132,
+      currency: 'usd',
+      customerEmail: 'someone@example.com',
+    });
+
+    const details = await polarServerAdapter({ accessToken: 'polar_oat_x' }).retrieve?.('polar_co_1');
+
+    expect(checkoutsGet).toHaveBeenCalledWith({ id: 'polar_co_1' });
+    expect(details).toEqual({
+      provider: 'polar',
+      id: 'polar_co_1',
+      status: 'complete',
+      amountTotal: 3132,
+      currency: 'usd',
+    });
+  });
+
+  it('does not report a checkout that is still processing as complete', async () => {
+    const { polarServerAdapter } = await import('../../src/server/adapter.js');
+    checkoutsGet.mockResolvedValue({ id: 'polar_co_1', status: 'confirmed', totalAmount: 2900, currency: 'usd' });
+
+    const details = await polarServerAdapter({ accessToken: 'polar_oat_x' }).retrieve?.('polar_co_1');
+
+    expect(details?.status).toBe('open');
   });
 });

@@ -50,11 +50,12 @@ pnpm check       # lint, build, typecheck, tests, package export checks
 - Stripe: Checkout (hosted) and PaymentIntent with the Payment Element (inline)
 - Polar: hosted checkout, one product per checkout
 - Server-side pricing from a catalog you define, or read from Stripe or Polar
+- Server-side confirmation on return: `onCheckoutCreated` to record the order under the provider's id, `handler.retrieve()` to ask the provider if it was paid
 - An adapter API for other providers, used by the first-party adapters themselves
 
 ## What does not work yet
 
-- **Webhooks.** Tenderlane cannot confirm a payment. `success` is the browser SDK's report, for the UI only.
+- **Webhooks.** `handler.retrieve()` asks the provider whether a checkout was paid when the customer returns. Nothing handles a payment that settles while nobody is asking. The client's `success` is the browser SDK's report, for the UI only.
 - Subscriptions, refunds, saved payment methods, failover.
 - Providers other than Stripe and Polar. Polar is hosted-only.
 - Vue bindings cover hosted flows only and have no example.

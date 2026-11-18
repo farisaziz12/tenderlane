@@ -1,9 +1,11 @@
 import type {
+  CheckoutDetails,
   CheckoutResult,
   ResolvedCatalogItem,
   ResolvedCheckoutInput,
 } from '@tenderlane/core';
 import { CatalogError } from '@tenderlane/core';
+import { CHECKOUT_ID_PLACEHOLDER } from '@tenderlane/core/adapters';
 import type Stripe from 'stripe';
 
 /**
@@ -73,7 +75,8 @@ export function mapToStripeSessionParams(
 ): Stripe.Checkout.SessionCreateParams {
   const params: Stripe.Checkout.SessionCreateParams = {
     mode: 'payment',
-    success_url: input.successUrl,
+    // Tenderlane's `{CHECKOUT_ID}` is Stripe's `{CHECKOUT_SESSION_ID}`.
+    success_url: input.successUrl.replace(CHECKOUT_ID_PLACEHOLDER, '{CHECKOUT_SESSION_ID}'),
     cancel_url: input.cancelUrl,
     line_items: input.items.map(resolvedItemToStripeLineItem),
   };
@@ -119,22 +122,42 @@ export function mapFromStripeSession(session: Stripe.Checkout.Session): Checkout
   return {
     provider: 'stripe',
     id: session.id,
-    status: mapStripeStatus(session.status),
+    status: mapStripeStatus(session),
     ...(session.url ? { url: session.url } : {}),
   };
 }
 
-function mapStripeStatus(
-  status: Stripe.Checkout.Session.Status | null,
-): CheckoutResult['status'] {
-  switch (status) {
-    case 'complete':
-      return 'complete';
-    case 'expired':
-      return 'expired';
-    default:
-      return 'open';
-  }
+/**
+ * A Checkout Session is `complete` once the customer finishes the page, which
+ * for delayed methods (bank debits) is before any money moved. It counts as
+ * a completed payment only when `payment_status` says so.
+ */
+function mapStripeStatus(session: Stripe.Checkout.Session): CheckoutResult['status'] {
+  if (session.status === 'expired') return 'expired';
+  if (session.status === 'complete' && session.payment_status !== 'unpaid') return 'complete';
+  return 'open';
+}
+
+/** What `retrieve()` reports for a hosted checkout. */
+export function mapStripeSessionDetails(session: Stripe.Checkout.Session): CheckoutDetails {
+  return {
+    provider: 'stripe',
+    id: session.id,
+    status: mapStripeStatus(session),
+    ...(session.amount_total !== null ? { amountTotal: session.amount_total } : {}),
+    ...(session.currency ? { currency: session.currency } : {}),
+  };
+}
+
+/** What `retrieve()` reports for an inline payment. */
+export function mapStripePaymentIntentDetails(paymentIntent: Stripe.PaymentIntent): CheckoutDetails {
+  return {
+    provider: 'stripe',
+    id: paymentIntent.id,
+    status: mapPaymentIntentStatus(paymentIntent.status),
+    amountTotal: paymentIntent.amount,
+    currency: paymentIntent.currency,
+  };
 }
 
 /**

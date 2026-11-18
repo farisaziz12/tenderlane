@@ -1,5 +1,6 @@
 import { Polar } from '@polar-sh/sdk';
 import type {
+  CheckoutDetails,
   CheckoutResult,
   ResolvedCheckoutInput,
   ServerProviderAdapter,
@@ -9,6 +10,7 @@ import type { PolarServerConfig } from './types.js';
 import {
   mapToPolarCheckoutParams,
   mapFromPolarCheckout,
+  mapPolarCheckoutDetails,
 } from './mapper.js';
 
 /**
@@ -60,16 +62,27 @@ export function polarServerAdapter(
           'polar',
         );
       } catch (error) {
-        // Catalog and provider errors flow through unchanged so the server
-        // handler maps them to the correct HTTP status (400 vs 500).
-        if (error instanceof CatalogError) throw error;
-        if (error instanceof ProviderError) throw error;
-        throw new ProviderError(
-          error instanceof Error ? error.message : 'Unknown Polar error',
-          'polar',
-          { cause: error },
-        );
+        throw toProviderError(error);
+      }
+    },
+
+    async retrieve(id: string): Promise<CheckoutDetails> {
+      try {
+        return mapPolarCheckoutDetails(await polar.checkouts.get({ id }));
+      } catch (error) {
+        throw toProviderError(error);
       }
     },
   };
+}
+
+/**
+ * Catalog and provider errors pass through unchanged, so the server handler
+ * maps them to the right HTTP status. Anything else becomes a ProviderError.
+ */
+function toProviderError(error: unknown): unknown {
+  if (error instanceof CatalogError || error instanceof ProviderError) return error;
+  return new ProviderError(error instanceof Error ? error.message : 'Unknown Polar error', 'polar', {
+    cause: error,
+  });
 }

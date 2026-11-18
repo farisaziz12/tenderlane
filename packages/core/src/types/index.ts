@@ -28,6 +28,7 @@ export type {
   ResolvedCheckoutInput,
   CheckoutStatus,
   CheckoutResult,
+  CheckoutDetails,
 } from './checkout.js';
 
 export type {

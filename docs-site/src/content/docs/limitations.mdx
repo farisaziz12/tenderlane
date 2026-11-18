@@ -8,7 +8,7 @@ order: 7
 
 | Area | State |
 | --- | --- |
-| Webhooks | None. Tenderlane creates checkouts and reports what the browser SDK says. It cannot tell you that a payment settled. |
+| Webhooks | None. `handler.retrieve()` asks the provider whether a checkout was paid, which covers a customer returning to your site. Nothing covers a payment that settles while nobody is asking. |
 | Subscriptions | None. Stripe sessions are created in `payment` mode only. |
 | Refunds, captures, disputes | None. |
 | Saved payment methods, customers | None. |
@@ -26,7 +26,7 @@ order: 7
 
 ## Yours to add
 
-- **Payment confirmation.** Verify the provider's webhook signature and fulfil from the webhook. Do not fulfil from the `success` status or from a visit to the success URL.
+- **Webhook handling.** Verify the provider's webhook signature yourself and fulfil from the webhook. `handler.retrieve()` is a sound check on return, but a customer who closes the tab never triggers it. Do not fulfil from the client's `success` status or from a visit to the success URL alone.
 - **Authentication, CSRF protection and rate limiting** on the endpoint.
 - **`routing` and `resolveContext`** on the handler. They are optional so that a first setup works; without them the browser has more say than it should. See [Server and price integrity](/docs/server).
 - **Idempotency keys** if a checkout can be retried across page loads.

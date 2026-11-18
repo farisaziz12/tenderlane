@@ -12,14 +12,14 @@ pnpm example          # terminal 1: http://localhost:3000
 ```
 
 Open three files in your editor, all under `examples/react-checkout-multi-psp/app/`:
-`checkout/routing.ts`, `api/payments/route.ts`, `demo-psp/server.ts`.
+`checkout/routing.ts`, `checkout/server.ts`, `demo-psp/server.ts`.
 
 Decide which version you are showing and say so up front:
 
 | Setup | What is real | What is not |
 | --- | --- | --- |
 | No keys (default) | Router, client state machine, wire format, server handler, catalog pricing, redirect round trip | The PSP. The demo PSP is a page inside the example. No money moves. |
-| Stripe test keys in `.env.local` | All of the above, plus Stripe's API, Checkout page and Payment Element in test mode | Polar (needs its own sandbox keys). Payment confirmation by webhook, which Tenderlane does not have. |
+| Stripe test keys in `.env.local` | All of the above, plus Stripe's API, Checkout page and Payment Element in test mode | Polar (needs its own sandbox keys). Webhook handling, which Tenderlane does not have. |
 
 Nobody has run the Stripe or Polar paths in CI. If you show them, you are showing them live.
 
@@ -43,13 +43,14 @@ In the browser, with the network tab open:
 2. Switch to Switzerland. The route becomes `ch-inline / stripe / inline` and the price CHF 29.00, with no request and no reload. That is the router running in the browser. (Without Stripe keys the panel says the route cannot be paid here. With keys, the Payment Element mounts.)
 3. Back to United Kingdom. Press Pay. Show the request body: `items: [{ sku, quantity }]`, no amount.
 4. You land on the page marked Demo PSP showing $29.00. The server chose that number.
-5. Press Pay. You are back on `/success`, which says plainly that a return is not proof of payment.
+5. Press Pay. You are back on `/success?checkout=demo_…`, which reads **Payment confirmed**. The page did not trust the return: it looked the order up by the checkout id it recorded when the checkout was created, then asked the provider from the server (`handler.retrieve`).
+6. Start a second checkout and stop on the Demo PSP page. Copy its `session` id from the address bar and open `/success?checkout=<that id>` without paying. It reads **Payment not confirmed yet**.
 
 With Stripe keys: Switzerland, card `4242 4242 4242 4242`, the status goes `prepared → submitting → success`. Germany redirects to Stripe Checkout.
 
 ## 4. The server is the trust boundary (60 seconds)
 
-Show `api/payments/route.ts`, then run this in terminal 2:
+Show `checkout/server.ts` (the handler behind `/api/payments`), then run this in terminal 2:
 
 ```bash
 # A forged price is ignored: the response still links to a 2900 checkout.
@@ -76,13 +77,13 @@ Show the package diagram in `README.md`.
 - `core` has no dependencies and names no provider.
 - `client` is the state machine. React is about 350 lines on top of `subscribe` and `getSnapshot`; Vue is about 150.
 - Each provider package has a browser entry and a `/server` entry. The secret key and the PSP's server SDK exist only in the second.
-- Show `demo-psp/server.ts`: a whole server adapter in 30 lines, written with the same `@tenderlane/core/adapters` entry the Stripe and Polar adapters use.
+- Show `demo-psp/server.ts`: a whole server adapter, create and look up, in about 50 lines, written with the same `@tenderlane/core/adapters` entry the Stripe and Polar adapters use.
 
 ## 6. What is missing (30 seconds)
 
 Say it before someone asks:
 
-- No webhooks, so Tenderlane cannot confirm a payment. This is the largest gap.
+- No webhooks. The status lookup covers a customer who returns; a payment that settles after they close the tab is not covered. This is the largest gap.
 - No subscriptions, refunds or failover.
 - Two providers. Polar is hosted-only.
 - No test against a live sandbox; the PSP SDKs are mocked.
@@ -95,7 +96,7 @@ Say it before someone asks:
 - Adapters are the extension point, with no privileged provider in core.
 - It is a library in the app and the API route, not a service in the payment path.
 
-Open questions worth raising: whether routing belongs in the browser at all for teams that only need one provider, how webhook verification should be shaped across providers, and whether `hosted` and `inline` are the right two flows once a third provider is added.
+Open questions worth raising: whether routing belongs in the browser at all for teams that only need one provider, how webhook events should be normalised across providers (verification is easy; a shared vocabulary for "paid" is not), and whether `hosted` and `inline` are the right two flows once a third provider is added.
 
 ## If something goes wrong
 

@@ -9,6 +9,7 @@
  */
 import type { ProviderCapabilities } from '../types/capabilities.js';
 import type {
+  CheckoutDetails,
   CheckoutInput,
   CheckoutResult,
   CheckoutStatus,
@@ -38,6 +39,7 @@ export type { ProviderPhantomTypes } from '../types/phantom.js';
 export type {
   CheckoutInput,
   CheckoutResult,
+  CheckoutDetails,
   CheckoutStatus,
   ResolvedCheckoutInput,
 } from '../types/checkout.js';
@@ -112,6 +114,7 @@ export function defineServerAdapter<
     payload: ResolvedCheckoutInput,
     options?: ServerActionOptions,
   ): Promise<CheckoutResult>;
+  retrieve?(id: string): Promise<CheckoutDetails>;
 }): ServerProviderAdapter<TProviderId> {
   return adapter as ServerProviderAdapter<TProviderId>;
 }
@@ -177,6 +180,42 @@ function readErrorMessage(body: string): string {
     // Not JSON: fall through to the raw text.
   }
   return body;
+}
+
+/**
+ * The placeholder a `successUrl` may contain. The provider replaces it with
+ * the checkout id when it sends the customer back. Adapters translate it to
+ * their PSP's own placeholder, or substitute the id themselves.
+ */
+export const CHECKOUT_ID_PLACEHOLDER = '{CHECKOUT_ID}';
+
+/**
+ * Validate a value that claims to be {@link CheckoutDetails} and return only
+ * its known fields.
+ *
+ * @throws {ProviderError} When the value does not have the expected shape.
+ */
+export function parseCheckoutDetails(value: unknown, provider: string): CheckoutDetails {
+  const result = parseCheckoutResult(value, provider);
+  const candidate = value as Record<string, unknown>;
+  const invalid = (detail: string) =>
+    new ProviderError(`Invalid checkout details from "${provider}": ${detail}.`, provider);
+
+  const { amountTotal, currency } = candidate;
+  if (amountTotal !== undefined && (typeof amountTotal !== 'number' || !Number.isSafeInteger(amountTotal))) {
+    throw invalid('`amountTotal` is not an integer');
+  }
+  if (currency !== undefined && typeof currency !== 'string') {
+    throw invalid('`currency` is not a string');
+  }
+
+  return {
+    provider: result.provider,
+    id: result.id,
+    status: result.status,
+    ...(amountTotal !== undefined ? { amountTotal } : {}),
+    ...(currency !== undefined ? { currency: currency.toLowerCase() } : {}),
+  };
 }
 
 export interface ProviderActionRequest {

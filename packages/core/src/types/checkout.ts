@@ -23,6 +23,12 @@ export interface CheckoutInput {
    * routing depends on it.
    */
   readonly context?: TenderlaneContext;
+  /**
+   * Where the provider sends the customer after a hosted checkout. Include
+   * the literal `{CHECKOUT_ID}` and the provider replaces it with the checkout
+   * id, which is the id to pass to the handler's `retrieve()` on return:
+   * `https://shop.example/success?checkout={CHECKOUT_ID}`.
+   */
   readonly successUrl: string;
   readonly cancelUrl: string;
   readonly customerEmail?: string;
@@ -68,4 +74,24 @@ export interface CheckoutResult {
   readonly url?: string;
   /** Inline flows: the secret the provider's browser SDK confirms with. */
   readonly clientSecret?: string;
+}
+
+/**
+ * What the provider says about a checkout right now, read with the secret
+ * key by the handler's `retrieve()`. Server-side only.
+ *
+ * `status: 'complete'` here is the provider's own record that the payment
+ * went through, unlike the client state `success`, which is the browser's
+ * report.
+ */
+export interface CheckoutDetails {
+  readonly provider: ProviderId;
+  readonly id: string;
+  readonly status: CheckoutStatus;
+  /**
+   * What the provider charged or will charge, in the currency's minor unit.
+   * It can differ from the catalog price: providers add tax and discounts.
+   */
+  readonly amountTotal?: number;
+  readonly currency?: string;
 }

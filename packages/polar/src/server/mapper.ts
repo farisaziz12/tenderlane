@@ -1,4 +1,5 @@
 import type {
+  CheckoutDetails,
   CheckoutResult,
   ResolvedCatalogItem,
   ResolvedCheckoutInput,
@@ -21,6 +22,19 @@ export type PolarCheckoutCreateParams = Pick<
 export type PolarCheckoutResponse = Pick<Checkout, 'id' | 'url'> & {
   readonly status?: Checkout['status'];
 };
+
+/** What `retrieve()` reports. `totalAmount` includes the tax Polar added. */
+export function mapPolarCheckoutDetails(
+  checkout: Pick<Checkout, 'id' | 'status' | 'totalAmount' | 'currency'>,
+): CheckoutDetails {
+  return {
+    provider: 'polar',
+    id: checkout.id,
+    status: mapPolarStatus(checkout.status),
+    amountTotal: checkout.totalAmount,
+    currency: checkout.currency,
+  };
+}
 
 function requirePolarProductId(item: ResolvedCatalogItem): string {
   const polarRef = item.providerRefs?.polar;
@@ -101,8 +115,9 @@ export function mapPolarStatus(
   status: PolarCheckoutResponse['status'],
 ): CheckoutResult['status'] {
   switch (status) {
+    // `confirmed` means the customer pressed Pay and the payment is still
+    // processing. Only `succeeded` is a completed payment.
     case 'succeeded':
-    case 'confirmed':
       return 'complete';
     case 'expired':
       return 'expired';

@@ -19,5 +19,6 @@ src/
 - One product, quantity one, per checkout. The mapper throws a `CatalogError` for anything else instead of approximating.
 - Sandbox and production are different hosts with separate tokens (`server: 'sandbox' | 'production'`).
 - The mapper's request and response types are `Pick`s of the SDK's `CheckoutCreate` and `Checkout`. Do not cast at the SDK boundary: a cast hid `success_url` (dropped by the SDK, which takes `successUrl`) behind mocked tests.
+- Only `succeeded` maps to `complete`. `confirmed` means the payment is still processing.
 
 Tests mock the Polar SDK. Nothing here is verified against the live API in CI.

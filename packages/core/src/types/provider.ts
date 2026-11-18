@@ -1,5 +1,10 @@
 import type { ProviderCapabilities, PaymentMethodDescriptor, PaymentFlow } from './capabilities.js';
-import type { CheckoutInput, CheckoutResult, ResolvedCheckoutInput } from './checkout.js';
+import type {
+  CheckoutDetails,
+  CheckoutInput,
+  CheckoutResult,
+  ResolvedCheckoutInput,
+} from './checkout.js';
 import type { TenderlaneContext } from './context.js';
 import type { ProviderPhantomTypes } from './phantom.js';
 import type { SelectedPaymentRoute } from './routing.js';
@@ -56,6 +61,12 @@ export interface ServerProviderAdapter<TProviderId extends string = string> {
     payload: ResolvedCheckoutInput,
     options?: ServerActionOptions,
   ): Promise<CheckoutResult>;
+  /**
+   * Read the current state of a checkout from the provider. `id` is the
+   * `CheckoutResult.id` that `handle` returned. Optional: a provider that
+   * cannot look a checkout up omits it.
+   */
+  retrieve?(id: string): Promise<CheckoutDetails>;
 }
 
 /** Any browser provider, for use in generic constraints. */

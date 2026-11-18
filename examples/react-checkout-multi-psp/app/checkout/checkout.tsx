@@ -81,7 +81,8 @@ export function Checkout({ configured }: { configured: Configured }) {
     () => ({
       items: [{ sku: 'pro-plan', quantity: 1 }],
       context,
-      successUrl: `${origin}/success`,
+      // The provider replaces {CHECKOUT_ID} with its id for this checkout.
+      successUrl: `${origin}/success?checkout={CHECKOUT_ID}`,
       cancelUrl: `${origin}/cancel`,
     }),
     [context, origin],
