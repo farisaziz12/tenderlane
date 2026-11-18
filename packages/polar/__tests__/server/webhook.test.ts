@@ -1,4 +1,5 @@
 import { Webhook } from 'standardwebhooks';
+import { validateEvent, WebhookVerificationError } from '@polar-sh/sdk/webhooks';
 import { describe, expect, it, vi } from 'vitest';
 
 // Signature verification is real (standardwebhooks, the library Polar's SDK
@@ -8,9 +9,12 @@ vi.mock('@polar-sh/sdk', () => ({ Polar: class {} }));
 const secret = 'polar_whs_test_secret';
 
 /** Sign the way Polar does: the key is the UTF-8 bytes of the endpoint secret. */
-function signedRequest(payload: string, options: { secret?: string; body?: string } = {}) {
+function signedRequest(
+  payload: string,
+  options: { secret?: string; body?: string; sentAt?: Date } = {},
+) {
   const key = Buffer.from(options.secret ?? secret, 'utf-8').toString('base64');
-  const sentAt = new Date();
+  const sentAt = options.sentAt ?? new Date();
   return new Request('https://shop.example/api/webhooks/polar', {
     method: 'POST',
     headers: {
@@ -86,5 +90,43 @@ describe('polarServerAdapter verifyWebhook', () => {
     await expect(
       polar.verifyWebhook?.(signedRequest(checkoutUpdated('succeeded'))),
     ).rejects.toMatchObject({ code: 'CONFIGURATION_ERROR' });
+  });
+
+  it('rejects a stale timestamp and a request without signature headers', async () => {
+    const polar = await adapter();
+    const payload = checkoutUpdated('succeeded');
+    const anHourAgo = new Date(Date.now() - 3_600_000);
+    const unsigned = new Request('https://shop.example/api/webhooks/polar', {
+      method: 'POST',
+      body: payload,
+    });
+
+    for (const request of [signedRequest(payload, { sentAt: anHourAgo }), unsigned]) {
+      await expect(polar.verifyWebhook?.(request)).rejects.toMatchObject({
+        code: 'WEBHOOK_VERIFICATION_FAILED',
+      });
+    }
+  });
+
+  it("derives the key the way Polar's SDK does", async () => {
+    // The SDK checks the signature first and its schema second. A request
+    // this adapter accepts must get past the SDK's signature check too: it
+    // then fails only on the schema, which is the step this adapter skips.
+    const request = signedRequest(checkoutUpdated('succeeded'));
+    const body = await request.clone().text();
+    const headers = Object.fromEntries(request.headers);
+
+    expect(() => validateEvent(body, headers, secret)).not.toThrow(WebhookVerificationError);
+    expect(() => validateEvent(body, headers, secret)).toThrow();
+    expect(() => validateEvent(body, headers, 'someone_elses_secret')).toThrow(
+      WebhookVerificationError,
+    );
+    expect((await (await adapter()).verifyWebhook?.(request))?.type).toBe('payment.succeeded');
+  });
+
+  it('acknowledges a signed body that is not JSON instead of asking for it again', async () => {
+    const event = await (await adapter()).verifyWebhook?.(signedRequest('not json'));
+
+    expect(event).toMatchObject({ type: 'unhandled', eventId: 'msg_1' });
   });
 });

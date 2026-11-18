@@ -27,7 +27,10 @@ function interpret(event: Stripe.Event): { type: Meaning; checkoutId: string } |
       return { type: 'payment.failed', checkoutId: event.data.object.id };
     case 'checkout.session.expired':
       return { type: 'checkout.expired', checkoutId: event.data.object.id };
+    // `amount_capturable_updated`: authorised and waiting for the merchant to
+    // capture, which `retrieve()` also reports as processing.
     case 'payment_intent.processing':
+    case 'payment_intent.amount_capturable_updated':
       return { type: 'payment.processing', checkoutId: event.data.object.id };
     case 'payment_intent.succeeded':
       return { type: 'payment.succeeded', checkoutId: event.data.object.id };

@@ -35,6 +35,7 @@ describe('stripeServerAdapter verifyWebhook', () => {
     ['checkout.session.async_payment_failed', { id: 'cs_1' }, 'payment.failed'],
     ['checkout.session.expired', { id: 'cs_1' }, 'checkout.expired'],
     ['payment_intent.processing', { id: 'pi_1' }, 'payment.processing'],
+    ['payment_intent.amount_capturable_updated', { id: 'pi_1' }, 'payment.processing'],
     ['payment_intent.succeeded', { id: 'pi_1' }, 'payment.succeeded'],
     ['payment_intent.payment_failed', { id: 'pi_1' }, 'payment.failed'],
     ['payment_intent.canceled', { id: 'pi_1' }, 'checkout.expired'],

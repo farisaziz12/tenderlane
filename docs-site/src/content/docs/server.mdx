@@ -106,9 +106,9 @@ To get the id back on return, put the literal `{CHECKOUT_ID}` in `successUrl`: `
 
 | `event.type` | Meaning | Stripe events | Polar `checkout.updated` status |
 | --- | --- | --- | --- |
-| `payment.processing` | Customer done, money not arrived | `checkout.session.completed` (unpaid), `payment_intent.processing` | `confirmed` |
+| `payment.processing` | Customer done, money not arrived | `checkout.session.completed` (unpaid), `payment_intent.processing`, `payment_intent.amount_capturable_updated` (authorised, not captured) | `confirmed` |
 | `payment.succeeded` | Paid | `checkout.session.completed` (paid), `checkout.session.async_payment_succeeded`, `payment_intent.succeeded` | `succeeded` |
-| `payment.failed` | The attempt failed, possibly days later | `checkout.session.async_payment_failed`, `payment_intent.payment_failed` | `failed` |
+| `payment.failed` | An attempt failed, possibly days later. Not final for an inline payment: the customer can retry on the same PaymentIntent, so do not cancel the order on it | `checkout.session.async_payment_failed`, `payment_intent.payment_failed` | `failed` |
 | `checkout.expired` | Expired or cancelled unpaid | `checkout.session.expired`, `payment_intent.canceled` | `expired` |
 | `unhandled` | Verified, and none of the above | everything else | everything else, including order events |
 
@@ -117,8 +117,8 @@ Every event has `provider`, `eventId` and `providerEventType`; all but `unhandle
 What `onEvent` must cope with, because no library can do it without your database:
 
 - **Repeats.** Providers deliver at least once. `eventId` is stable across retries if you want to record what you have seen.
-- **Disorder.** A `succeeded` can arrive before the `processing` it follows. Reading the state back with `retrieve`, as the snippet does, sidesteps both problems: you store what is true now, not what an event said.
-- **Unknown ids.** A hosted Stripe checkout also emits PaymentIntent events, whose `pi_…` id you never recorded. Not finding an order is normal; return without throwing, or the provider retries for days.
+- **Disorder.** A `succeeded` can arrive before the `processing` it follows. Reading the state back with `retrieve`, as the snippet does, handles most of it: you store what the provider says now, not what an event said. Two deliveries can still overlap and write in the wrong order, so never let an update move a paid order back. For full safety make the write conditional in your database.
+- **Unknown ids.** A hosted Stripe checkout also emits PaymentIntent events, whose `pi_…` id you never recorded. Not finding an order is normal; return without throwing, or the provider retries for days. One consequence: with manual capture on a hosted checkout, the later capture is reported only under the `pi_…` id.
 - **Slowness.** Providers time out. Do slow work (email, shipping) after acknowledging, on your own queue.
 
 :::caution
@@ -132,7 +132,7 @@ Tenderlane has no queue, no scheduler and no storage. A sweep that calls `retrie
 
 | Status | When | Body |
 | --- | --- | --- |
-| 400 | Invalid body, unknown provider or action, wrong provider for the route, redirect URL on another origin, unknown SKU, cart the provider cannot represent | `{ error, code }` with the specific message; `code` is `VALIDATION_ERROR` or `CATALOG_ERROR` |
+| 400 | A webhook whose signature does not verify (also reported to `onError`, since a wrong or rotated secret looks the same). Invalid body, unknown provider or action, wrong provider for the route, redirect URL on another origin, unknown SKU, cart the provider cannot represent | `{ error, code }` with the specific message; `code` is `VALIDATION_ERROR` or `CATALOG_ERROR` |
 | 500 | The PSP call failed, no catalog is configured, or anything unexpected | `{ error: 'Checkout request failed.', code }`. The detail goes to `onError`, not to the browser. |
 
 ## What the handler does not do

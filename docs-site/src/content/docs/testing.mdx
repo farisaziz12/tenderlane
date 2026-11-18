@@ -24,6 +24,8 @@ At the time of writing the live suite has not been run: it was written in an env
 STRIPE_TEST_SECRET_KEY=sk_test_... pnpm test:live
 ```
 
+The test payment method ids and IBANs in the table were written from memory of Stripe's documentation. If a row fails on the confirm call instead of on the status check, its test data is the first thing to compare against the docs.
+
 It refuses any key that does not start with `sk_test_` or `rk_test_`, and is skipped without one. It creates real test-mode objects, which appear in your Stripe test dashboard and cost nothing.
 
 `e2e/live/stripe.live.ts` is a table. Each row takes one payment method to one outcome and checks the status Tenderlane reports:

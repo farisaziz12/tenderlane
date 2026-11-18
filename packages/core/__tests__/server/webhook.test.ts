@@ -40,16 +40,20 @@ describe('handler.webhook', () => {
 
   it('answers 400 and does not call onEvent when the signature does not verify', async () => {
     const onEvent = vi.fn();
+    const onError = vi.fn();
     const handler = createTenderlaneHandler({
       providers: [
         adapterThat(async () => {
           throw new WebhookVerificationError('bad signature', 'acme');
         }),
       ],
+      onError,
     });
 
     const response = await handler.webhook('acme', onEvent)(request());
 
+    // Refused, and reported: a wrong secret must not fail silently.
+    expect(onError).toHaveBeenCalledOnce();
     expect(response.status).toBe(400);
     expect((await response.json()).code).toBe('WEBHOOK_VERIFICATION_FAILED');
     expect(onEvent).not.toHaveBeenCalled();

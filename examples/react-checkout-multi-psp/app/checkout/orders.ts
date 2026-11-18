@@ -29,9 +29,11 @@ export function findOrder(checkoutId: string): Order | undefined {
 }
 
 /**
- * Record what the provider says now. Safe to call any number of times and in
- * any order, because it stores the provider's current status and never a
- * transition taken from an event. A paid order stays paid.
+ * Record what the provider says now. Safe to call repeatedly: it stores the
+ * provider's current status, never a transition taken from an event. A paid
+ * order stays paid, so an update that read an older state and wrote late
+ * cannot undo it. Two overlapping updates to an unpaid order can still land
+ * in the wrong order; a real app makes this write conditional in its database.
  */
 export function applyPaymentStatus(
   order: Order,

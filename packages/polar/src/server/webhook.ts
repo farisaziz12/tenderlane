@@ -28,6 +28,9 @@ export function verifyPolarSignature(
         cause: error,
       });
     }
+    // Signed by Polar but not JSON. Nothing can be done with it, and failing
+    // would only make Polar send it again: report it as an unknown payload.
+    if (error instanceof SyntaxError) return undefined;
     throw error;
   }
 }

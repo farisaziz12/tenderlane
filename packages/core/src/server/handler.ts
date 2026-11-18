@@ -525,8 +525,9 @@ export function createTenderlaneHandler<
     providerId: string,
     onEvent: (event: PaymentEvent<AdapterIds<TAdapters>>) => void | Promise<void>,
   ): (request: Request) => Promise<Response> {
-    // Checked when the route is built, so a misconfiguration fails at startup
-    // and not on the first payment.
+    // Checked when the route is built, so an unknown provider or an adapter
+    // without webhook support fails at startup. A missing signing secret is
+    // the adapter's to report, on the first delivery.
     const adapter = providerMap.get(providerId);
     if (!adapter) {
       throw new ConfigurationError(
@@ -547,6 +548,9 @@ export function createTenderlaneHandler<
         event = parsePaymentEvent(await verify(request), providerId);
       } catch (error) {
         if (hasErrorCode(error, 'WEBHOOK_VERIFICATION_FAILED')) {
+          // Reported as well as refused: a rotated or mistyped secret makes
+          // every genuine event fail this way, silently otherwise.
+          config.onError?.(error);
           return Response.json(
             { error: 'Webhook signature verification failed.', code: error.code },
             { status: 400 },

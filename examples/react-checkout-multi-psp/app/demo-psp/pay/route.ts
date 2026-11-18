@@ -20,11 +20,17 @@ export async function POST(request: Request): Promise<Response> {
     type: 'checkout.paid',
     checkout: session.id,
   });
-  await fetch(new URL('/api/webhooks/demo', request.url), {
-    method: 'POST',
-    headers: { [DEMO_SIGNATURE_HEADER]: await signDemoPayload(body) },
-    body,
-  }).catch((error: unknown) => console.error('[demo-psp] webhook delivery failed', error));
+  // A real provider retries a failed delivery. The demo only logs it.
+  try {
+    const delivery = await fetch(new URL('/api/webhooks/demo', request.url), {
+      method: 'POST',
+      headers: { [DEMO_SIGNATURE_HEADER]: await signDemoPayload(body) },
+      body,
+    });
+    if (!delivery.ok) console.error('[demo-psp] webhook answered', delivery.status);
+  } catch (error) {
+    console.error('[demo-psp] webhook delivery failed', error);
+  }
 
   // The URL was validated by the Tenderlane handler when the checkout was created.
   return Response.redirect(session.successUrl, 303);

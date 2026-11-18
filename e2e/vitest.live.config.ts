@@ -6,7 +6,9 @@ export default defineConfig({
   test: {
     globals: true,
     include: ['live/**/*.live.ts'],
-    testTimeout: 60_000,
+    // Longer than the settle poll in the suite, so a slow debit fails on the
+    // assertion and not on the clock.
+    testTimeout: 120_000,
     // One at a time: the cases share an account and its rate limit.
     fileParallelism: false,
   },
